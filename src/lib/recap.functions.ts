@@ -11,13 +11,8 @@ export const RECAP_VIEWER_TYPES = [
   "super_admin",
   "mudir",
   "kepala_sekolah",
-  "kepala_tu",
   "waka_kurikulum",
   "kabid_kesantrian",
-  "musyrif_asrama",
-  "musyrif_halaqoh",
-  "wali_kelas",
-  "guru_mapel",
 ] as const;
 
 /** Peran yang melihat rekap seluruh anggota (bukan hanya unit binaan). */
@@ -25,7 +20,6 @@ export const RECAP_FULL_ACCESS_TYPES = [
   "super_admin",
   "mudir",
   "kepala_sekolah",
-  "kepala_tu",
   "waka_kurikulum",
   "kabid_kesantrian",
 ] as const;
