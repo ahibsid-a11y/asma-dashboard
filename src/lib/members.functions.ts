@@ -6,21 +6,34 @@ import { ACCOUNT_TYPES, MEMBER_ADMIN_TYPES } from "./roles";
 
 const accountTypeSchema = z.enum(ACCOUNT_TYPES);
 
+/** Ubah string kosong / null menjadi undefined agar field opsional tidak gagal validasi. */
+const blankToUndefined = (v: unknown) =>
+  v === null || (typeof v === "string" && v.trim() === "") ? undefined : v;
+
+const optionalText = (max: number) =>
+  z.preprocess(blankToUndefined, z.string().trim().max(max).optional());
+
 const memberSchema = z.object({
-  id: z.string().uuid().optional(),
+  id: z.preprocess(blankToUndefined, z.string().uuid().optional()),
   name: z.string().trim().min(2, "Nama minimal 2 karakter"),
   email: z.string().trim().email("Email tidak valid"),
-  password: z.string().min(8, "Password minimal 8 karakter").optional(),
-  phone: z.string().trim().max(30).optional().nullable(),
-  gender: z.enum(["L", "P"]).optional().nullable(),
+  password: z.preprocess(
+    blankToUndefined,
+    z.string().min(8, "Password minimal 8 karakter").optional(),
+  ),
+  phone: optionalText(30),
+  gender: z.preprocess(blankToUndefined, z.enum(["L", "P"]).optional()),
   status: z.enum(["Aktif", "Nonaktif"]).default("Aktif"),
   account_type: accountTypeSchema,
-  class: z.string().trim().max(80).optional().nullable(),
-  dorm: z.string().trim().max(120).optional().nullable(),
-  halaqoh: z.string().trim().max(120).optional().nullable(),
+  class: optionalText(80),
+  dorm: optionalText(120),
+  halaqoh: optionalText(120),
   nis_nip: z.string().trim().min(1, "Nomor induk wajib diisi"),
-  rfid_card: z.string().trim().max(60).optional().nullable(),
-  avatar: z.string().trim().url("URL foto tidak valid").optional().nullable(),
+  rfid_card: optionalText(60),
+  avatar: z.preprocess(
+    blankToUndefined,
+    z.string().trim().url("URL foto tidak valid").optional(),
+  ),
 });
 
 type Ctx = { supabase: any; userId: string };
