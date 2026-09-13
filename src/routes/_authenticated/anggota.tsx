@@ -320,6 +320,15 @@ function MembersPage() {
                         >
                           {m.status === "Aktif" ? "Nonaktifkan" : "Aktifkan"}
                         </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive"
+                          onClick={() => setToDelete(m)}
+                        >
+                          Hapus
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))
