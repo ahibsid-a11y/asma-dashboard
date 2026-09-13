@@ -104,7 +104,7 @@ const COLORS = [
   { value: "violet", label: "Ungu", chip: "bg-violet-500/12 text-violet-700 border-violet-500/25", dot: "bg-violet-500" },
   { value: "rose", label: "Merah", chip: "bg-rose-500/12 text-rose-700 border-rose-500/25", dot: "bg-rose-500" },
 ];
-const colorOf = (c: string) => COLORS.find((x) => x.value === c) ?? COLORS[0];
+const colorOf = (c: string) => COLORS.find((x) => x.value === c) ?? COLORS[0]!;
 
 const minutesOf = (t?: string | null) => {
   if (!t) return null;
