@@ -108,11 +108,19 @@ function ScanPresensiPage() {
   const fetchToday = useServerFn(listTodayAttendance);
   const submitScan = useServerFn(scanAttendance);
   const runAbsent = useServerFn(processAbsentToday);
+  const fetchCandidates = useServerFn(searchMembersForCard);
+  const submitAssign = useServerFn(assignRfidCard);
+
+  const isMemberAdmin = ["super_admin", "mudir", "kepala_sekolah", "kepala_tu"].includes(
+    accountType ?? "",
+  );
 
   const [sessionId, setSessionId] = useState("");
   const [card, setCard] = useState("");
   const [showAll, setShowAll] = useState(false);
   const [results, setResults] = useState<ScanResult[]>([]);
+  const [unknownCard, setUnknownCard] = useState<string | null>(null);
+  const [assignTo, setAssignTo] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const sessionsQuery = useQuery({
@@ -134,13 +142,28 @@ function ScanPresensiPage() {
     enabled: allowed && !!sessionId,
   });
 
+  const candidatesQuery = useQuery({
+    queryKey: ["card-candidates", sessionId],
+    queryFn: () => fetchCandidates({ data: { session_id: sessionId } }) as Promise<any[]>,
+    enabled: allowed && isMemberAdmin && !!sessionId && !!unknownCard,
+  });
+
   const scanMutation = useMutation({
     mutationFn: (rfid: string) =>
-      submitScan({ data: { session_id: sessionId, rfid_card: rfid } }) as Promise<ScanResult>,
+      submitScan({ data: { session_id: sessionId, rfid_card: rfid } }) as Promise<
+        ScanResult | ScanFailure
+      >,
     onSuccess: async (result) => {
-      setResults((prev) => [result, ...prev].slice(0, 20));
       setCard("");
       inputRef.current?.focus();
+      if (!result.ok) {
+        toast.error(result.message);
+        setUnknownCard(result.reason === "unknown_card" ? result.code : null);
+        setAssignTo("");
+        return;
+      }
+      setUnknownCard(null);
+      setResults((prev) => [result, ...prev].slice(0, 20));
       toast.success(`${result.member.name ?? "Anggota"} — ${result.status}`);
       await queryClient.invalidateQueries({ queryKey: ["attendance-today", sessionId] });
     },
@@ -150,6 +173,22 @@ function ScanPresensiPage() {
       inputRef.current?.focus();
     },
   });
+
+  const assignMutation = useMutation({
+    mutationFn: async (vars: { user_id: string; rfid_card: string }) => {
+      await submitAssign({ data: vars });
+      return vars.rfid_card;
+    },
+    onSuccess: async (rfid) => {
+      toast.success("Kartu berhasil didaftarkan, mencatat presensi…");
+      setUnknownCard(null);
+      setAssignTo("");
+      await queryClient.invalidateQueries({ queryKey: ["card-candidates", sessionId] });
+      scanMutation.mutate(rfid);
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
 
   const absentMutation = useMutation({
     mutationFn: () => runAbsent({ data: { session_id: sessionId || undefined } }) as Promise<any>,
