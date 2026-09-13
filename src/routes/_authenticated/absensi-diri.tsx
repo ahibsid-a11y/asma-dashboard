@@ -168,10 +168,13 @@ function SelfAttendancePage() {
   const items = recapQuery.data ?? [];
 
   const counts = useMemo(() => {
-    const base = { Hadir: 0, Telat: 0, Izin: 0, Sakit: 0, Alfa: 0 } as Record<string, number>;
-    for (const it of items) if (it.status in base) base[it.status] += 1;
+    const base = { Hadir: 0, Telat: 0, Izin: 0, Sakit: 0, Alfa: 0 };
+    for (const it of items) {
+      if (it.status in base) (base as Record<string, number>)[it.status] += 1;
+    }
     return base;
   }, [items]);
+
 
   const total = items.length;
   const percent = total ? Math.round(((counts.Hadir + counts.Telat) / total) * 1000) / 10 : 0;
