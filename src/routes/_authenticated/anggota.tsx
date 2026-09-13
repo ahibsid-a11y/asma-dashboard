@@ -136,18 +136,29 @@ function MembersPage() {
   const submitMember = useServerFn(saveMember);
   const changeStatus = useServerFn(setMemberStatus);
   const removeMember = useServerFn(deleteMember);
+  const fetchOrg = useServerFn(listOrgData);
 
-  const [filter, setFilter] = useState<"all" | AccountType>("all");
+  const [filter, setFilter] = useState<"all" | MemberCategory>("all");
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [toDelete, setToDelete] = useState<Member | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
+  const orgQuery = useQuery({
+    queryKey: ["org-data"],
+    queryFn: () => fetchOrg({}) as Promise<any>,
+    enabled: allowed,
+  });
+  const classOptions: { id: string; name: string }[] = orgQuery.data?.classes ?? [];
+  const dormOptions: { id: string; name: string }[] = orgQuery.data?.dorms ?? [];
+  const halaqohOptions: { id: string; name: string }[] = orgQuery.data?.halaqohs ?? [];
+
   const membersQuery = useQuery({
     queryKey: ["members"],
     queryFn: () => fetchMembers({}) as Promise<Member[]>,
     enabled: allowed,
+
   });
 
   const saveMutation = useMutation({
