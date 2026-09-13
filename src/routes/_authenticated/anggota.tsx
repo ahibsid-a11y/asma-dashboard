@@ -411,23 +411,43 @@ function MembersPage() {
             }}
           >
             <div className="grid gap-2">
-              <Label htmlFor="account_type">Jenis Akun</Label>
+              <Label htmlFor="category">Kategori Akun</Label>
               <Select
-                value={form.account_type}
-                onValueChange={(v) => setForm((f) => ({ ...f, account_type: v as AccountType }))}
+                value={form.category}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, category: v as MemberCategory, positions: [] }))
+                }
               >
-                <SelectTrigger id="account_type">
+                <SelectTrigger id="category">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {ACCOUNT_TYPES.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {ACCOUNT_TYPE_LABELS[t]}
+                  {MEMBER_CATEGORIES.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {MEMBER_CATEGORY_LABELS[c]}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+
+            {CATEGORY_POSITIONS[form.category].length > 0 && (
+              <div className="grid gap-2">
+                <Label>Jabatan (boleh lebih dari satu)</Label>
+                <div className="grid gap-2 rounded-lg border border-border p-3 sm:grid-cols-2">
+                  {CATEGORY_POSITIONS[form.category].map((p) => (
+                    <label key={p} className="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={form.positions.includes(p)}
+                        onCheckedChange={() => togglePosition(p)}
+                      />
+                      {ACCOUNT_TYPE_LABELS[p]}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
 
             <div className="grid gap-2">
               <Label htmlFor="name">Nama Lengkap</Label>
