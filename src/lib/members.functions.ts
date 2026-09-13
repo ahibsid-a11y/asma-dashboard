@@ -176,8 +176,9 @@ export const setMemberStatus = createServerFn({ method: "POST" })
   });
 
 const importRowSchema = z.object({
-  name: z.string().trim().min(2),
+  name: z.string().trim().min(1),
   nis_nip: z.string().trim().min(1),
+
   account_type: accountTypeSchema,
   class: z.string().trim().max(80).optional().default(""),
   dorm: z.string().trim().max(120).optional().default(""),
