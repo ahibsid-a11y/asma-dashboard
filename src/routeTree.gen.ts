@@ -20,6 +20,7 @@ import { Route as AuthenticatedMutabaahSayaRouteImport } from './routes/_authent
 import { Route as AuthenticatedPelanggaranSayaRouteImport } from './routes/_authenticated/pelanggaran-saya'
 import { Route as AuthenticatedPengaturanSesiRouteImport } from './routes/_authenticated/pengaturan-sesi'
 import { Route as AuthenticatedPresensiInsidentalRouteImport } from './routes/_authenticated/presensi-insidental'
+import { Route as AuthenticatedProfilRouteImport } from './routes/_authenticated/profil'
 import { Route as AuthenticatedRekapPresensiRouteImport } from './routes/_authenticated/rekap-presensi'
 import { Route as AuthenticatedScanPresensiRouteImport } from './routes/_authenticated/scan-presensi'
 
@@ -82,6 +83,11 @@ const AuthenticatedPresensiInsidentalRoute =
     path: '/presensi-insidental',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedProfilRoute = AuthenticatedProfilRouteImport.update({
+  id: '/profil',
+  path: '/profil',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedRekapPresensiRoute =
   AuthenticatedRekapPresensiRouteImport.update({
     id: '/rekap-presensi',
@@ -106,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/pelanggaran-saya': typeof AuthenticatedPelanggaranSayaRoute
   '/pengaturan-sesi': typeof AuthenticatedPengaturanSesiRoute
   '/presensi-insidental': typeof AuthenticatedPresensiInsidentalRoute
+  '/profil': typeof AuthenticatedProfilRoute
   '/rekap-presensi': typeof AuthenticatedRekapPresensiRoute
   '/scan-presensi': typeof AuthenticatedScanPresensiRoute
 }
@@ -120,6 +127,7 @@ export interface FileRoutesByTo {
   '/pelanggaran-saya': typeof AuthenticatedPelanggaranSayaRoute
   '/pengaturan-sesi': typeof AuthenticatedPengaturanSesiRoute
   '/presensi-insidental': typeof AuthenticatedPresensiInsidentalRoute
+  '/profil': typeof AuthenticatedProfilRoute
   '/rekap-presensi': typeof AuthenticatedRekapPresensiRoute
   '/scan-presensi': typeof AuthenticatedScanPresensiRoute
 }
@@ -136,6 +144,7 @@ export interface FileRoutesById {
   '/_authenticated/pelanggaran-saya': typeof AuthenticatedPelanggaranSayaRoute
   '/_authenticated/pengaturan-sesi': typeof AuthenticatedPengaturanSesiRoute
   '/_authenticated/presensi-insidental': typeof AuthenticatedPresensiInsidentalRoute
+  '/_authenticated/profil': typeof AuthenticatedProfilRoute
   '/_authenticated/rekap-presensi': typeof AuthenticatedRekapPresensiRoute
   '/_authenticated/scan-presensi': typeof AuthenticatedScanPresensiRoute
 }
@@ -152,6 +161,7 @@ export interface FileRouteTypes {
     | '/pelanggaran-saya'
     | '/pengaturan-sesi'
     | '/presensi-insidental'
+    | '/profil'
     | '/rekap-presensi'
     | '/scan-presensi'
   fileRoutesByTo: FileRoutesByTo
@@ -166,6 +176,7 @@ export interface FileRouteTypes {
     | '/pelanggaran-saya'
     | '/pengaturan-sesi'
     | '/presensi-insidental'
+    | '/profil'
     | '/rekap-presensi'
     | '/scan-presensi'
   id:
@@ -181,6 +192,7 @@ export interface FileRouteTypes {
     | '/_authenticated/pelanggaran-saya'
     | '/_authenticated/pengaturan-sesi'
     | '/_authenticated/presensi-insidental'
+    | '/_authenticated/profil'
     | '/_authenticated/rekap-presensi'
     | '/_authenticated/scan-presensi'
   fileRoutesById: FileRoutesById
@@ -269,6 +281,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPresensiInsidentalRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/profil': {
+      id: '/_authenticated/profil'
+      path: '/profil'
+      fullPath: '/profil'
+      preLoaderRoute: typeof AuthenticatedProfilRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/rekap-presensi': {
       id: '/_authenticated/rekap-presensi'
       path: '/rekap-presensi'
@@ -296,6 +315,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPelanggaranSayaRoute: typeof AuthenticatedPelanggaranSayaRoute
   AuthenticatedPengaturanSesiRoute: typeof AuthenticatedPengaturanSesiRoute
   AuthenticatedPresensiInsidentalRoute: typeof AuthenticatedPresensiInsidentalRoute
+  AuthenticatedProfilRoute: typeof AuthenticatedProfilRoute
   AuthenticatedRekapPresensiRoute: typeof AuthenticatedRekapPresensiRoute
   AuthenticatedScanPresensiRoute: typeof AuthenticatedScanPresensiRoute
 }
@@ -310,6 +330,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPelanggaranSayaRoute: AuthenticatedPelanggaranSayaRoute,
   AuthenticatedPengaturanSesiRoute: AuthenticatedPengaturanSesiRoute,
   AuthenticatedPresensiInsidentalRoute: AuthenticatedPresensiInsidentalRoute,
+  AuthenticatedProfilRoute: AuthenticatedProfilRoute,
   AuthenticatedRekapPresensiRoute: AuthenticatedRekapPresensiRoute,
   AuthenticatedScanPresensiRoute: AuthenticatedScanPresensiRoute,
 }
