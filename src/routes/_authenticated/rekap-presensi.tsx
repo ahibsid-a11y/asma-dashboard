@@ -206,7 +206,7 @@ function RecapPage() {
 
   if (profileQuery.isLoading) {
     return (
-      <AppShell title="Rekap Presensi">
+      <AppShell accountType={accountType}>
         <div className="flex items-center gap-2 text-muted-foreground">
           <Loader2 className="size-4 animate-spin" /> Memuat…
         </div>
@@ -216,7 +216,7 @@ function RecapPage() {
 
   if (!allowed) {
     return (
-      <AppShell title="Rekap Presensi">
+      <AppShell accountType={accountType}>
         <Card>
           <CardContent className="p-6 text-sm text-muted-foreground">
             Halaman Rekap Presensi hanya untuk pimpinan dan petugas kehadiran.
@@ -229,8 +229,15 @@ function RecapPage() {
   const options = optionsQuery.data;
 
   return (
-    <AppShell title="Rekap Presensi">
+    <AppShell accountType={accountType}>
       <div className="space-y-6">
+        <div className="border-b border-border pb-5">
+          <p className="mb-1 text-xs font-bold uppercase text-accent">Kehadiran</p>
+          <h1 className="text-2xl font-extrabold text-foreground">Rekap Presensi</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Gabungan presensi kegiatan tetap dan kegiatan insidental sesuai periode dan unit.
+          </p>
+        </div>
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Filter rekap</CardTitle>

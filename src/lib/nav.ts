@@ -38,7 +38,7 @@ export type NavItem = {
 export const NAV_ITEMS: Record<NavKey, NavItem> = {
   dashboard: { key: "dashboard", to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   anggota: { key: "anggota", to: "/anggota", label: "Manajemen Anggota", icon: Users },
-  presensi: { key: "presensi", to: "/presensi", label: "Presensi", icon: ClipboardCheck },
+  presensi: { key: "presensi", to: "/rekap-presensi", label: "Rekap Presensi", icon: ClipboardCheck },
   "scan-presensi": {
     key: "scan-presensi",
     to: "/scan-presensi",
@@ -81,10 +81,10 @@ const MENUS: Record<AccountType, NavKey[]> = {
   kepala_tu: ["dashboard", "anggota", "presensi", "scan-presensi", "presensi-insidental", "kalender", "kesiswaan"],
   waka_kurikulum: ["dashboard", "presensi", "scan-presensi", "presensi-insidental", "kalender", "kesiswaan"],
   kabid_kesantrian: ["dashboard", "presensi", "scan-presensi", "presensi-insidental", "kalender", "kesiswaan"],
-  musyrif_asrama: ["dashboard", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan"],
-  musyrif_halaqoh: ["dashboard", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan"],
-  wali_kelas: ["dashboard", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan"],
-  guru_mapel: ["dashboard", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan"],
+  musyrif_asrama: ["dashboard", "presensi", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan"],
+  musyrif_halaqoh: ["dashboard", "presensi", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan"],
+  wali_kelas: ["dashboard", "presensi", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan"],
+  guru_mapel: ["dashboard", "presensi", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan"],
   kepala_rt_sarpras: ["dashboard", "presensi-insidental", "absensi-diri", "kalender"],
   tendik: ["dashboard", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender"],
   santri: ["dashboard", "absensi-diri", "mutabaah-saya", "pelanggaran-saya", "kalender"],
