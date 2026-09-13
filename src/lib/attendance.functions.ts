@@ -80,6 +80,89 @@ export const listScanSessions = createServerFn({ method: "GET" })
     });
   });
 
+const MEMBER_ADMIN_TYPES = ["super_admin", "mudir", "kepala_sekolah", "kepala_tu"] as const;
+
+/** Cari anggota berdasarkan nomor kartu RFID, dengan cadangan nomor induk (NIS/NIP). */
+async function findMemberByCode(ctx: Ctx, code: string) {
+  const clean = code.trim();
+  const MEMBER_SELECT = "id,name,nis_nip,account_type,class,dorm,halaqoh,status,rfid_card";
+  const byCard = await ctx.supabase
+    .from("profiles")
+    .select(MEMBER_SELECT)
+    .ilike("rfid_card", clean)
+    .limit(1)
+    .maybeSingle();
+  if (byCard.error) throw new Error(byCard.error.message);
+  if (byCard.data) return byCard.data as any;
+
+  const byNis = await ctx.supabase
+    .from("profiles")
+    .select(MEMBER_SELECT)
+    .ilike("nis_nip", clean)
+    .limit(1)
+    .maybeSingle();
+  if (byNis.error) throw new Error(byNis.error.message);
+  return (byNis.data ?? null) as any;
+}
+
+export const searchMembersForCard = createServerFn({ method: "GET" })
+  .inputValidator((data: unknown) =>
+    z.object({ session_id: z.string().uuid(), q: z.string().trim().max(80).optional() }).parse(data),
+  )
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context, data }) => {
+    const ctx = context as Ctx;
+    await officerProfile(ctx);
+    const { data: session, error: sErr } = await ctx.supabase
+      .from("attendance_sessions")
+      .select("target_role")
+      .eq("id", data.session_id)
+      .maybeSingle();
+    if (sErr) throw new Error(sErr.message);
+    if (!session) throw new Error("Sesi presensi tidak ditemukan");
+
+    let query = ctx.supabase
+      .from("profiles")
+      .select("id,name,nis_nip,account_type,class,dorm,rfid_card")
+      .eq("status", "Aktif")
+      .in("account_type", session.target_role)
+      .order("name", { ascending: true })
+      .limit(50);
+    if (data.q) query = query.or(`name.ilike.%${data.q}%,nis_nip.ilike.%${data.q}%`);
+    const { data: rows, error } = await query;
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+/** Kaitkan nomor kartu RFID ke satu anggota (hanya admin anggota). */
+export const assignRfidCard = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        user_id: z.string().uuid(),
+        rfid_card: z.string().trim().min(1).max(60),
+      })
+      .parse(data),
+  )
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context, data }) => {
+    const ctx = context as Ctx;
+    const officer = await officerProfile(ctx);
+    if (!(MEMBER_ADMIN_TYPES as readonly string[]).includes(officer.account_type)) {
+      throw new Error("Hanya admin anggota yang boleh mendaftarkan kartu RFID");
+    }
+    const existing = await findMemberByCode(ctx, data.rfid_card);
+    if (existing && existing.rfid_card && existing.id !== data.user_id) {
+      throw new Error(`Kartu ini sudah terdaftar untuk ${existing.name ?? "anggota lain"}`);
+    }
+    const { error } = await ctx.supabase
+      .from("profiles")
+      .update({ rfid_card: data.rfid_card })
+      .eq("id", data.user_id);
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
+  });
+
 export const scanAttendance = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) =>
     z
@@ -103,31 +186,38 @@ export const scanAttendance = createServerFn({ method: "POST" })
     if (sessionError) throw new Error(sessionError.message);
     if (!session) throw new Error("Sesi presensi tidak ditemukan");
 
-    const { data: member, error: memberError } = await ctx.supabase
-      .from("profiles")
-      .select("id,name,nis_nip,account_type,class,dorm,halaqoh,status,rfid_card")
-      .eq("rfid_card", data.rfid_card)
-      .maybeSingle();
-    if (memberError) throw new Error(memberError.message);
+    const member = await findMemberByCode(ctx, data.rfid_card);
     if (!member) {
-      throw new Error(
-        "Kartu tidak dikenali atau anggota berada di luar unit binaan Anda",
-      );
+      return {
+        ok: false as const,
+        reason: "unknown_card" as const,
+        code: data.rfid_card,
+        message: `Kartu "${data.rfid_card}" belum terdaftar pada anggota mana pun. Daftarkan kartu ini terlebih dahulu, atau ketik nomor induk (NIS/NIP) anggota.`,
+      };
     }
-    if (member.status !== "Aktif") throw new Error(`${member.name} berstatus Nonaktif`);
+    if (member.status !== "Aktif") {
+      return {
+        ok: false as const,
+        reason: "inactive" as const,
+        code: data.rfid_card,
+        message: `${member.name ?? "Anggota"} berstatus Nonaktif`,
+      };
+    }
     if (!session.target_role.includes(member.account_type)) {
-      throw new Error(`${member.name} tidak termasuk dalam sesi "${session.session_name}"`);
+      return {
+        ok: false as const,
+        reason: "wrong_session" as const,
+        code: data.rfid_card,
+        message: `${member.name ?? "Anggota"} tidak termasuk dalam sesi "${session.session_name}". Pilih sesi yang sesuai.`,
+      };
     }
 
     const now = new Date();
     const minutes = jakartaMinutes(now);
-    const status =
-      minutes <= toMinutes(session.on_time_deadline)
-        ? "Hadir"
-        : minutes <= toMinutes(session.late_cutoff_time)
-          ? "Telat"
-          : "Telat";
-    const pastCutoff = minutes > toMinutes(session.late_cutoff_time);
+    const onTime = toMinutes(session.on_time_deadline);
+    const cutoff = toMinutes(session.late_cutoff_time);
+    const pastCutoff = minutes > cutoff;
+    const status = minutes <= onTime ? "Hadir" : pastCutoff ? "Alfa" : "Telat";
 
     const { data: record, error } = await ctx.supabase
       .from("attendance_records")
@@ -148,25 +238,50 @@ export const scanAttendance = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     let violation = false;
-    if (status === "Telat" && session.auto_violation_on_late) {
-      const { error: vError } = await ctx.supabase.from("violation_records").insert({
-        user_id: member.id,
-        date: jakartaDate(now),
-        violation_title: `Terlambat ${session.session_name}`,
-        category: "Kedisiplinan",
-        points: session.violation_points_late,
-        notes: `Otomatis dari scan presensi (${new Intl.DateTimeFormat("id-ID", {
-          timeZone: "Asia/Jakarta",
-          hour: "2-digit",
-          minute: "2-digit",
-        }).format(now)})`,
-        recorded_by: officer.id,
-        source: "auto_presensi",
-      });
-      if (!vError) violation = true;
+    const violationTitle =
+      status === "Telat"
+        ? `Terlambat ${session.session_name}`
+        : status === "Alfa"
+          ? `Alfa ${session.session_name}`
+          : null;
+    const autoOn =
+      status === "Telat"
+        ? session.auto_violation_on_late
+        : status === "Alfa"
+          ? session.auto_violation_on_absent
+          : false;
+
+    if (violationTitle && autoOn) {
+      // Hindari pelanggaran ganda saat kartu discan berulang di hari yang sama.
+      const { data: dup } = await ctx.supabase
+        .from("violation_records")
+        .select("id")
+        .eq("user_id", member.id)
+        .eq("date", jakartaDate(now))
+        .eq("violation_title", violationTitle)
+        .maybeSingle();
+      if (!dup) {
+        const { error: vError } = await ctx.supabase.from("violation_records").insert({
+          user_id: member.id,
+          date: jakartaDate(now),
+          violation_title: violationTitle,
+          category: "Kedisiplinan",
+          points:
+            status === "Telat" ? session.violation_points_late : session.violation_points_absent,
+          notes: `Otomatis dari scan presensi (${new Intl.DateTimeFormat("id-ID", {
+            timeZone: "Asia/Jakarta",
+            hour: "2-digit",
+            minute: "2-digit",
+          }).format(now)})`,
+          recorded_by: officer.id,
+          source: "auto_presensi",
+        });
+        if (!vError) violation = true;
+      }
     }
 
     return {
+      ok: true as const,
       member: {
         id: member.id,
         name: member.name,
@@ -181,6 +296,7 @@ export const scanAttendance = createServerFn({ method: "POST" })
       session_name: session.session_name as string,
     };
   });
+
 
 export const listTodayAttendance = createServerFn({ method: "GET" })
   .inputValidator((data: unknown) => z.object({ session_id: z.string().uuid() }).parse(data))
