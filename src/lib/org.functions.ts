@@ -82,11 +82,11 @@ export const saveGroup = createServerFn({ method: "POST" })
         .select("name")
         .eq("id", data.id)
         .maybeSingle();
-      const { error } = await supabaseAdmin.from(table).update(fields).eq("id", data.id);
+      const { error } = await supabaseAdmin.from(table).update(fields as any).eq("id", data.id);
       if (error) throw new Error(error.message);
       const oldName = (before as any)?.name as string | undefined;
       if (oldName && oldName !== data.name) {
-        await supabaseAdmin.from("profiles").update({ [column]: data.name }).eq(column, oldName);
+        await supabaseAdmin.from("profiles").update({ [column]: data.name } as any).eq(column, oldName);
       }
       return { id: data.id };
     }
@@ -124,7 +124,7 @@ export const deleteGroup = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     const name = (row as any)?.name as string | undefined;
     if (name) {
-      await supabaseAdmin.from("profiles").update({ [column]: null }).eq(column, name);
+      await supabaseAdmin.from("profiles").update({ [column]: null } as any).eq(column, name);
     }
     return { ok: true };
   });
@@ -147,7 +147,7 @@ export const setGroupMembers = createServerFn({ method: "POST" })
     const column = data.kind === "class" ? "class" : data.kind === "dorm" ? "dorm" : "halaqoh";
     const { error } = await supabaseAdmin
       .from("profiles")
-      .update({ [column]: data.name })
+      .update({ [column]: data.name } as any)
       .in("id", data.memberIds);
     if (error) throw new Error(error.message);
     return { updated: data.memberIds.length };
