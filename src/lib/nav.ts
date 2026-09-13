@@ -1,4 +1,6 @@
 import {
+  BedDouble,
+  BookOpen,
   CalendarDays,
   CalendarPlus,
   ClipboardCheck,
@@ -6,12 +8,14 @@ import {
   LayoutDashboard,
   ListChecks,
   ScanLine,
+  School,
   ShieldAlert,
   Timer,
   UserCheck,
   UserCog,
   Users,
 } from "lucide-react";
+
 import type { LucideIcon } from "lucide-react";
 
 import type { AccountType } from "./roles";
@@ -19,6 +23,9 @@ import type { AccountType } from "./roles";
 export type NavKey =
   | "dashboard"
   | "anggota"
+  | "manajemen-kelas"
+  | "manajemen-asrama"
+  | "manajemen-halaqoh"
   | "presensi"
   | "scan-presensi"
   | "presensi-insidental"
@@ -30,6 +37,7 @@ export type NavKey =
   | "pelanggaran-saya"
   | "profil";
 
+
 export type NavItem = {
   key: NavKey;
   to: string;
@@ -40,6 +48,25 @@ export type NavItem = {
 export const NAV_ITEMS: Record<NavKey, NavItem> = {
   dashboard: { key: "dashboard", to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   anggota: { key: "anggota", to: "/anggota", label: "Manajemen Anggota", icon: Users },
+  "manajemen-kelas": {
+    key: "manajemen-kelas",
+    to: "/manajemen-kelas",
+    label: "Manajemen Kelas",
+    icon: School,
+  },
+  "manajemen-asrama": {
+    key: "manajemen-asrama",
+    to: "/manajemen-asrama",
+    label: "Manajemen Asrama",
+    icon: BedDouble,
+  },
+  "manajemen-halaqoh": {
+    key: "manajemen-halaqoh",
+    to: "/manajemen-halaqoh",
+    label: "Manajemen Halaqoh",
+    icon: BookOpen,
+  },
+
   presensi: { key: "presensi", to: "/rekap-presensi", label: "Rekap Presensi", icon: ClipboardCheck },
   "scan-presensi": {
     key: "scan-presensi",
@@ -78,10 +105,11 @@ export const NAV_ITEMS: Record<NavKey, NavItem> = {
 };
 
 const MENUS: Record<AccountType, NavKey[]> = {
-  super_admin: ["dashboard", "anggota", "presensi", "scan-presensi", "presensi-insidental", "pengaturan-sesi", "kalender", "kesiswaan", "profil"],
-  mudir: ["dashboard", "anggota", "presensi", "scan-presensi", "presensi-insidental", "pengaturan-sesi", "absensi-diri", "kalender", "kesiswaan", "profil"],
-  kepala_sekolah: ["dashboard", "anggota", "presensi", "scan-presensi", "presensi-insidental", "pengaturan-sesi", "absensi-diri", "kalender", "kesiswaan", "profil"],
-  kepala_tu: ["dashboard", "anggota", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan", "profil"],
+  super_admin: ["dashboard", "anggota", "manajemen-kelas", "manajemen-asrama", "manajemen-halaqoh", "presensi", "scan-presensi", "presensi-insidental", "pengaturan-sesi", "kalender", "kesiswaan", "profil"],
+  mudir: ["dashboard", "anggota", "manajemen-kelas", "manajemen-asrama", "manajemen-halaqoh", "presensi", "scan-presensi", "presensi-insidental", "pengaturan-sesi", "absensi-diri", "kalender", "kesiswaan", "profil"],
+  kepala_sekolah: ["dashboard", "anggota", "manajemen-kelas", "manajemen-asrama", "manajemen-halaqoh", "presensi", "scan-presensi", "presensi-insidental", "pengaturan-sesi", "absensi-diri", "kalender", "kesiswaan", "profil"],
+  kepala_tu: ["dashboard", "anggota", "manajemen-kelas", "manajemen-asrama", "manajemen-halaqoh", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan", "profil"],
+
   waka_kurikulum: ["dashboard", "presensi", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan", "profil"],
   kabid_kesantrian: ["dashboard", "presensi", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan", "profil"],
 

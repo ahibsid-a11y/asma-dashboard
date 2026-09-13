@@ -33,10 +33,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
 import { MemberImportDialog } from "@/components/member-import-dialog";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
 import { deleteMember, listMembers, saveMember, setMemberStatus } from "@/lib/members.functions";
-import { ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS, isMemberAdmin, type AccountType } from "@/lib/roles";
+import { listOrgData } from "@/lib/org.functions";
+import {
+  ACCOUNT_TYPE_LABELS,
+  CATEGORY_POSITIONS,
+  MEMBER_CATEGORIES,
+  MEMBER_CATEGORY_LABELS,
+  categoryOf,
+  isMemberAdmin,
+  type AccountType,
+  type MemberCategory,
+} from "@/lib/roles";
+
 
 export const Route = createFileRoute("/_authenticated/anggota")({
   head: () => ({
@@ -66,6 +78,8 @@ type Member = {
   gender: "L" | "P" | null;
   status: "Aktif" | "Nonaktif";
   account_type: AccountType | null;
+  category: MemberCategory | null;
+  positions: AccountType[];
   class: string | null;
   dorm: string | null;
   halaqoh: string | null;
@@ -80,9 +94,10 @@ type FormState = {
   email: string;
   password: string;
   phone: string;
-  gender: "L" | "P";
+  gender: "L" | "P" | "";
   status: "Aktif" | "Nonaktif";
-  account_type: AccountType;
+  category: MemberCategory;
+  positions: AccountType[];
   class: string;
   dorm: string;
   halaqoh: string;
@@ -96,9 +111,10 @@ const emptyForm: FormState = {
   email: "",
   password: "",
   phone: "",
-  gender: "L",
+  gender: "",
   status: "Aktif",
-  account_type: "santri",
+  category: "siswa",
+  positions: [],
   class: "",
   dorm: "",
   halaqoh: "",
@@ -106,6 +122,9 @@ const emptyForm: FormState = {
   rfid_card: "",
   avatar: "",
 };
+
+const NONE = "__none__";
+
 
 function MembersPage() {
   const profileQuery = useCurrentProfile();
@@ -117,18 +136,29 @@ function MembersPage() {
   const submitMember = useServerFn(saveMember);
   const changeStatus = useServerFn(setMemberStatus);
   const removeMember = useServerFn(deleteMember);
+  const fetchOrg = useServerFn(listOrgData);
 
-  const [filter, setFilter] = useState<"all" | AccountType>("all");
+  const [filter, setFilter] = useState<"all" | MemberCategory>("all");
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [toDelete, setToDelete] = useState<Member | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
+  const orgQuery = useQuery({
+    queryKey: ["org-data"],
+    queryFn: () => fetchOrg({}) as Promise<any>,
+    enabled: allowed,
+  });
+  const classOptions: { id: string; name: string }[] = orgQuery.data?.classes ?? [];
+  const dormOptions: { id: string; name: string }[] = orgQuery.data?.dorms ?? [];
+  const halaqohOptions: { id: string; name: string }[] = orgQuery.data?.halaqohs ?? [];
+
   const membersQuery = useQuery({
     queryKey: ["members"],
     queryFn: () => fetchMembers({}) as Promise<Member[]>,
     enabled: allowed,
+
   });
 
   const saveMutation = useMutation({
@@ -171,7 +201,8 @@ function MembersPage() {
     const list = membersQuery.data ?? [];
     const q = search.trim().toLowerCase();
     return list.filter((m) => {
-      if (filter !== "all" && m.account_type !== filter) return false;
+      const cat = m.category ?? categoryOf(m.account_type);
+      if (filter !== "all" && cat !== filter) return false;
       if (!q) return true;
       return [m.name, m.email, m.nis_nip, m.class, m.dorm, m.halaqoh]
         .filter(Boolean)
@@ -185,15 +216,19 @@ function MembersPage() {
   }
 
   function openEdit(member: Member) {
+    const category = member.category ?? categoryOf(member.account_type);
     setForm({
       id: member.id,
       name: member.name ?? "",
       email: member.email ?? "",
       password: "",
       phone: member.phone ?? "",
-      gender: member.gender ?? "L",
+      gender: member.gender ?? "",
       status: member.status,
-      account_type: member.account_type ?? "santri",
+      category,
+      positions: (member.positions ?? []).filter((p) =>
+        CATEGORY_POSITIONS[category].includes(p),
+      ),
       class: member.class ?? "",
       dorm: member.dorm ?? "",
       halaqoh: member.halaqoh ?? "",
@@ -204,7 +239,17 @@ function MembersPage() {
     setOpen(true);
   }
 
-  const isSantri = form.account_type === "santri";
+  function togglePosition(position: AccountType) {
+    setForm((f) => ({
+      ...f,
+      positions: f.positions.includes(position)
+        ? f.positions.filter((p) => p !== position)
+        : [...f.positions, position],
+    }));
+  }
+
+  const isSantri = form.category === "siswa";
+
 
   return (
     <AppShell accountType={accountType}>
@@ -233,18 +278,19 @@ function MembersPage() {
               />
             </div>
             <Select value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
-              <SelectTrigger className="w-56" aria-label="Filter jenis akun">
+              <SelectTrigger className="w-56" aria-label="Filter kategori akun">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Semua jenis akun</SelectItem>
-                {ACCOUNT_TYPES.map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {ACCOUNT_TYPE_LABELS[t]}
+                <SelectItem value="all">Semua kategori</SelectItem>
+                {MEMBER_CATEGORIES.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {MEMBER_CATEGORY_LABELS[c]}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+
             <MemberImportDialog existing={membersQuery.data ?? []} />
             <Button type="button" onClick={openCreate}>
               <Plus /> Tambah Anggota
@@ -256,7 +302,7 @@ function MembersPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nama</TableHead>
-                  <TableHead>Jenis Akun</TableHead>
+                  <TableHead>Kategori &amp; Jabatan</TableHead>
                   <TableHead>No. Induk</TableHead>
                   <TableHead>Kelas / Asrama</TableHead>
                   <TableHead>Status</TableHead>
@@ -284,8 +330,16 @@ function MembersPage() {
                         <div className="text-xs text-muted-foreground">{m.email}</div>
                       </TableCell>
                       <TableCell>
-                        {m.account_type ? ACCOUNT_TYPE_LABELS[m.account_type] : "-"}
+                        <div className="font-semibold">
+                          {MEMBER_CATEGORY_LABELS[m.category ?? categoryOf(m.account_type)]}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {(m.positions ?? [])
+                            .map((p) => ACCOUNT_TYPE_LABELS[p])
+                            .join(", ") || "-"}
+                        </div>
                       </TableCell>
+
                       <TableCell>{m.nis_nip ?? "-"}</TableCell>
                       <TableCell className="text-sm">
                         {m.account_type === "santri" ? (
@@ -357,23 +411,43 @@ function MembersPage() {
             }}
           >
             <div className="grid gap-2">
-              <Label htmlFor="account_type">Jenis Akun</Label>
+              <Label htmlFor="category">Kategori Akun</Label>
               <Select
-                value={form.account_type}
-                onValueChange={(v) => setForm((f) => ({ ...f, account_type: v as AccountType }))}
+                value={form.category}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, category: v as MemberCategory, positions: [] }))
+                }
               >
-                <SelectTrigger id="account_type">
+                <SelectTrigger id="category">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {ACCOUNT_TYPES.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {ACCOUNT_TYPE_LABELS[t]}
+                  {MEMBER_CATEGORIES.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {MEMBER_CATEGORY_LABELS[c]}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+
+            {CATEGORY_POSITIONS[form.category].length > 0 && (
+              <div className="grid gap-2">
+                <Label>Jabatan (boleh lebih dari satu)</Label>
+                <div className="grid gap-2 rounded-lg border border-border p-3 sm:grid-cols-2">
+                  {CATEGORY_POSITIONS[form.category].map((p) => (
+                    <label key={p} className="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={form.positions.includes(p)}
+                        onCheckedChange={() => togglePosition(p)}
+                      />
+                      {ACCOUNT_TYPE_LABELS[p]}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
 
             <div className="grid gap-2">
               <Label htmlFor="name">Nama Lengkap</Label>
@@ -477,35 +551,38 @@ function MembersPage() {
 
             {isSantri && (
               <div className="grid gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="class">Kelas</Label>
-                  <Input
-                    id="class"
-                    placeholder="7A Tahfizh"
-                    value={form.class}
-                    onChange={(e) => setForm((f) => ({ ...f, class: e.target.value }))}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="dorm">Asrama</Label>
-                  <Input
-                    id="dorm"
-                    placeholder="Asrama Abu Bakar - Kamar 102"
-                    value={form.dorm}
-                    onChange={(e) => setForm((f) => ({ ...f, dorm: e.target.value }))}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="halaqoh">Halaqoh</Label>
-                  <Input
-                    id="halaqoh"
-                    placeholder="Halaqoh Ustadz Ahmad"
-                    value={form.halaqoh}
-                    onChange={(e) => setForm((f) => ({ ...f, halaqoh: e.target.value }))}
-                  />
-                </div>
+                {(
+                  [
+                    ["class", "Kelas", classOptions],
+                    ["dorm", "Asrama", dormOptions],
+                    ["halaqoh", "Halaqoh", halaqohOptions],
+                  ] as const
+                ).map(([field, label, options]) => (
+                  <div key={field} className="grid gap-2">
+                    <Label htmlFor={field}>{label} (opsional)</Label>
+                    <Select
+                      value={form[field] || NONE}
+                      onValueChange={(v) =>
+                        setForm((f) => ({ ...f, [field]: v === NONE ? "" : v }))
+                      }
+                    >
+                      <SelectTrigger id={field}>
+                        <SelectValue placeholder={`Pilih ${label.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NONE}>Belum ditentukan</SelectItem>
+                        {options.map((o) => (
+                          <SelectItem key={o.id} value={o.name}>
+                            {o.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
               </div>
             )}
+
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="grid gap-2">

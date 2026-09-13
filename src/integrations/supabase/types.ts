@@ -191,6 +191,105 @@ export type Database = {
           },
         ]
       }
+      classes: {
+        Row: {
+          created_at: string
+          grade: number
+          homeroom_teacher_id: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          grade: number
+          homeroom_teacher_id?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          grade?: number
+          homeroom_teacher_id?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "classes_homeroom_teacher_id_fkey"
+            columns: ["homeroom_teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dorms: {
+        Row: {
+          created_at: string
+          id: string
+          musyrif_id: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          musyrif_id?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          musyrif_id?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dorms_musyrif_id_fkey"
+            columns: ["musyrif_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      halaqohs: {
+        Row: {
+          created_at: string
+          id: string
+          musyrif_id: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          musyrif_id?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          musyrif_id?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "halaqohs_musyrif_id_fkey"
+            columns: ["musyrif_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       incidental_attendance_events: {
         Row: {
           created_at: string
@@ -293,11 +392,41 @@ export type Database = {
           },
         ]
       }
+      profile_positions: {
+        Row: {
+          created_at: string
+          id: string
+          position: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          position: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          position?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_positions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           account_type: Database["public"]["Enums"]["app_role"] | null
           avatar: string | null
           avatar_url: string | null
+          category: Database["public"]["Enums"]["member_category"] | null
           class: string | null
           created_at: string
           display_name: string | null
@@ -318,6 +447,7 @@ export type Database = {
           account_type?: Database["public"]["Enums"]["app_role"] | null
           avatar?: string | null
           avatar_url?: string | null
+          category?: Database["public"]["Enums"]["member_category"] | null
           class?: string | null
           created_at?: string
           display_name?: string | null
@@ -338,6 +468,7 @@ export type Database = {
           account_type?: Database["public"]["Enums"]["app_role"] | null
           avatar?: string | null
           avatar_url?: string | null
+          category?: Database["public"]["Enums"]["member_category"] | null
           class?: string | null
           created_at?: string
           display_name?: string | null
@@ -480,6 +611,13 @@ export type Database = {
       gender_type: "L" | "P"
       incidental_status: "Hadir" | "Izin" | "Sakit" | "Alfa"
       incidental_target_type: "ROLE" | "USERS"
+      member_category:
+        | "super_admin"
+        | "admin"
+        | "guru"
+        | "musyrif"
+        | "tendik"
+        | "siswa"
       member_status: "Aktif" | "Nonaktif"
     }
     CompositeTypes: {
@@ -628,6 +766,14 @@ export const Constants = {
       gender_type: ["L", "P"],
       incidental_status: ["Hadir", "Izin", "Sakit", "Alfa"],
       incidental_target_type: ["ROLE", "USERS"],
+      member_category: [
+        "super_admin",
+        "admin",
+        "guru",
+        "musyrif",
+        "tendik",
+        "siswa",
+      ],
       member_status: ["Aktif", "Nonaktif"],
     },
   },
