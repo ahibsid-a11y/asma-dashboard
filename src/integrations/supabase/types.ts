@@ -126,6 +126,71 @@ export type Database = {
         }
         Relationships: []
       }
+      calendar_events: {
+        Row: {
+          all_day: boolean
+          color: string
+          created_at: string
+          created_by: string
+          description: string | null
+          end_date: string | null
+          end_time: string | null
+          event_date: string
+          id: string
+          location: string | null
+          start_time: string | null
+          target_roles: Database["public"]["Enums"]["app_role"][]
+          target_type: Database["public"]["Enums"]["calendar_target_type"]
+          target_user_ids: string[]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          all_day?: boolean
+          color?: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          end_date?: string | null
+          end_time?: string | null
+          event_date: string
+          id?: string
+          location?: string | null
+          start_time?: string | null
+          target_roles?: Database["public"]["Enums"]["app_role"][]
+          target_type?: Database["public"]["Enums"]["calendar_target_type"]
+          target_user_ids?: string[]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          all_day?: boolean
+          color?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          end_date?: string | null
+          end_time?: string | null
+          event_date?: string
+          id?: string
+          location?: string | null
+          start_time?: string | null
+          target_roles?: Database["public"]["Enums"]["app_role"][]
+          target_type?: Database["public"]["Enums"]["calendar_target_type"]
+          target_user_ids?: string[]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       incidental_attendance_events: {
         Row: {
           created_at: string
@@ -378,6 +443,10 @@ export type Database = {
         Args: { _actor: string; _target: string }
         Returns: boolean
       }
+      current_account_type: {
+        Args: never
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -386,6 +455,7 @@ export type Database = {
         Returns: boolean
       }
       is_attendance_overseer: { Args: { _user_id: string }; Returns: boolean }
+      is_calendar_admin: { Args: { _user_id: string }; Returns: boolean }
       is_member_admin: { Args: { _user_id: string }; Returns: boolean }
       is_not_santri: { Args: { _user_id: string }; Returns: boolean }
       is_session_admin: { Args: { _user_id: string }; Returns: boolean }
@@ -406,6 +476,7 @@ export type Database = {
         | "tendik"
         | "santri"
       attendance_status: "Hadir" | "Telat" | "Alfa"
+      calendar_target_type: "ALL" | "ROLE" | "USERS"
       gender_type: "L" | "P"
       incidental_status: "Hadir" | "Izin" | "Sakit" | "Alfa"
       incidental_target_type: "ROLE" | "USERS"
@@ -553,6 +624,7 @@ export const Constants = {
         "santri",
       ],
       attendance_status: ["Hadir", "Telat", "Alfa"],
+      calendar_target_type: ["ALL", "ROLE", "USERS"],
       gender_type: ["L", "P"],
       incidental_status: ["Hadir", "Izin", "Sakit", "Alfa"],
       incidental_target_type: ["ROLE", "USERS"],
