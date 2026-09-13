@@ -205,6 +205,30 @@ function SelfAttendancePage() {
     { name: "Alfa", value: counts.Alfa, fill: "var(--destructive)" },
   ].filter((d) => d.value > 0);
 
+  const perActivity = useMemo(() => {
+    const map = new Map<
+      string,
+      { label: string; kind: Item["kind"]; total: number; counts: Record<string, number> }
+    >();
+    for (const it of items) {
+      const key = `${it.kind}|${it.label}`;
+      const row =
+        map.get(key) ??
+        {
+          label: it.label,
+          kind: it.kind,
+          total: 0,
+          counts: {} as Record<string, number>,
+        };
+      row.total += 1;
+      row.counts[it.status] = (row.counts[it.status] ?? 0) + 1;
+      map.set(key, row);
+    }
+    return [...map.values()].sort((a, b) =>
+      a.kind === b.kind ? b.total - a.total : a.kind === "Wajib" ? -1 : 1,
+    );
+  }, [items]);
+
   const periodLabel =
     period === "harian"
       ? parseISO(anchor).toLocaleDateString("id-ID", { dateStyle: "full" })
