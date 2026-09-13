@@ -330,8 +330,16 @@ function MembersPage() {
                         <div className="text-xs text-muted-foreground">{m.email}</div>
                       </TableCell>
                       <TableCell>
-                        {m.account_type ? ACCOUNT_TYPE_LABELS[m.account_type] : "-"}
+                        <div className="font-semibold">
+                          {MEMBER_CATEGORY_LABELS[m.category ?? categoryOf(m.account_type)]}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {(m.positions ?? [])
+                            .map((p) => ACCOUNT_TYPE_LABELS[p])
+                            .join(", ") || "-"}
+                        </div>
                       </TableCell>
+
                       <TableCell>{m.nis_nip ?? "-"}</TableCell>
                       <TableCell className="text-sm">
                         {m.account_type === "santri" ? (
