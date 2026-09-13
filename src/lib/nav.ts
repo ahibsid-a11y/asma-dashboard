@@ -18,6 +18,7 @@ export type NavKey =
   | "dashboard"
   | "anggota"
   | "presensi"
+  | "scan-presensi"
   | "pengaturan-sesi"
   | "absensi-diri"
   | "kalender"
@@ -36,6 +37,12 @@ export const NAV_ITEMS: Record<NavKey, NavItem> = {
   dashboard: { key: "dashboard", to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   anggota: { key: "anggota", to: "/anggota", label: "Manajemen Anggota", icon: Users },
   presensi: { key: "presensi", to: "/presensi", label: "Presensi", icon: ClipboardCheck },
+  "scan-presensi": {
+    key: "scan-presensi",
+    to: "/scan-presensi",
+    label: "Scan Presensi",
+    icon: ScanLine,
+  },
   "pengaturan-sesi": {
     key: "pengaturan-sesi",
     to: "/pengaturan-sesi",
