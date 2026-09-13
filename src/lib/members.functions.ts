@@ -37,7 +37,8 @@ async function assertAdmin(context: Ctx) {
   }
 }
 
-const empty = (v: unknown) => (typeof v === "string" && v.trim() === "" ? null : (v ?? null));
+const empty = (v: unknown): string | null =>
+  typeof v === "string" && v.trim() !== "" ? v.trim() : null;
 
 export const listMembers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

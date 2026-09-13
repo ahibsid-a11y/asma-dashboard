@@ -130,8 +130,8 @@ function MembersPage() {
   const saveMutation = useMutation({
     mutationFn: (values: FormState) => {
       const payload: Record<string, unknown> = { ...values };
-      if (!values.password) delete payload.password;
-      if (!values.id) delete payload.id;
+      if (!values.password) delete payload["password"];
+      if (!values.id) delete payload["id"];
       return submitMember({ data: payload });
     },
     onSuccess: async () => {
