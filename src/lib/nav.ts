@@ -75,12 +75,13 @@ export const NAV_ITEMS: Record<NavKey, NavItem> = {
 };
 
 const MENUS: Record<AccountType, NavKey[]> = {
-  super_admin: ["dashboard", "anggota", "presensi", "scan-presensi", "presensi-insidental", "pengaturan-sesi", "kalender", "kesiswaan"],
-  mudir: ["dashboard", "anggota", "presensi", "scan-presensi", "presensi-insidental", "pengaturan-sesi", "kalender", "kesiswaan"],
-  kepala_sekolah: ["dashboard", "anggota", "presensi", "scan-presensi", "presensi-insidental", "pengaturan-sesi", "kalender", "kesiswaan"],
-  kepala_tu: ["dashboard", "anggota", "scan-presensi", "presensi-insidental", "kalender", "kesiswaan"],
-  waka_kurikulum: ["dashboard", "presensi", "scan-presensi", "presensi-insidental", "kalender", "kesiswaan"],
-  kabid_kesantrian: ["dashboard", "presensi", "scan-presensi", "presensi-insidental", "kalender", "kesiswaan"],
+  super_admin: ["dashboard", "anggota", "presensi", "scan-presensi", "presensi-insidental", "pengaturan-sesi", "absensi-diri", "kalender", "kesiswaan"],
+  mudir: ["dashboard", "anggota", "presensi", "scan-presensi", "presensi-insidental", "pengaturan-sesi", "absensi-diri", "kalender", "kesiswaan"],
+  kepala_sekolah: ["dashboard", "anggota", "presensi", "scan-presensi", "presensi-insidental", "pengaturan-sesi", "absensi-diri", "kalender", "kesiswaan"],
+  kepala_tu: ["dashboard", "anggota", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan"],
+  waka_kurikulum: ["dashboard", "presensi", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan"],
+  kabid_kesantrian: ["dashboard", "presensi", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan"],
+
   musyrif_asrama: ["dashboard", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan"],
   musyrif_halaqoh: ["dashboard", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan"],
   wali_kelas: ["dashboard", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan"],
