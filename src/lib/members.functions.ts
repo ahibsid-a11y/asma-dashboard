@@ -110,8 +110,8 @@ export const saveMember = createServerFn({ method: "POST" })
     };
 
     if (data.id) {
-      const fields = data.email ? profileFields : { ...profileFields, email: undefined };
-      if (!data.email) delete (fields as Record<string, unknown>)["email"];
+      const fields: Record<string, unknown> = { ...profileFields };
+      if (!data.email) delete fields["email"];
       const { error } = await supabaseAdmin.from("profiles").update(fields).eq("id", data.id);
       if (error) throw new Error(friendlyDbError(error.message));
       const authUpdate: Record<string, unknown> = {
