@@ -85,12 +85,15 @@ export const updateMyProfile = createServerFn({ method: "POST" })
         authUpdate["email"] = data.email;
         authUpdate["email_confirm"] = true;
       }
-      if (data.password) authUpdate["password"] = data.password;
       const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
         ctx.userId,
         authUpdate,
       );
       if (authError) throw new Error(friendly(authError.message));
+      if (data.password) {
+        const { setUserPassword } = await import("./password.server");
+        await setUserPassword(supabaseAdmin, ctx.userId, data.password);
+      }
     }
 
     return { ok: true };
