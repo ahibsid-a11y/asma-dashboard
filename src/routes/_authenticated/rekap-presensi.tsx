@@ -437,12 +437,12 @@ function RecapPage() {
                   <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="hadir" name="Hadir" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="telat" name="Telat" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="hadir" name="Hadir" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="telat" name="Telat" fill="var(--accent)" radius={[4, 4, 0, 0]} />
                   <Bar
                     dataKey="alfa"
                     name="Alfa"
-                    fill="hsl(var(--destructive))"
+                    fill="var(--destructive)"
                     radius={[4, 4, 0, 0]}
                   />
                 </BarChart>
