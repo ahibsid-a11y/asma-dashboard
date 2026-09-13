@@ -251,7 +251,7 @@ function ProfilePage() {
               <div className="grid gap-2">
                 <Label htmlFor="gender">Jenis Kelamin</Label>
                 <Select
-                  value={form.gender || undefined}
+                  {...(form.gender ? { value: form.gender } : {})}
                   onValueChange={(v) => setForm((f) => ({ ...f, gender: v as "L" | "P" }))}
                 >
                   <SelectTrigger id="gender">
