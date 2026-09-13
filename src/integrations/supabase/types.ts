@@ -14,6 +14,67 @@ export type Database = {
   }
   public: {
     Tables: {
+      attendance_records: {
+        Row: {
+          attendance_date: string
+          created_at: string
+          id: string
+          notes: string | null
+          recorded_by: string | null
+          scan_time: string
+          session_id: string
+          status: Database["public"]["Enums"]["attendance_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attendance_date?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          recorded_by?: string | null
+          scan_time?: string
+          session_id: string
+          status: Database["public"]["Enums"]["attendance_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attendance_date?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          recorded_by?: string | null
+          scan_time?: string
+          session_id?: string
+          status?: Database["public"]["Enums"]["attendance_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_records_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "attendance_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_records_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attendance_sessions: {
         Row: {
           auto_violation_on_absent: boolean
@@ -149,11 +210,72 @@ export type Database = {
         }
         Relationships: []
       }
+      violation_records: {
+        Row: {
+          category: string
+          created_at: string
+          date: string
+          id: string
+          notes: string | null
+          points: number
+          recorded_by: string | null
+          source: string
+          updated_at: string
+          user_id: string
+          violation_title: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          points?: number
+          recorded_by?: string | null
+          source?: string
+          updated_at?: string
+          user_id: string
+          violation_title: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          points?: number
+          recorded_by?: string | null
+          source?: string
+          updated_at?: string
+          user_id?: string
+          violation_title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "violation_records_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "violation_records_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      can_manage_attendance: {
+        Args: { _actor: string; _target: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -161,6 +283,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_attendance_overseer: { Args: { _user_id: string }; Returns: boolean }
       is_member_admin: { Args: { _user_id: string }; Returns: boolean }
       is_session_admin: { Args: { _user_id: string }; Returns: boolean }
     }
@@ -179,6 +302,7 @@ export type Database = {
         | "kepala_rt_sarpras"
         | "tendik"
         | "santri"
+      attendance_status: "Hadir" | "Telat" | "Alfa"
       gender_type: "L" | "P"
       member_status: "Aktif" | "Nonaktif"
     }
@@ -323,6 +447,7 @@ export const Constants = {
         "tendik",
         "santri",
       ],
+      attendance_status: ["Hadir", "Telat", "Alfa"],
       gender_type: ["L", "P"],
       member_status: ["Aktif", "Nonaktif"],
     },

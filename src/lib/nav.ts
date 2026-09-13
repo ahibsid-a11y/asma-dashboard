@@ -4,6 +4,7 @@ import {
   GraduationCap,
   LayoutDashboard,
   ListChecks,
+  ScanLine,
   ShieldAlert,
   Timer,
   UserCheck,
@@ -17,6 +18,7 @@ export type NavKey =
   | "dashboard"
   | "anggota"
   | "presensi"
+  | "scan-presensi"
   | "pengaturan-sesi"
   | "absensi-diri"
   | "kalender"
@@ -35,6 +37,12 @@ export const NAV_ITEMS: Record<NavKey, NavItem> = {
   dashboard: { key: "dashboard", to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   anggota: { key: "anggota", to: "/anggota", label: "Manajemen Anggota", icon: Users },
   presensi: { key: "presensi", to: "/presensi", label: "Presensi", icon: ClipboardCheck },
+  "scan-presensi": {
+    key: "scan-presensi",
+    to: "/scan-presensi",
+    label: "Scan Presensi",
+    icon: ScanLine,
+  },
   "pengaturan-sesi": {
     key: "pengaturan-sesi",
     to: "/pengaturan-sesi",
@@ -59,18 +67,18 @@ export const NAV_ITEMS: Record<NavKey, NavItem> = {
 };
 
 const MENUS: Record<AccountType, NavKey[]> = {
-  super_admin: ["dashboard", "anggota", "presensi", "pengaturan-sesi", "kalender", "kesiswaan"],
-  mudir: ["dashboard", "anggota", "presensi", "pengaturan-sesi", "kalender", "kesiswaan"],
-  kepala_sekolah: ["dashboard", "anggota", "presensi", "pengaturan-sesi", "kalender", "kesiswaan"],
-  kepala_tu: ["dashboard", "anggota", "presensi", "kalender", "kesiswaan"],
-  waka_kurikulum: ["dashboard", "presensi", "kalender", "kesiswaan"],
-  kabid_kesantrian: ["dashboard", "presensi", "kalender", "kesiswaan"],
-  musyrif_asrama: ["dashboard", "absensi-diri", "kalender", "kesiswaan"],
-  musyrif_halaqoh: ["dashboard", "absensi-diri", "kalender", "kesiswaan"],
-  wali_kelas: ["dashboard", "absensi-diri", "kalender", "kesiswaan"],
-  guru_mapel: ["dashboard", "absensi-diri", "kalender", "kesiswaan"],
+  super_admin: ["dashboard", "anggota", "presensi", "scan-presensi", "pengaturan-sesi", "kalender", "kesiswaan"],
+  mudir: ["dashboard", "anggota", "presensi", "scan-presensi", "pengaturan-sesi", "kalender", "kesiswaan"],
+  kepala_sekolah: ["dashboard", "anggota", "presensi", "scan-presensi", "pengaturan-sesi", "kalender", "kesiswaan"],
+  kepala_tu: ["dashboard", "anggota", "presensi", "scan-presensi", "kalender", "kesiswaan"],
+  waka_kurikulum: ["dashboard", "presensi", "scan-presensi", "kalender", "kesiswaan"],
+  kabid_kesantrian: ["dashboard", "presensi", "scan-presensi", "kalender", "kesiswaan"],
+  musyrif_asrama: ["dashboard", "scan-presensi", "absensi-diri", "kalender", "kesiswaan"],
+  musyrif_halaqoh: ["dashboard", "scan-presensi", "absensi-diri", "kalender", "kesiswaan"],
+  wali_kelas: ["dashboard", "scan-presensi", "absensi-diri", "kalender", "kesiswaan"],
+  guru_mapel: ["dashboard", "scan-presensi", "absensi-diri", "kalender", "kesiswaan"],
   kepala_rt_sarpras: ["dashboard", "absensi-diri", "kalender"],
-  tendik: ["dashboard", "absensi-diri", "kalender"],
+  tendik: ["dashboard", "scan-presensi", "absensi-diri", "kalender"],
   santri: ["dashboard", "absensi-diri", "mutabaah-saya", "pelanggaran-saya", "kalender"],
 };
 
