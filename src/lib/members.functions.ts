@@ -16,7 +16,7 @@ const optionalText = (max: number) =>
 const memberSchema = z.object({
   id: z.preprocess(blankToUndefined, z.string().uuid().optional()),
   name: z.string().trim().min(2, "Nama minimal 2 karakter"),
-  email: z.string().trim().email("Email tidak valid"),
+  email: z.preprocess(blankToUndefined, z.string().trim().email("Email tidak valid").optional()),
   password: z.preprocess(
     blankToUndefined,
     z.string().min(8, "Password minimal 8 karakter").optional(),
@@ -24,11 +24,11 @@ const memberSchema = z.object({
   phone: optionalText(30),
   gender: z.preprocess(blankToUndefined, z.enum(["L", "P"]).optional()),
   status: z.enum(["Aktif", "Nonaktif"]).default("Aktif"),
-  account_type: accountTypeSchema,
+  account_type: accountTypeSchema.optional().default("santri"),
   class: optionalText(80),
   dorm: optionalText(120),
   halaqoh: optionalText(120),
-  nis_nip: z.string().trim().min(1, "Nomor induk wajib diisi"),
+  nis_nip: optionalText(60),
   rfid_card: optionalText(60),
   avatar: z.preprocess(
     blankToUndefined,
@@ -86,10 +86,17 @@ export const saveMember = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const isSantri = data.account_type === "santri";
+    // Email bersifat opsional: bila kosong, sistem membuat alamat internal otomatis.
+    const email =
+      data.email ??
+      `${
+        (data.nis_nip ?? data.name).toLowerCase().replace(/[^a-z0-9]/g, "") || "anggota"
+      }${Math.floor(1000 + Math.random() * 9000)}@ahibs.local`;
+
     const profileFields = {
       name: data.name,
       display_name: data.name,
-      email: data.email,
+      email,
       phone: empty(data.phone),
       gender: (data.gender ?? null) as "L" | "P" | null,
       status: data.status,
@@ -97,16 +104,19 @@ export const saveMember = createServerFn({ method: "POST" })
       class: isSantri ? empty(data.class) : null,
       dorm: isSantri ? empty(data.dorm) : null,
       halaqoh: empty(data.halaqoh),
-      nis_nip: data.nis_nip,
+      nis_nip: empty(data.nis_nip),
       rfid_card: empty(data.rfid_card),
       avatar: empty(data.avatar),
     };
 
     if (data.id) {
-      const { error } = await supabaseAdmin.from("profiles").update(profileFields).eq("id", data.id);
+      const { email: newEmail, ...rest } = profileFields;
+      const { error } = await supabaseAdmin
+        .from("profiles")
+        .update(data.email ? { ...rest, email: newEmail } : rest)
+        .eq("id", data.id);
       if (error) throw new Error(friendlyDbError(error.message));
       const authUpdate: Record<string, unknown> = {
-        email: data.email,
         email_confirm: true,
         user_metadata: {
           name: data.name,
@@ -114,6 +124,7 @@ export const saveMember = createServerFn({ method: "POST" })
           account_type: data.account_type,
         },
       };
+      if (data.email) authUpdate["email"] = data.email;
       if (data.password) authUpdate["password"] = data.password;
       const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
         data.id,
@@ -125,7 +136,7 @@ export const saveMember = createServerFn({ method: "POST" })
 
     if (!data.password) throw new Error("Password wajib diisi untuk anggota baru");
     const { data: created, error: createError } = await supabaseAdmin.auth.admin.createUser({
-      email: data.email,
+      email,
       password: data.password,
       email_confirm: true,
       user_metadata: { name: data.name, display_name: data.name, account_type: data.account_type },
@@ -226,4 +237,21 @@ export const importMembers = createServerFn({ method: "POST" })
     }
 
     return { created, failures };
+  });
+
+export const deleteMember = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context, data }) => {
+    const ctx = context as Ctx;
+    await assertAdmin(ctx);
+    if (data.id === ctx.userId) throw new Error("Anda tidak dapat menghapus akun Anda sendiri");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Data terkait (presensi, pelanggaran, kegiatan) ikut terhapus lewat ON DELETE CASCADE.
+    const { error } = await supabaseAdmin.from("profiles").delete().eq("id", data.id);
+    if (error) throw new Error(friendlyDbError(error.message));
+    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(data.id);
+    if (authError) throw new Error(friendlyDbError(authError.message));
+    return { ok: true };
   });

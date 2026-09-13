@@ -285,7 +285,7 @@ function ScanPresensiPage() {
                     ref={inputRef}
                     autoFocus
                     autoComplete="off"
-                    placeholder="Tempel kartu, atau ketik nomor kartu / NIS-NIP…"
+                    placeholder="Tempel kartu, atau ketik nomor kartu / NIS/NIY…"
                     value={card}
                     onChange={(e) => setCard(e.target.value)}
                   />
@@ -295,7 +295,7 @@ function ScanPresensiPage() {
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Alat pembaca RFID biasanya mengirim nomor kartu lalu menekan Enter otomatis. Bila
-                  kartu belum terdaftar, Anda tetap bisa mengetik nomor induk (NIS/NIP) anggota.
+                  kartu belum terdaftar, Anda tetap bisa mengetik nomor induk (NIS/NIY) anggota.
                 </p>
               </form>
 

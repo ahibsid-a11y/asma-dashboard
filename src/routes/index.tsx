@@ -1,10 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveLoginEmail } from "@/lib/auth.functions";
 
 // No head() here: the home route inherits title/description/og/twitter from
 // __root.tsx, and ships no og:image so serve-time hosting can inject the
@@ -26,6 +28,7 @@ export const Route = createFileRoute("/")({
 // IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
 function Index() {
   const navigate = useNavigate();
+  const lookupEmail = useServerFn(resolveLoginEmail);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -42,13 +45,26 @@ function Index() {
     event.preventDefault();
     setError("");
     setLoading(true);
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (signInError) {
-      setError("Email atau kata sandi tidak sesuai.");
-      return;
+    try {
+      const { email: resolved } = await lookupEmail({ data: { identifier: email } });
+      if (!resolved) {
+        setError("Nama atau email tidak ditemukan.");
+        return;
+      }
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: resolved,
+        password,
+      });
+      if (signInError) {
+        setError("Nama/email atau kata sandi tidak sesuai.");
+        return;
+      }
+      await navigate({ to: "/dashboard", replace: true });
+    } catch (err) {
+      setError((err as Error).message || "Gagal masuk. Coba lagi.");
+    } finally {
+      setLoading(false);
     }
-    await navigate({ to: "/dashboard", replace: true });
   }
 
   return (
@@ -74,10 +90,10 @@ function Index() {
 
           <form className="space-y-5" onSubmit={handleSubmit}>
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-semibold text-foreground">Email</label>
+              <label htmlFor="email" className="text-sm font-semibold text-foreground">Nama atau Email</label>
               <div className="relative">
                 <Mail aria-hidden="true" className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input id="email" type="email" autoComplete="email" placeholder="nama@ahibs.sch.id" className="h-11 pl-10" value={email} onChange={(event) => setEmail(event.target.value)} required />
+                <Input id="email" type="text" autoComplete="username" placeholder="Nama lengkap atau nama@ahibs.sch.id" className="h-11 pl-10" value={email} onChange={(event) => setEmail(event.target.value)} required />
               </div>
             </div>
             <div className="space-y-2">

@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/table";
 import { MemberImportDialog } from "@/components/member-import-dialog";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
-import { listMembers, saveMember, setMemberStatus } from "@/lib/members.functions";
+import { deleteMember, listMembers, saveMember, setMemberStatus } from "@/lib/members.functions";
 import { ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS, isMemberAdmin, type AccountType } from "@/lib/roles";
 
 export const Route = createFileRoute("/_authenticated/anggota")({
@@ -116,11 +116,13 @@ function MembersPage() {
   const fetchMembers = useServerFn(listMembers);
   const submitMember = useServerFn(saveMember);
   const changeStatus = useServerFn(setMemberStatus);
+  const removeMember = useServerFn(deleteMember);
 
   const [filter, setFilter] = useState<"all" | AccountType>("all");
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [toDelete, setToDelete] = useState<Member | null>(null);
 
   const membersQuery = useQuery({
     queryKey: ["members"],
@@ -149,6 +151,16 @@ function MembersPage() {
       changeStatus({ data: values }),
     onSuccess: async () => {
       toast.success("Status akun diperbarui");
+      await queryClient.invalidateQueries({ queryKey: ["members"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => removeMember({ data: { id } }),
+    onSuccess: async () => {
+      toast.success("Akun anggota dihapus permanen");
+      setToDelete(null);
       await queryClient.invalidateQueries({ queryKey: ["members"] });
     },
     onError: (error: Error) => toast.error(error.message),
@@ -308,6 +320,15 @@ function MembersPage() {
                         >
                           {m.status === "Aktif" ? "Nonaktifkan" : "Aktifkan"}
                         </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive"
+                          onClick={() => setToDelete(m)}
+                        >
+                          Hapus
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))
@@ -365,11 +386,11 @@ function MembersPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email (opsional)</Label>
                 <Input
                   id="email"
                   type="email"
-                  required
+                  placeholder="Kosongkan bila tidak ada"
                   value={form.email}
                   onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                 />
@@ -390,10 +411,9 @@ function MembersPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
-                <Label htmlFor="nis_nip">Nomor Induk (NIS/NIP)</Label>
+                <Label htmlFor="nis_nip">Nomor Induk (NIS/NIY) — opsional</Label>
                 <Input
                   id="nis_nip"
-                  required
                   value={form.nis_nip}
                   onChange={(e) => setForm((f) => ({ ...f, nis_nip: e.target.value }))}
                 />
@@ -503,6 +523,32 @@ function MembersPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={toDelete !== null} onOpenChange={(v) => !v && setToDelete(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Hapus akun anggota?</DialogTitle>
+            <DialogDescription>
+              Akun <strong>{toDelete?.name ?? "-"}</strong> beserta seluruh riwayat presensi dan
+              pelanggarannya akan dihapus permanen dan tidak dapat dipulihkan. Bila hanya ingin
+              menghentikan akses, gunakan tombol Nonaktifkan.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setToDelete(null)}>
+              Batal
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deleteMutation.isPending}
+              onClick={() => toDelete && deleteMutation.mutate(toDelete.id)}
+            >
+              {deleteMutation.isPending ? "Menghapus…" : "Hapus Permanen"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AppShell>
