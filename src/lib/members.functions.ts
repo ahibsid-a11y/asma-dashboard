@@ -6,21 +6,34 @@ import { ACCOUNT_TYPES, MEMBER_ADMIN_TYPES } from "./roles";
 
 const accountTypeSchema = z.enum(ACCOUNT_TYPES);
 
+/** Ubah string kosong / null menjadi undefined agar field opsional tidak gagal validasi. */
+const blankToUndefined = (v: unknown) =>
+  v === null || (typeof v === "string" && v.trim() === "") ? undefined : v;
+
+const optionalText = (max: number) =>
+  z.preprocess(blankToUndefined, z.string().trim().max(max).optional());
+
 const memberSchema = z.object({
-  id: z.string().uuid().optional(),
+  id: z.preprocess(blankToUndefined, z.string().uuid().optional()),
   name: z.string().trim().min(2, "Nama minimal 2 karakter"),
   email: z.string().trim().email("Email tidak valid"),
-  password: z.string().min(8, "Password minimal 8 karakter").optional(),
-  phone: z.string().trim().max(30).optional().nullable(),
-  gender: z.enum(["L", "P"]).optional().nullable(),
+  password: z.preprocess(
+    blankToUndefined,
+    z.string().min(8, "Password minimal 8 karakter").optional(),
+  ),
+  phone: optionalText(30),
+  gender: z.preprocess(blankToUndefined, z.enum(["L", "P"]).optional()),
   status: z.enum(["Aktif", "Nonaktif"]).default("Aktif"),
   account_type: accountTypeSchema,
-  class: z.string().trim().max(80).optional().nullable(),
-  dorm: z.string().trim().max(120).optional().nullable(),
-  halaqoh: z.string().trim().max(120).optional().nullable(),
+  class: optionalText(80),
+  dorm: optionalText(120),
+  halaqoh: optionalText(120),
   nis_nip: z.string().trim().min(1, "Nomor induk wajib diisi"),
-  rfid_card: z.string().trim().max(60).optional().nullable(),
-  avatar: z.string().trim().url("URL foto tidak valid").optional().nullable(),
+  rfid_card: optionalText(60),
+  avatar: z.preprocess(
+    blankToUndefined,
+    z.string().trim().url("URL foto tidak valid").optional(),
+  ),
 });
 
 type Ctx = { supabase: any; userId: string };
@@ -35,6 +48,17 @@ async function assertAdmin(context: Ctx) {
   if (!data || !MEMBER_ADMIN_TYPES.includes(data.account_type)) {
     throw new Error("Anda tidak memiliki akses ke Manajemen Anggota");
   }
+}
+
+/** Terjemahkan pesan teknis database menjadi pesan yang dimengerti pengguna. */
+function friendlyDbError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes("nis_nip")) return "Nomor induk ini sudah dipakai anggota lain";
+  if (m.includes("rfid")) return "Nomor kartu RFID ini sudah dipakai anggota lain";
+  if (m.includes("already been registered") || m.includes("duplicate key") && m.includes("email")) {
+    return "Email ini sudah terdaftar untuk anggota lain";
+  }
+  return message;
 }
 
 const empty = (v: unknown): string | null =>
@@ -80,13 +104,22 @@ export const saveMember = createServerFn({ method: "POST" })
 
     if (data.id) {
       const { error } = await supabaseAdmin.from("profiles").update(profileFields).eq("id", data.id);
-      if (error) throw new Error(error.message);
-      if (data.password) {
-        const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(data.id, {
-          password: data.password,
-        });
-        if (authError) throw new Error(authError.message);
-      }
+      if (error) throw new Error(friendlyDbError(error.message));
+      const authUpdate: Record<string, unknown> = {
+        email: data.email,
+        email_confirm: true,
+        user_metadata: {
+          name: data.name,
+          display_name: data.name,
+          account_type: data.account_type,
+        },
+      };
+      if (data.password) authUpdate["password"] = data.password;
+      const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
+        data.id,
+        authUpdate,
+      );
+      if (authError) throw new Error(friendlyDbError(authError.message));
       return { id: data.id };
     }
 
@@ -97,10 +130,15 @@ export const saveMember = createServerFn({ method: "POST" })
       email_confirm: true,
       user_metadata: { name: data.name, display_name: data.name, account_type: data.account_type },
     });
-    if (createError || !created?.user) throw new Error(createError?.message ?? "Gagal membuat akun");
+    if (createError || !created?.user) {
+      throw new Error(friendlyDbError(createError?.message ?? "Gagal membuat akun"));
+    }
 
     const { error } = await supabaseAdmin.from("profiles").upsert({ id: created.user.id, ...profileFields });
-    if (error) throw new Error(error.message);
+    if (error) {
+      await supabaseAdmin.auth.admin.deleteUser(created.user.id);
+      throw new Error(friendlyDbError(error.message));
+    }
     return { id: created.user.id };
   });
 
