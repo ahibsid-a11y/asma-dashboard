@@ -35,6 +35,12 @@ export const NAV_ITEMS: Record<NavKey, NavItem> = {
   dashboard: { key: "dashboard", to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   anggota: { key: "anggota", to: "/anggota", label: "Manajemen Anggota", icon: Users },
   presensi: { key: "presensi", to: "/presensi", label: "Presensi", icon: ClipboardCheck },
+  "pengaturan-sesi": {
+    key: "pengaturan-sesi",
+    to: "/pengaturan-sesi",
+    label: "Sesi Presensi",
+    icon: Timer,
+  },
   "absensi-diri": { key: "absensi-diri", to: "/absensi-diri", label: "Absensi Diri", icon: UserCheck },
   kalender: { key: "kalender", to: "/kalender", label: "Kalender Pendidikan", icon: CalendarDays },
   kesiswaan: { key: "kesiswaan", to: "/kesiswaan", label: "Kesiswaan", icon: GraduationCap },
