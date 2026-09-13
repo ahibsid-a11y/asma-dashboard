@@ -50,6 +50,17 @@ async function assertAdmin(context: Ctx) {
   }
 }
 
+/** Terjemahkan pesan teknis database menjadi pesan yang dimengerti pengguna. */
+function friendlyDbError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes("nis_nip")) return "Nomor induk ini sudah dipakai anggota lain";
+  if (m.includes("rfid")) return "Nomor kartu RFID ini sudah dipakai anggota lain";
+  if (m.includes("already been registered") || m.includes("duplicate key") && m.includes("email")) {
+    return "Email ini sudah terdaftar untuk anggota lain";
+  }
+  return message;
+}
+
 const empty = (v: unknown): string | null =>
   typeof v === "string" && v.trim() !== "" ? v.trim() : null;
 
