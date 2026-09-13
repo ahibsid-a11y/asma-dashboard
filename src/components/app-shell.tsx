@@ -1,27 +1,45 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { LogOut } from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { navItemsFor } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
 
-function Brand() {
+function Brand({ inverted = false }: { inverted?: boolean }) {
   return (
     <div className="flex items-center gap-3">
-      <div className="grid size-10 place-items-center rounded-lg bg-primary-foreground text-lg font-extrabold text-primary">
+      <div
+        className={cn(
+          "grid size-10 shrink-0 place-items-center rounded-lg text-lg font-extrabold shadow-sm",
+          inverted ? "bg-primary-foreground text-primary" : "bg-primary text-primary-foreground",
+        )}
+      >
         A
       </div>
       <div>
         <div className="flex items-center gap-2">
-          <span className="text-xl font-extrabold text-primary-foreground">ASMA</span>
+          <span className={cn("text-xl font-extrabold", inverted ? "text-primary-foreground" : "text-foreground")}>
+            ASMA
+          </span>
           <span className="rounded bg-accent px-1.5 py-0.5 text-[9px] font-extrabold text-accent-foreground">
             AHIBS
           </span>
         </div>
-        <span className="text-[10px] font-medium text-primary-foreground/65">SMPIT Putra Al-Hanif</span>
+        <span className={cn("text-[10px] font-medium", inverted ? "text-primary-foreground/65" : "text-muted-foreground")}>
+          SMPIT Putra Al-Hanif
+        </span>
       </div>
     </div>
   );
@@ -47,7 +65,7 @@ export function AppShell({
   return (
     <div className="min-h-screen bg-background md:flex">
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col bg-primary p-5 md:flex">
-        <Brand />
+        <Brand inverted />
         <nav aria-label="Navigasi utama" className="mt-10 flex flex-col gap-1">
           {items.map(({ to, label, icon: Icon }) => (
             <Link
@@ -72,8 +90,47 @@ export function AppShell({
       </aside>
 
       <div className="min-w-0 flex-1 md:ml-64">
-        <header className="flex h-16 items-center justify-between border-b border-border bg-card px-5 md:px-8">
+        <header className="grid h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-border bg-card px-4 md:flex md:px-8">
           <div className="md:hidden">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button type="button" variant="ghost" size="icon" aria-label="Buka semua menu">
+                  <Menu />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="flex w-[86%] max-w-80 flex-col border-none bg-primary p-5 text-primary-foreground">
+                <SheetHeader className="text-left">
+                  <SheetTitle className="sr-only">Semua fitur ASMA</SheetTitle>
+                  <SheetDescription className="sr-only">Pilih fitur sesuai akses akun Anda.</SheetDescription>
+                  <Brand inverted />
+                </SheetHeader>
+                <p className="mt-8 px-3 text-xs font-bold uppercase text-primary-foreground/55">Semua fitur</p>
+                <nav aria-label="Semua fitur" className="mt-3 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
+                  {items.map(({ to, label, icon: Icon }) => (
+                    <SheetClose asChild key={to}>
+                      <Link
+                        to={to}
+                        activeProps={{ className: "bg-primary-foreground/12" }}
+                        className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-bold text-primary-foreground hover:bg-primary-foreground/10"
+                      >
+                        <Icon className="size-5 shrink-0 text-accent" />
+                        <span>{label}</span>
+                      </Link>
+                    </SheetClose>
+                  ))}
+                </nav>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="mt-4 justify-start text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+                  onClick={handleSignOut}
+                >
+                  <LogOut /> Keluar
+                </Button>
+              </SheetContent>
+            </Sheet>
+          </div>
+          <div className="min-w-0 md:hidden">
             <Brand />
           </div>
           <div className="hidden md:block">
@@ -92,28 +149,8 @@ export function AppShell({
           </Button>
         </header>
 
-        <main className="min-h-[calc(100vh-4rem)] p-5 pb-24 md:p-8">{children}</main>
+        <main className="min-h-[calc(100vh-4rem)] p-4 md:p-8">{children}</main>
       </div>
-
-      <nav
-        aria-label="Navigasi bawah"
-        className="fixed inset-x-0 bottom-0 z-30 flex h-16 items-center justify-between gap-1 overflow-x-auto border-t border-border bg-card px-3 md:hidden"
-      >
-        {items.map(({ to, label, icon: Icon }) => (
-          <Link
-            key={to}
-            to={to}
-            activeProps={{ className: "text-primary" }}
-            className={cn(
-              "flex min-w-16 shrink-0 flex-1 flex-col items-center gap-1 text-muted-foreground",
-            )}
-          >
-            <Icon className="size-5" />
-            <span className="text-center text-[10px] font-bold leading-tight">{label}</span>
-          </Link>
-        ))}
-
-      </nav>
     </div>
   );
 }
