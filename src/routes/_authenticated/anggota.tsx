@@ -232,6 +232,7 @@ function MembersPage() {
                 ))}
               </SelectContent>
             </Select>
+            <MemberImportDialog existing={membersQuery.data ?? []} />
             <Button type="button" onClick={openCreate}>
               <Plus /> Tambah Anggota
             </Button>
