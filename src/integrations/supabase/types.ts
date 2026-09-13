@@ -126,6 +126,108 @@ export type Database = {
         }
         Relationships: []
       }
+      incidental_attendance_events: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          event_date: string
+          id: string
+          target_roles: Database["public"]["Enums"]["app_role"][]
+          target_type: Database["public"]["Enums"]["incidental_target_type"]
+          target_user_ids: string[]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          event_date?: string
+          id?: string
+          target_roles?: Database["public"]["Enums"]["app_role"][]
+          target_type?: Database["public"]["Enums"]["incidental_target_type"]
+          target_user_ids?: string[]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          event_date?: string
+          id?: string
+          target_roles?: Database["public"]["Enums"]["app_role"][]
+          target_type?: Database["public"]["Enums"]["incidental_target_type"]
+          target_user_ids?: string[]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incidental_attendance_events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      incidental_attendance_records: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          notes: string | null
+          recorded_by: string | null
+          status: Database["public"]["Enums"]["incidental_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          notes?: string | null
+          recorded_by?: string | null
+          status: Database["public"]["Enums"]["incidental_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          notes?: string | null
+          recorded_by?: string | null
+          status?: Database["public"]["Enums"]["incidental_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incidental_attendance_records_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "incidental_attendance_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incidental_attendance_records_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incidental_attendance_records_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           account_type: Database["public"]["Enums"]["app_role"] | null
@@ -285,6 +387,7 @@ export type Database = {
       }
       is_attendance_overseer: { Args: { _user_id: string }; Returns: boolean }
       is_member_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_not_santri: { Args: { _user_id: string }; Returns: boolean }
       is_session_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
@@ -304,6 +407,8 @@ export type Database = {
         | "santri"
       attendance_status: "Hadir" | "Telat" | "Alfa"
       gender_type: "L" | "P"
+      incidental_status: "Hadir" | "Izin" | "Sakit" | "Alfa"
+      incidental_target_type: "ROLE" | "USERS"
       member_status: "Aktif" | "Nonaktif"
     }
     CompositeTypes: {
@@ -449,6 +554,8 @@ export const Constants = {
       ],
       attendance_status: ["Hadir", "Telat", "Alfa"],
       gender_type: ["L", "P"],
+      incidental_status: ["Hadir", "Izin", "Sakit", "Alfa"],
+      incidental_target_type: ["ROLE", "USERS"],
       member_status: ["Aktif", "Nonaktif"],
     },
   },
