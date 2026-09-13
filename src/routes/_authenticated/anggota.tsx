@@ -278,18 +278,19 @@ function MembersPage() {
               />
             </div>
             <Select value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
-              <SelectTrigger className="w-56" aria-label="Filter jenis akun">
+              <SelectTrigger className="w-56" aria-label="Filter kategori akun">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Semua jenis akun</SelectItem>
-                {ACCOUNT_TYPES.map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {ACCOUNT_TYPE_LABELS[t]}
+                <SelectItem value="all">Semua kategori</SelectItem>
+                {MEMBER_CATEGORIES.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {MEMBER_CATEGORY_LABELS[c]}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+
             <MemberImportDialog existing={membersQuery.data ?? []} />
             <Button type="button" onClick={openCreate}>
               <Plus /> Tambah Anggota
