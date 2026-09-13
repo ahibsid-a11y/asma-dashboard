@@ -16,6 +16,7 @@ import { Route as AuthenticatedAnggotaRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedKalenderRouteImport } from './routes/_authenticated/kalender'
 import { Route as AuthenticatedKesiswaanRouteImport } from './routes/_authenticated/kesiswaan'
+import { Route as AuthenticatedManajemenKelasRouteImport } from './routes/_authenticated/manajemen-kelas'
 import { Route as AuthenticatedMutabaahSayaRouteImport } from './routes/_authenticated/mutabaah-saya'
 import { Route as AuthenticatedPelanggaranSayaRouteImport } from './routes/_authenticated/pelanggaran-saya'
 import { Route as AuthenticatedPengaturanSesiRouteImport } from './routes/_authenticated/pengaturan-sesi'
@@ -59,6 +60,12 @@ const AuthenticatedKesiswaanRoute = AuthenticatedKesiswaanRouteImport.update({
   path: '/kesiswaan',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedManajemenKelasRoute =
+  AuthenticatedManajemenKelasRouteImport.update({
+    id: '/manajemen-kelas',
+    path: '/manajemen-kelas',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedMutabaahSayaRoute =
   AuthenticatedMutabaahSayaRouteImport.update({
     id: '/mutabaah-saya',
@@ -108,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/kalender': typeof AuthenticatedKalenderRoute
   '/kesiswaan': typeof AuthenticatedKesiswaanRoute
+  '/manajemen-kelas': typeof AuthenticatedManajemenKelasRoute
   '/mutabaah-saya': typeof AuthenticatedMutabaahSayaRoute
   '/pelanggaran-saya': typeof AuthenticatedPelanggaranSayaRoute
   '/pengaturan-sesi': typeof AuthenticatedPengaturanSesiRoute
@@ -123,6 +131,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/kalender': typeof AuthenticatedKalenderRoute
   '/kesiswaan': typeof AuthenticatedKesiswaanRoute
+  '/manajemen-kelas': typeof AuthenticatedManajemenKelasRoute
   '/mutabaah-saya': typeof AuthenticatedMutabaahSayaRoute
   '/pelanggaran-saya': typeof AuthenticatedPelanggaranSayaRoute
   '/pengaturan-sesi': typeof AuthenticatedPengaturanSesiRoute
@@ -140,6 +149,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/kalender': typeof AuthenticatedKalenderRoute
   '/_authenticated/kesiswaan': typeof AuthenticatedKesiswaanRoute
+  '/_authenticated/manajemen-kelas': typeof AuthenticatedManajemenKelasRoute
   '/_authenticated/mutabaah-saya': typeof AuthenticatedMutabaahSayaRoute
   '/_authenticated/pelanggaran-saya': typeof AuthenticatedPelanggaranSayaRoute
   '/_authenticated/pengaturan-sesi': typeof AuthenticatedPengaturanSesiRoute
@@ -157,6 +167,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/kalender'
     | '/kesiswaan'
+    | '/manajemen-kelas'
     | '/mutabaah-saya'
     | '/pelanggaran-saya'
     | '/pengaturan-sesi'
@@ -172,6 +183,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/kalender'
     | '/kesiswaan'
+    | '/manajemen-kelas'
     | '/mutabaah-saya'
     | '/pelanggaran-saya'
     | '/pengaturan-sesi'
@@ -188,6 +200,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/kalender'
     | '/_authenticated/kesiswaan'
+    | '/_authenticated/manajemen-kelas'
     | '/_authenticated/mutabaah-saya'
     | '/_authenticated/pelanggaran-saya'
     | '/_authenticated/pengaturan-sesi'
@@ -253,6 +266,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedKesiswaanRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/manajemen-kelas': {
+      id: '/_authenticated/manajemen-kelas'
+      path: '/manajemen-kelas'
+      fullPath: '/manajemen-kelas'
+      preLoaderRoute: typeof AuthenticatedManajemenKelasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/mutabaah-saya': {
       id: '/_authenticated/mutabaah-saya'
       path: '/mutabaah-saya'
@@ -311,6 +331,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedKalenderRoute: typeof AuthenticatedKalenderRoute
   AuthenticatedKesiswaanRoute: typeof AuthenticatedKesiswaanRoute
+  AuthenticatedManajemenKelasRoute: typeof AuthenticatedManajemenKelasRoute
   AuthenticatedMutabaahSayaRoute: typeof AuthenticatedMutabaahSayaRoute
   AuthenticatedPelanggaranSayaRoute: typeof AuthenticatedPelanggaranSayaRoute
   AuthenticatedPengaturanSesiRoute: typeof AuthenticatedPengaturanSesiRoute
@@ -326,6 +347,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedKalenderRoute: AuthenticatedKalenderRoute,
   AuthenticatedKesiswaanRoute: AuthenticatedKesiswaanRoute,
+  AuthenticatedManajemenKelasRoute: AuthenticatedManajemenKelasRoute,
   AuthenticatedMutabaahSayaRoute: AuthenticatedMutabaahSayaRoute,
   AuthenticatedPelanggaranSayaRoute: AuthenticatedPelanggaranSayaRoute,
   AuthenticatedPengaturanSesiRoute: AuthenticatedPengaturanSesiRoute,
