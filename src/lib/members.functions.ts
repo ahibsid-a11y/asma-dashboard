@@ -2,7 +2,16 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { ACCOUNT_TYPES, MEMBER_ADMIN_TYPES } from "./roles";
+import {
+  ACCOUNT_TYPES,
+  CATEGORY_DEFAULT_ACCOUNT_TYPE,
+  CATEGORY_POSITIONS,
+  MEMBER_ADMIN_TYPES,
+  MEMBER_CATEGORIES,
+  categoryOf,
+  type AccountType,
+  type MemberCategory,
+} from "./roles";
 
 const accountTypeSchema = z.enum(ACCOUNT_TYPES);
 
@@ -25,6 +34,8 @@ const memberSchema = z.object({
   phone: optionalText(30),
   gender: z.preprocess(blankToUndefined, z.enum(["L", "P"]).optional()),
   status: z.enum(["Aktif", "Nonaktif"]).default("Aktif"),
+  category: z.enum(MEMBER_CATEGORIES).optional(),
+  positions: z.array(accountTypeSchema).optional().default([]),
   account_type: accountTypeSchema.optional().default("santri"),
   class: optionalText(80),
   dorm: optionalText(120),
@@ -36,6 +47,20 @@ const memberSchema = z.object({
     z.string().trim().url("URL foto tidak valid").optional(),
   ),
 });
+
+/** Tentukan kategori akun dan jabatan utama yang tersimpan pada profil. */
+function resolveRole(data: {
+  category?: MemberCategory | undefined;
+  positions?: AccountType[];
+  account_type?: AccountType;
+}) {
+  const category: MemberCategory = data.category ?? categoryOf(data.account_type);
+  const allowed = CATEGORY_POSITIONS[category];
+  const positions = (data.positions ?? []).filter((p) => allowed.includes(p));
+  const primary = positions[0] ?? CATEGORY_DEFAULT_ACCOUNT_TYPE[category];
+  return { category, positions, primary };
+}
+
 
 type Ctx = { supabase: any; userId: string };
 
