@@ -44,6 +44,25 @@ export type NavItem = {
 export const NAV_ITEMS: Record<NavKey, NavItem> = {
   dashboard: { key: "dashboard", to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   anggota: { key: "anggota", to: "/anggota", label: "Manajemen Anggota", icon: Users },
+  "manajemen-kelas": {
+    key: "manajemen-kelas",
+    to: "/manajemen-kelas",
+    label: "Manajemen Kelas",
+    icon: School,
+  },
+  "manajemen-asrama": {
+    key: "manajemen-asrama",
+    to: "/manajemen-asrama",
+    label: "Manajemen Asrama",
+    icon: BedDouble,
+  },
+  "manajemen-halaqoh": {
+    key: "manajemen-halaqoh",
+    to: "/manajemen-halaqoh",
+    label: "Manajemen Halaqoh",
+    icon: BookOpen,
+  },
+
   presensi: { key: "presensi", to: "/rekap-presensi", label: "Rekap Presensi", icon: ClipboardCheck },
   "scan-presensi": {
     key: "scan-presensi",
