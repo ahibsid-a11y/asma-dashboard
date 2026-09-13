@@ -185,7 +185,7 @@ function RecapPage() {
   function exportExcel() {
     const sheetRows = rows.map((r) => ({
       Nama: r.name ?? "",
-      "NIS/NIP": r.nis_nip ?? "",
+      "NIS/NIY": r.nis_nip ?? "",
       Jabatan: ACCOUNT_TYPE_LABELS[r.account_type as AccountType] ?? r.account_type ?? "",
       Kelas: r.class ?? "",
       Asrama: r.dorm ?? "",
@@ -459,7 +459,7 @@ function RecapPage() {
                 <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
                 <Input
                   className="w-56 pl-8"
-                  placeholder="Cari nama / NIS-NIP"
+                  placeholder="Cari nama / NIS/NIY"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />

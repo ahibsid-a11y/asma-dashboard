@@ -82,7 +82,7 @@ export const listScanSessions = createServerFn({ method: "GET" })
 
 const MEMBER_ADMIN_TYPES = ["super_admin", "mudir", "kepala_sekolah", "kepala_tu"] as const;
 
-/** Cari anggota berdasarkan nomor kartu RFID, dengan cadangan nomor induk (NIS/NIP). */
+/** Cari anggota berdasarkan nomor kartu RFID, dengan cadangan nomor induk (NIS/NIY). */
 async function findMemberByCode(ctx: Ctx, code: string) {
   const clean = code.trim();
   const MEMBER_SELECT = "id,name,nis_nip,account_type,class,dorm,halaqoh,status,rfid_card";
@@ -192,7 +192,7 @@ export const scanAttendance = createServerFn({ method: "POST" })
         ok: false as const,
         reason: "unknown_card" as const,
         code: data.rfid_card,
-        message: `Kartu "${data.rfid_card}" belum terdaftar pada anggota mana pun. Daftarkan kartu ini terlebih dahulu, atau ketik nomor induk (NIS/NIP) anggota.`,
+        message: `Kartu "${data.rfid_card}" belum terdaftar pada anggota mana pun. Daftarkan kartu ini terlebih dahulu, atau ketik nomor induk (NIS/NIY) anggota.`,
       };
     }
     if (member.status !== "Aktif") {
