@@ -97,19 +97,22 @@ export function AppShell({
 
       <nav
         aria-label="Navigasi bawah"
-        className="fixed inset-x-0 bottom-0 z-30 flex h-16 items-center justify-around border-t border-border bg-card px-4 md:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 flex h-16 items-center justify-between gap-1 overflow-x-auto border-t border-border bg-card px-3 md:hidden"
       >
         {items.map(({ to, label, icon: Icon }) => (
           <Link
             key={to}
             to={to}
             activeProps={{ className: "text-primary" }}
-            className={cn("flex min-w-20 flex-col items-center gap-1 text-muted-foreground")}
+            className={cn(
+              "flex min-w-16 shrink-0 flex-1 flex-col items-center gap-1 text-muted-foreground",
+            )}
           >
             <Icon className="size-5" />
-            <span className="text-[11px] font-bold">{label}</span>
+            <span className="text-center text-[10px] font-bold leading-tight">{label}</span>
           </Link>
         ))}
+
       </nav>
     </div>
   );
