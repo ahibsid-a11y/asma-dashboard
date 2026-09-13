@@ -33,10 +33,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
 import { MemberImportDialog } from "@/components/member-import-dialog";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
 import { deleteMember, listMembers, saveMember, setMemberStatus } from "@/lib/members.functions";
-import { ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS, isMemberAdmin, type AccountType } from "@/lib/roles";
+import { listOrgData } from "@/lib/org.functions";
+import {
+  ACCOUNT_TYPE_LABELS,
+  CATEGORY_POSITIONS,
+  MEMBER_CATEGORIES,
+  MEMBER_CATEGORY_LABELS,
+  categoryOf,
+  isMemberAdmin,
+  type AccountType,
+  type MemberCategory,
+} from "@/lib/roles";
+
 
 export const Route = createFileRoute("/_authenticated/anggota")({
   head: () => ({
