@@ -36,10 +36,8 @@ export function AppShell({
 }) {
   const navigate = useNavigate();
 
-  const items = [
-    { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, show: true },
-    { to: "/anggota", label: "Anggota", icon: Users, show: isMemberAdmin(accountType) },
-  ].filter((item) => item.show);
+  const items = navItemsFor(accountType);
+
 
   async function handleSignOut() {
     await supabase.auth.signOut();
