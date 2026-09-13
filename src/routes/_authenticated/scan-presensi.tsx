@@ -67,12 +67,21 @@ type ScanSession = {
 };
 
 type ScanResult = {
+  ok: true;
   member: { id: string; name: string | null; nis_nip: string | null; account_type: string; class: string | null; dorm: string | null };
   status: "Hadir" | "Telat" | "Alfa";
   scan_time: string;
   violation_created: boolean;
   session_name: string;
 };
+
+type ScanFailure = {
+  ok: false;
+  reason: "unknown_card" | "inactive" | "wrong_session";
+  code: string;
+  message: string;
+};
+
 
 const hhmm = (v: string) => v.slice(0, 5);
 
