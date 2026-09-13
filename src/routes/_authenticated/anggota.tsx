@@ -116,11 +116,13 @@ function MembersPage() {
   const fetchMembers = useServerFn(listMembers);
   const submitMember = useServerFn(saveMember);
   const changeStatus = useServerFn(setMemberStatus);
+  const removeMember = useServerFn(deleteMember);
 
   const [filter, setFilter] = useState<"all" | AccountType>("all");
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [toDelete, setToDelete] = useState<Member | null>(null);
 
   const membersQuery = useQuery({
     queryKey: ["members"],
