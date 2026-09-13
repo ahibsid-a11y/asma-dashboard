@@ -27,11 +27,14 @@ import {
 import { useCurrentProfile } from "@/hooks/use-current-profile";
 import {
   ATTENDANCE_OFFICER_TYPES,
+  assignRfidCard,
   listScanSessions,
   listTodayAttendance,
   processAbsentToday,
   scanAttendance,
+  searchMembersForCard,
 } from "@/lib/attendance.functions";
+
 import { ACCOUNT_TYPE_LABELS, type AccountType } from "@/lib/roles";
 
 export const Route = createFileRoute("/_authenticated/scan-presensi")({
