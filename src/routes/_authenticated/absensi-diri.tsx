@@ -169,11 +169,13 @@ function SelfAttendancePage() {
 
   const counts = useMemo(() => {
     const base = { Hadir: 0, Telat: 0, Izin: 0, Sakit: 0, Alfa: 0 };
+    const rec = base as Record<string, number>;
     for (const it of items) {
-      if (it.status in base) (base as Record<string, number>)[it.status] += 1;
+      if (it.status in base) rec[it.status] = (rec[it.status] ?? 0) + 1;
     }
     return base;
   }, [items]);
+
 
 
   const total = items.length;
