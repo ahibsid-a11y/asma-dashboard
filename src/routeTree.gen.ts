@@ -18,6 +18,7 @@ import { Route as AuthenticatedKalenderRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedKesiswaanRouteImport } from './routes/_authenticated/kesiswaan'
 import { Route as AuthenticatedMutabaahSayaRouteImport } from './routes/_authenticated/mutabaah-saya'
 import { Route as AuthenticatedPelanggaranSayaRouteImport } from './routes/_authenticated/pelanggaran-saya'
+import { Route as AuthenticatedPengaturanSesiRouteImport } from './routes/_authenticated/pengaturan-sesi'
 import { Route as AuthenticatedPresensiRouteImport } from './routes/_authenticated/presensi'
 
 const IndexRoute = IndexRouteImport.update({
@@ -67,6 +68,12 @@ const AuthenticatedPelanggaranSayaRoute =
     path: '/pelanggaran-saya',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedPengaturanSesiRoute =
+  AuthenticatedPengaturanSesiRouteImport.update({
+    id: '/pengaturan-sesi',
+    path: '/pengaturan-sesi',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedPresensiRoute = AuthenticatedPresensiRouteImport.update({
   id: '/presensi',
   path: '/presensi',
@@ -82,6 +89,7 @@ export interface FileRoutesByFullPath {
   '/kesiswaan': typeof AuthenticatedKesiswaanRoute
   '/mutabaah-saya': typeof AuthenticatedMutabaahSayaRoute
   '/pelanggaran-saya': typeof AuthenticatedPelanggaranSayaRoute
+  '/pengaturan-sesi': typeof AuthenticatedPengaturanSesiRoute
   '/presensi': typeof AuthenticatedPresensiRoute
 }
 export interface FileRoutesByTo {
@@ -93,6 +101,7 @@ export interface FileRoutesByTo {
   '/kesiswaan': typeof AuthenticatedKesiswaanRoute
   '/mutabaah-saya': typeof AuthenticatedMutabaahSayaRoute
   '/pelanggaran-saya': typeof AuthenticatedPelanggaranSayaRoute
+  '/pengaturan-sesi': typeof AuthenticatedPengaturanSesiRoute
   '/presensi': typeof AuthenticatedPresensiRoute
 }
 export interface FileRoutesById {
@@ -106,6 +115,7 @@ export interface FileRoutesById {
   '/_authenticated/kesiswaan': typeof AuthenticatedKesiswaanRoute
   '/_authenticated/mutabaah-saya': typeof AuthenticatedMutabaahSayaRoute
   '/_authenticated/pelanggaran-saya': typeof AuthenticatedPelanggaranSayaRoute
+  '/_authenticated/pengaturan-sesi': typeof AuthenticatedPengaturanSesiRoute
   '/_authenticated/presensi': typeof AuthenticatedPresensiRoute
 }
 export interface FileRouteTypes {
@@ -119,6 +129,7 @@ export interface FileRouteTypes {
     | '/kesiswaan'
     | '/mutabaah-saya'
     | '/pelanggaran-saya'
+    | '/pengaturan-sesi'
     | '/presensi'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -130,6 +141,7 @@ export interface FileRouteTypes {
     | '/kesiswaan'
     | '/mutabaah-saya'
     | '/pelanggaran-saya'
+    | '/pengaturan-sesi'
     | '/presensi'
   id:
     | '__root__'
@@ -142,6 +154,7 @@ export interface FileRouteTypes {
     | '/_authenticated/kesiswaan'
     | '/_authenticated/mutabaah-saya'
     | '/_authenticated/pelanggaran-saya'
+    | '/_authenticated/pengaturan-sesi'
     | '/_authenticated/presensi'
   fileRoutesById: FileRoutesById
 }
@@ -215,6 +228,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPelanggaranSayaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/pengaturan-sesi': {
+      id: '/_authenticated/pengaturan-sesi'
+      path: '/pengaturan-sesi'
+      fullPath: '/pengaturan-sesi'
+      preLoaderRoute: typeof AuthenticatedPengaturanSesiRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/presensi': {
       id: '/_authenticated/presensi'
       path: '/presensi'
@@ -233,6 +253,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedKesiswaanRoute: typeof AuthenticatedKesiswaanRoute
   AuthenticatedMutabaahSayaRoute: typeof AuthenticatedMutabaahSayaRoute
   AuthenticatedPelanggaranSayaRoute: typeof AuthenticatedPelanggaranSayaRoute
+  AuthenticatedPengaturanSesiRoute: typeof AuthenticatedPengaturanSesiRoute
   AuthenticatedPresensiRoute: typeof AuthenticatedPresensiRoute
 }
 
@@ -244,6 +265,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedKesiswaanRoute: AuthenticatedKesiswaanRoute,
   AuthenticatedMutabaahSayaRoute: AuthenticatedMutabaahSayaRoute,
   AuthenticatedPelanggaranSayaRoute: AuthenticatedPelanggaranSayaRoute,
+  AuthenticatedPengaturanSesiRoute: AuthenticatedPengaturanSesiRoute,
   AuthenticatedPresensiRoute: AuthenticatedPresensiRoute,
 }
 

@@ -33,6 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { MemberImportDialog } from "@/components/member-import-dialog";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
 import { listMembers, saveMember, setMemberStatus } from "@/lib/members.functions";
 import { ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS, isMemberAdmin, type AccountType } from "@/lib/roles";
@@ -231,6 +232,7 @@ function MembersPage() {
                 ))}
               </SelectContent>
             </Select>
+            <MemberImportDialog existing={membersQuery.data ?? []} />
             <Button type="button" onClick={openCreate}>
               <Plus /> Tambah Anggota
             </Button>
