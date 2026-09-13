@@ -87,7 +87,7 @@ export const saveMember = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const isSantri = data.account_type === "santri";
-    // Email bersifat opsional: bila kosong, sistem membuat alamat internal otomatis.
+    // Alamat login internal hanya dipakai sistem bila email tidak diisi; TIDAK disimpan di data anggota.
     const email =
       data.email ??
       `${
@@ -97,7 +97,7 @@ export const saveMember = createServerFn({ method: "POST" })
     const profileFields = {
       name: data.name,
       display_name: data.name,
-      email,
+      email: data.email ?? null,
       phone: empty(data.phone),
       gender: (data.gender ?? null) as "L" | "P" | null,
       status: data.status,
