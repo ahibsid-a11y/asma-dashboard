@@ -52,6 +52,11 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-feature-blue: var(--feature-blue);
+  --color-feature-orange: var(--feature-orange);
+  --color-feature-emerald: var(--feature-emerald);
+  --color-feature-rose: var(--feature-rose);
+  --color-feature-sky: var(--feature-sky);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -88,6 +93,11 @@
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
+  --feature-blue: oklch(0.94 0.035 270);
+  --feature-orange: oklch(0.95 0.05 65);
+  --feature-emerald: oklch(0.95 0.04 160);
+  --feature-rose: oklch(0.95 0.04 15);
+  --feature-sky: oklch(0.95 0.035 230);
   --sidebar: oklch(0.984 0.003 247.858);
   --sidebar-foreground: oklch(0.129 0.042 264.695);
   --sidebar-primary: oklch(0.208 0.042 265.755);
