@@ -278,14 +278,14 @@ function ScanPresensiPage() {
                   scanMutation.mutate(card.trim());
                 }}
               >
-                <Label htmlFor="rfid">Nomor kartu RFID</Label>
+                <Label htmlFor="rfid">Nomor kartu RFID atau nomor induk</Label>
                 <div className="flex gap-2">
                   <Input
                     id="rfid"
                     ref={inputRef}
                     autoFocus
                     autoComplete="off"
-                    placeholder="Tempel kartu atau ketik nomor…"
+                    placeholder="Tempel kartu, atau ketik nomor kartu / NIS-NIP…"
                     value={card}
                     onChange={(e) => setCard(e.target.value)}
                   />
@@ -294,9 +294,61 @@ function ScanPresensiPage() {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Alat pembaca RFID biasanya mengirim nomor kartu lalu menekan Enter otomatis.
+                  Alat pembaca RFID biasanya mengirim nomor kartu lalu menekan Enter otomatis. Bila
+                  kartu belum terdaftar, Anda tetap bisa mengetik nomor induk (NIS/NIP) anggota.
                 </p>
               </form>
+
+              {unknownCard && (
+                <div className="mt-4 rounded-lg border border-accent/40 bg-accent/10 p-4">
+                  <p className="text-sm font-bold text-foreground">
+                    Kartu "{unknownCard}" belum terdaftar
+                  </p>
+                  {isMemberAdmin ? (
+                    <>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Pilih anggota pemilik kartu ini, lalu kartu langsung didaftarkan dan
+                        presensinya dicatat.
+                      </p>
+                      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                        <Select value={assignTo} onValueChange={setAssignTo}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pilih anggota…" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(candidatesQuery.data ?? []).map((m: any) => (
+                              <SelectItem key={m.id} value={m.id}>
+                                {m.name ?? "Tanpa nama"}
+                                {m.nis_nip ? ` · ${m.nis_nip}` : ""}
+                                {m.rfid_card ? " (sudah ada kartu)" : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          type="button"
+                          disabled={!assignTo || assignMutation.isPending}
+                          onClick={() =>
+                            assignMutation.mutate({ user_id: assignTo, rfid_card: unknownCard })
+                          }
+                        >
+                          Daftarkan & Catat
+                        </Button>
+                        <Button type="button" variant="ghost" onClick={() => setUnknownCard(null)}>
+                          Tutup
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Minta admin (Super Admin / Mudir / Kepala Sekolah / Kepala TU) mendaftarkan
+                      nomor kartu ini pada data anggota, atau ketik nomor induk anggota untuk
+                      mencatat presensi sekarang.
+                    </p>
+                  )}
+                </div>
+              )}
+
 
               <div className="mt-5 border-t border-border pt-4">
                 <Button
