@@ -19,6 +19,9 @@ import type { AccountType } from "./roles";
 export type NavKey =
   | "dashboard"
   | "anggota"
+  | "manajemen-kelas"
+  | "manajemen-asrama"
+  | "manajemen-halaqoh"
   | "presensi"
   | "scan-presensi"
   | "presensi-insidental"
@@ -29,6 +32,7 @@ export type NavKey =
   | "mutabaah-saya"
   | "pelanggaran-saya"
   | "profil";
+
 
 export type NavItem = {
   key: NavKey;

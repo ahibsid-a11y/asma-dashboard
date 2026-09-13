@@ -17,6 +17,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedKalenderRouteImport } from './routes/_authenticated/kalender'
 import { Route as AuthenticatedKesiswaanRouteImport } from './routes/_authenticated/kesiswaan'
 import { Route as AuthenticatedManajemenAsramaRouteImport } from './routes/_authenticated/manajemen-asrama'
+import { Route as AuthenticatedManajemenHalaqohRouteImport } from './routes/_authenticated/manajemen-halaqoh'
 import { Route as AuthenticatedManajemenKelasRouteImport } from './routes/_authenticated/manajemen-kelas'
 import { Route as AuthenticatedMutabaahSayaRouteImport } from './routes/_authenticated/mutabaah-saya'
 import { Route as AuthenticatedPelanggaranSayaRouteImport } from './routes/_authenticated/pelanggaran-saya'
@@ -65,6 +66,12 @@ const AuthenticatedManajemenAsramaRoute =
   AuthenticatedManajemenAsramaRouteImport.update({
     id: '/manajemen-asrama',
     path: '/manajemen-asrama',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedManajemenHalaqohRoute =
+  AuthenticatedManajemenHalaqohRouteImport.update({
+    id: '/manajemen-halaqoh',
+    path: '/manajemen-halaqoh',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedManajemenKelasRoute =
@@ -123,6 +130,7 @@ export interface FileRoutesByFullPath {
   '/kalender': typeof AuthenticatedKalenderRoute
   '/kesiswaan': typeof AuthenticatedKesiswaanRoute
   '/manajemen-asrama': typeof AuthenticatedManajemenAsramaRoute
+  '/manajemen-halaqoh': typeof AuthenticatedManajemenHalaqohRoute
   '/manajemen-kelas': typeof AuthenticatedManajemenKelasRoute
   '/mutabaah-saya': typeof AuthenticatedMutabaahSayaRoute
   '/pelanggaran-saya': typeof AuthenticatedPelanggaranSayaRoute
@@ -140,6 +148,7 @@ export interface FileRoutesByTo {
   '/kalender': typeof AuthenticatedKalenderRoute
   '/kesiswaan': typeof AuthenticatedKesiswaanRoute
   '/manajemen-asrama': typeof AuthenticatedManajemenAsramaRoute
+  '/manajemen-halaqoh': typeof AuthenticatedManajemenHalaqohRoute
   '/manajemen-kelas': typeof AuthenticatedManajemenKelasRoute
   '/mutabaah-saya': typeof AuthenticatedMutabaahSayaRoute
   '/pelanggaran-saya': typeof AuthenticatedPelanggaranSayaRoute
@@ -159,6 +168,7 @@ export interface FileRoutesById {
   '/_authenticated/kalender': typeof AuthenticatedKalenderRoute
   '/_authenticated/kesiswaan': typeof AuthenticatedKesiswaanRoute
   '/_authenticated/manajemen-asrama': typeof AuthenticatedManajemenAsramaRoute
+  '/_authenticated/manajemen-halaqoh': typeof AuthenticatedManajemenHalaqohRoute
   '/_authenticated/manajemen-kelas': typeof AuthenticatedManajemenKelasRoute
   '/_authenticated/mutabaah-saya': typeof AuthenticatedMutabaahSayaRoute
   '/_authenticated/pelanggaran-saya': typeof AuthenticatedPelanggaranSayaRoute
@@ -178,6 +188,7 @@ export interface FileRouteTypes {
     | '/kalender'
     | '/kesiswaan'
     | '/manajemen-asrama'
+    | '/manajemen-halaqoh'
     | '/manajemen-kelas'
     | '/mutabaah-saya'
     | '/pelanggaran-saya'
@@ -195,6 +206,7 @@ export interface FileRouteTypes {
     | '/kalender'
     | '/kesiswaan'
     | '/manajemen-asrama'
+    | '/manajemen-halaqoh'
     | '/manajemen-kelas'
     | '/mutabaah-saya'
     | '/pelanggaran-saya'
@@ -213,6 +225,7 @@ export interface FileRouteTypes {
     | '/_authenticated/kalender'
     | '/_authenticated/kesiswaan'
     | '/_authenticated/manajemen-asrama'
+    | '/_authenticated/manajemen-halaqoh'
     | '/_authenticated/manajemen-kelas'
     | '/_authenticated/mutabaah-saya'
     | '/_authenticated/pelanggaran-saya'
@@ -286,6 +299,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedManajemenAsramaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/manajemen-halaqoh': {
+      id: '/_authenticated/manajemen-halaqoh'
+      path: '/manajemen-halaqoh'
+      fullPath: '/manajemen-halaqoh'
+      preLoaderRoute: typeof AuthenticatedManajemenHalaqohRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/manajemen-kelas': {
       id: '/_authenticated/manajemen-kelas'
       path: '/manajemen-kelas'
@@ -352,6 +372,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedKalenderRoute: typeof AuthenticatedKalenderRoute
   AuthenticatedKesiswaanRoute: typeof AuthenticatedKesiswaanRoute
   AuthenticatedManajemenAsramaRoute: typeof AuthenticatedManajemenAsramaRoute
+  AuthenticatedManajemenHalaqohRoute: typeof AuthenticatedManajemenHalaqohRoute
   AuthenticatedManajemenKelasRoute: typeof AuthenticatedManajemenKelasRoute
   AuthenticatedMutabaahSayaRoute: typeof AuthenticatedMutabaahSayaRoute
   AuthenticatedPelanggaranSayaRoute: typeof AuthenticatedPelanggaranSayaRoute
@@ -369,6 +390,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedKalenderRoute: AuthenticatedKalenderRoute,
   AuthenticatedKesiswaanRoute: AuthenticatedKesiswaanRoute,
   AuthenticatedManajemenAsramaRoute: AuthenticatedManajemenAsramaRoute,
+  AuthenticatedManajemenHalaqohRoute: AuthenticatedManajemenHalaqohRoute,
   AuthenticatedManajemenKelasRoute: AuthenticatedManajemenKelasRoute,
   AuthenticatedMutabaahSayaRoute: AuthenticatedMutabaahSayaRoute,
   AuthenticatedPelanggaranSayaRoute: AuthenticatedPelanggaranSayaRoute,
