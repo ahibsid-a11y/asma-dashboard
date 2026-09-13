@@ -302,7 +302,7 @@ function MembersPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nama</TableHead>
-                  <TableHead>Jenis Akun</TableHead>
+                  <TableHead>Kategori &amp; Jabatan</TableHead>
                   <TableHead>No. Induk</TableHead>
                   <TableHead>Kelas / Asrama</TableHead>
                   <TableHead>Status</TableHead>
