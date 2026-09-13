@@ -236,3 +236,20 @@ export const importMembers = createServerFn({ method: "POST" })
 
     return { created, failures };
   });
+
+export const deleteMember = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context, data }) => {
+    const ctx = context as Ctx;
+    await assertAdmin(ctx);
+    if (data.id === ctx.userId) throw new Error("Anda tidak dapat menghapus akun Anda sendiri");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Data terkait (presensi, pelanggaran, kegiatan) ikut terhapus lewat ON DELETE CASCADE.
+    const { error } = await supabaseAdmin.from("profiles").delete().eq("id", data.id);
+    if (error) throw new Error(friendlyDbError(error.message));
+    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(data.id);
+    if (authError) throw new Error(friendlyDbError(authError.message));
+    return { ok: true };
+  });
