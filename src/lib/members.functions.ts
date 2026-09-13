@@ -111,10 +111,9 @@ export const saveMember = createServerFn({ method: "POST" })
     };
 
     if (data.id) {
-      const { email: newEmail, ...rest } = profileFields;
       const { error } = await supabaseAdmin
         .from("profiles")
-        .update(data.email ? { ...rest, email: newEmail } : rest)
+        .update(profileFields)
         .eq("id", data.id);
       if (error) throw new Error(friendlyDbError(error.message));
       const authUpdate: Record<string, unknown> = {
