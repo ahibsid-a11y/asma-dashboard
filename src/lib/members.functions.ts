@@ -15,12 +15,13 @@ const optionalText = (max: number) =>
 
 const memberSchema = z.object({
   id: z.preprocess(blankToUndefined, z.string().uuid().optional()),
-  name: z.string().trim().min(2, "Nama minimal 2 karakter"),
+  name: z.string().trim().min(1, "Nama wajib diisi"),
   email: z.preprocess(blankToUndefined, z.string().trim().email("Email tidak valid").optional()),
   password: z.preprocess(
     blankToUndefined,
-    z.string().min(8, "Password minimal 8 karakter").optional(),
+    z.string().min(1, "Password wajib diisi").optional(),
   ),
+
   phone: optionalText(30),
   gender: z.preprocess(blankToUndefined, z.enum(["L", "P"]).optional()),
   status: z.enum(["Aktif", "Nonaktif"]).default("Aktif"),
@@ -175,8 +176,9 @@ export const setMemberStatus = createServerFn({ method: "POST" })
   });
 
 const importRowSchema = z.object({
-  name: z.string().trim().min(2),
+  name: z.string().trim().min(1),
   nis_nip: z.string().trim().min(1),
+
   account_type: accountTypeSchema,
   class: z.string().trim().max(80).optional().default(""),
   dorm: z.string().trim().max(120).optional().default(""),
