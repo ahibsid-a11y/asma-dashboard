@@ -124,3 +124,68 @@ export const setMemberStatus = createServerFn({ method: "POST" })
     }
     return { ok: true };
   });
+
+const importRowSchema = z.object({
+  name: z.string().trim().min(2),
+  nis_nip: z.string().trim().min(1),
+  account_type: accountTypeSchema,
+  class: z.string().trim().max(80).optional().default(""),
+  dorm: z.string().trim().max(120).optional().default(""),
+  halaqoh: z.string().trim().max(120).optional().default(""),
+  phone: z.string().trim().max(30).optional().default(""),
+  gender: z.enum(["L", "P"]).optional().nullable(),
+  rfid_card: z.string().trim().max(60).optional().default(""),
+});
+
+export const importMembers = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) =>
+    z.object({ rows: z.array(importRowSchema).min(1).max(1000) }).parse(data),
+  )
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context as Ctx);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    let created = 0;
+    const failures: { nis_nip: string; message: string }[] = [];
+
+    for (const row of data.rows) {
+      const email = `${row.nis_nip.toLowerCase().replace(/[^a-z0-9]/g, "")}@ahibs.local`;
+      const isSantri = row.account_type === "santri";
+      try {
+        const { data: user, error: authError } = await supabaseAdmin.auth.admin.createUser({
+          email,
+          password: "Ahibs1234",
+          email_confirm: true,
+          user_metadata: {
+            name: row.name,
+            display_name: row.name,
+            account_type: row.account_type,
+          },
+        });
+        if (authError || !user?.user) throw new Error(authError?.message ?? "Gagal membuat akun");
+
+        const { error } = await supabaseAdmin.from("profiles").upsert({
+          id: user.user.id,
+          name: row.name,
+          display_name: row.name,
+          email,
+          phone: empty(row.phone),
+          gender: (row.gender ?? null) as "L" | "P" | null,
+          status: "Aktif" as const,
+          account_type: row.account_type,
+          class: isSantri ? empty(row.class) : null,
+          dorm: isSantri ? empty(row.dorm) : null,
+          halaqoh: empty(row.halaqoh),
+          nis_nip: row.nis_nip,
+          rfid_card: empty(row.rfid_card),
+        });
+        if (error) throw new Error(error.message);
+        created += 1;
+      } catch (error) {
+        failures.push({ nis_nip: row.nis_nip, message: (error as Error).message });
+      }
+    }
+
+    return { created, failures };
+  });
