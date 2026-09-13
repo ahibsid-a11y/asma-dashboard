@@ -411,10 +411,9 @@ function MembersPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
-                <Label htmlFor="nis_nip">Nomor Induk (NIS/NIP)</Label>
+                <Label htmlFor="nis_nip">Nomor Induk (NIS/NIY) — opsional</Label>
                 <Input
                   id="nis_nip"
-                  required
                   value={form.nis_nip}
                   onChange={(e) => setForm((f) => ({ ...f, nis_nip: e.target.value }))}
                 />
