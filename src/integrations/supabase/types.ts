@@ -16,28 +16,85 @@ export type Database = {
     Tables: {
       profiles: {
         Row: {
+          account_type: Database["public"]["Enums"]["app_role"] | null
+          avatar: string | null
           avatar_url: string | null
+          class: string | null
           created_at: string
           display_name: string | null
+          dorm: string | null
+          email: string | null
+          gender: Database["public"]["Enums"]["gender_type"] | null
+          halaqoh: string | null
           id: string
+          name: string | null
+          nis_nip: string | null
+          phone: string | null
           preferences: Json
+          rfid_card: string | null
+          status: Database["public"]["Enums"]["member_status"]
           updated_at: string
         }
         Insert: {
+          account_type?: Database["public"]["Enums"]["app_role"] | null
+          avatar?: string | null
           avatar_url?: string | null
+          class?: string | null
           created_at?: string
           display_name?: string | null
+          dorm?: string | null
+          email?: string | null
+          gender?: Database["public"]["Enums"]["gender_type"] | null
+          halaqoh?: string | null
           id: string
+          name?: string | null
+          nis_nip?: string | null
+          phone?: string | null
           preferences?: Json
+          rfid_card?: string | null
+          status?: Database["public"]["Enums"]["member_status"]
           updated_at?: string
         }
         Update: {
+          account_type?: Database["public"]["Enums"]["app_role"] | null
+          avatar?: string | null
           avatar_url?: string | null
+          class?: string | null
           created_at?: string
           display_name?: string | null
+          dorm?: string | null
+          email?: string | null
+          gender?: Database["public"]["Enums"]["gender_type"] | null
+          halaqoh?: string | null
           id?: string
+          name?: string | null
+          nis_nip?: string | null
+          phone?: string | null
           preferences?: Json
+          rfid_card?: string | null
+          status?: Database["public"]["Enums"]["member_status"]
           updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
         }
         Relationships: []
       }
@@ -46,10 +103,32 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_member_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role:
+        | "super_admin"
+        | "mudir"
+        | "kepala_sekolah"
+        | "waka_kurikulum"
+        | "kabid_kesantrian"
+        | "musyrif_asrama"
+        | "musyrif_halaqoh"
+        | "wali_kelas"
+        | "guru_mapel"
+        | "kepala_tu"
+        | "kepala_rt_sarpras"
+        | "tendik"
+        | "santri"
+      gender_type: "L" | "P"
+      member_status: "Aktif" | "Nonaktif"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -176,6 +255,24 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: [
+        "super_admin",
+        "mudir",
+        "kepala_sekolah",
+        "waka_kurikulum",
+        "kabid_kesantrian",
+        "musyrif_asrama",
+        "musyrif_halaqoh",
+        "wali_kelas",
+        "guru_mapel",
+        "kepala_tu",
+        "kepala_rt_sarpras",
+        "tendik",
+        "santri",
+      ],
+      gender_type: ["L", "P"],
+      member_status: ["Aktif", "Nonaktif"],
+    },
   },
 } as const
