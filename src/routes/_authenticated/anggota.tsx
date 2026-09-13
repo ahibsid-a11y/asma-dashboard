@@ -156,6 +156,16 @@ function MembersPage() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => removeMember({ data: { id } }),
+    onSuccess: async () => {
+      toast.success("Akun anggota dihapus permanen");
+      setToDelete(null);
+      await queryClient.invalidateQueries({ queryKey: ["members"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
   const rows = useMemo(() => {
     const list = membersQuery.data ?? [];
     const q = search.trim().toLowerCase();
