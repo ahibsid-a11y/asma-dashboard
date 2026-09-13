@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/table";
 import { MemberImportDialog } from "@/components/member-import-dialog";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
-import { listMembers, saveMember, setMemberStatus } from "@/lib/members.functions";
+import { deleteMember, listMembers, saveMember, setMemberStatus } from "@/lib/members.functions";
 import { ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS, isMemberAdmin, type AccountType } from "@/lib/roles";
 
 export const Route = createFileRoute("/_authenticated/anggota")({
