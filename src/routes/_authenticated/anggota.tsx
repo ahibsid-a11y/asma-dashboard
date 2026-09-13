@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { Plus, Search } from "lucide-react";
+import { Eye, EyeOff, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app-shell";
@@ -123,6 +123,7 @@ function MembersPage() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [toDelete, setToDelete] = useState<Member | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const membersQuery = useQuery({
     queryKey: ["members"],
