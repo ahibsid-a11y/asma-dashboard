@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   ListChecks,
   ShieldAlert,
+  Timer,
   UserCheck,
   Users,
 } from "lucide-react";
