@@ -1,5 +1,6 @@
 import {
   CalendarDays,
+  CalendarPlus,
   ClipboardCheck,
   GraduationCap,
   LayoutDashboard,
@@ -19,6 +20,7 @@ export type NavKey =
   | "anggota"
   | "presensi"
   | "scan-presensi"
+  | "presensi-insidental"
   | "pengaturan-sesi"
   | "absensi-diri"
   | "kalender"
@@ -42,6 +44,12 @@ export const NAV_ITEMS: Record<NavKey, NavItem> = {
     to: "/scan-presensi",
     label: "Scan Presensi",
     icon: ScanLine,
+  },
+  "presensi-insidental": {
+    key: "presensi-insidental",
+    to: "/presensi-insidental",
+    label: "Presensi Insidental",
+    icon: CalendarPlus,
   },
   "pengaturan-sesi": {
     key: "pengaturan-sesi",
