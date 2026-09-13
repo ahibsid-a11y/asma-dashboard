@@ -78,6 +78,8 @@ type Member = {
   gender: "L" | "P" | null;
   status: "Aktif" | "Nonaktif";
   account_type: AccountType | null;
+  category: MemberCategory | null;
+  positions: AccountType[];
   class: string | null;
   dorm: string | null;
   halaqoh: string | null;
@@ -92,9 +94,10 @@ type FormState = {
   email: string;
   password: string;
   phone: string;
-  gender: "L" | "P";
+  gender: "L" | "P" | "";
   status: "Aktif" | "Nonaktif";
-  account_type: AccountType;
+  category: MemberCategory;
+  positions: AccountType[];
   class: string;
   dorm: string;
   halaqoh: string;
@@ -108,9 +111,10 @@ const emptyForm: FormState = {
   email: "",
   password: "",
   phone: "",
-  gender: "L",
+  gender: "",
   status: "Aktif",
-  account_type: "santri",
+  category: "siswa",
+  positions: [],
   class: "",
   dorm: "",
   halaqoh: "",
@@ -118,6 +122,9 @@ const emptyForm: FormState = {
   rfid_card: "",
   avatar: "",
 };
+
+const NONE = "__none__";
+
 
 function MembersPage() {
   const profileQuery = useCurrentProfile();
