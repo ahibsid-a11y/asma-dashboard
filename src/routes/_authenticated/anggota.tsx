@@ -551,35 +551,38 @@ function MembersPage() {
 
             {isSantri && (
               <div className="grid gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="class">Kelas</Label>
-                  <Input
-                    id="class"
-                    placeholder="7A Tahfizh"
-                    value={form.class}
-                    onChange={(e) => setForm((f) => ({ ...f, class: e.target.value }))}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="dorm">Asrama</Label>
-                  <Input
-                    id="dorm"
-                    placeholder="Asrama Abu Bakar - Kamar 102"
-                    value={form.dorm}
-                    onChange={(e) => setForm((f) => ({ ...f, dorm: e.target.value }))}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="halaqoh">Halaqoh</Label>
-                  <Input
-                    id="halaqoh"
-                    placeholder="Halaqoh Ustadz Ahmad"
-                    value={form.halaqoh}
-                    onChange={(e) => setForm((f) => ({ ...f, halaqoh: e.target.value }))}
-                  />
-                </div>
+                {(
+                  [
+                    ["class", "Kelas", classOptions],
+                    ["dorm", "Asrama", dormOptions],
+                    ["halaqoh", "Halaqoh", halaqohOptions],
+                  ] as const
+                ).map(([field, label, options]) => (
+                  <div key={field} className="grid gap-2">
+                    <Label htmlFor={field}>{label} (opsional)</Label>
+                    <Select
+                      value={form[field] || NONE}
+                      onValueChange={(v) =>
+                        setForm((f) => ({ ...f, [field]: v === NONE ? "" : v }))
+                      }
+                    >
+                      <SelectTrigger id={field}>
+                        <SelectValue placeholder={`Pilih ${label.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NONE}>Belum ditentukan</SelectItem>
+                        {options.map((o) => (
+                          <SelectItem key={o.id} value={o.name}>
+                            {o.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
               </div>
             )}
+
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
