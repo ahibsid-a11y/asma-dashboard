@@ -90,10 +90,10 @@ function Index() {
 
           <form className="space-y-5" onSubmit={handleSubmit}>
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-semibold text-foreground">Email</label>
+              <label htmlFor="email" className="text-sm font-semibold text-foreground">Nama atau Email</label>
               <div className="relative">
                 <Mail aria-hidden="true" className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input id="email" type="email" autoComplete="email" placeholder="nama@ahibs.sch.id" className="h-11 pl-10" value={email} onChange={(event) => setEmail(event.target.value)} required />
+                <Input id="email" type="text" autoComplete="username" placeholder="Nama lengkap atau nama@ahibs.sch.id" className="h-11 pl-10" value={email} onChange={(event) => setEmail(event.target.value)} required />
               </div>
             </div>
             <div className="space-y-2">
