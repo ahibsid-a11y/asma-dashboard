@@ -525,6 +525,32 @@ function MembersPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={toDelete !== null} onOpenChange={(v) => !v && setToDelete(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Hapus akun anggota?</DialogTitle>
+            <DialogDescription>
+              Akun <strong>{toDelete?.name ?? "-"}</strong> beserta seluruh riwayat presensi dan
+              pelanggarannya akan dihapus permanen dan tidak dapat dipulihkan. Bila hanya ingin
+              menghentikan akses, gunakan tombol Nonaktifkan.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setToDelete(null)}>
+              Batal
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deleteMutation.isPending}
+              onClick={() => toDelete && deleteMutation.mutate(toDelete.id)}
+            >
+              {deleteMutation.isPending ? "Menghapus…" : "Hapus Permanen"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
