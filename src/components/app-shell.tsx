@@ -1,11 +1,12 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, LogOut, Users } from "lucide-react";
+import { LogOut } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { isMemberAdmin } from "@/lib/roles";
+import { navItemsFor } from "@/lib/nav";
 import { cn } from "@/lib/utils";
+
 
 function Brand() {
   return (
