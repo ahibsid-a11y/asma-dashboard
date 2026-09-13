@@ -65,7 +65,7 @@ export const Route = createFileRoute("/_authenticated/rekap-presensi")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: RecapPage;
+  component: RecapPage,
 });
 
 type Period = "harian" | "mingguan" | "bulanan";
