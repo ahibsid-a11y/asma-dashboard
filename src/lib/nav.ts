@@ -9,6 +9,7 @@ import {
   ShieldAlert,
   Timer,
   UserCheck,
+  UserCog,
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -26,7 +27,8 @@ export type NavKey =
   | "kalender"
   | "kesiswaan"
   | "mutabaah-saya"
-  | "pelanggaran-saya";
+  | "pelanggaran-saya"
+  | "profil";
 
 export type NavItem = {
   key: NavKey;
@@ -72,26 +74,27 @@ export const NAV_ITEMS: Record<NavKey, NavItem> = {
     label: "Pelanggaran Saya",
     icon: ShieldAlert,
   },
+  profil: { key: "profil", to: "/profil", label: "Profil Saya", icon: UserCog },
 };
 
 const MENUS: Record<AccountType, NavKey[]> = {
-  super_admin: ["dashboard", "anggota", "presensi", "scan-presensi", "presensi-insidental", "pengaturan-sesi", "kalender", "kesiswaan"],
-  mudir: ["dashboard", "anggota", "presensi", "scan-presensi", "presensi-insidental", "pengaturan-sesi", "absensi-diri", "kalender", "kesiswaan"],
-  kepala_sekolah: ["dashboard", "anggota", "presensi", "scan-presensi", "presensi-insidental", "pengaturan-sesi", "absensi-diri", "kalender", "kesiswaan"],
-  kepala_tu: ["dashboard", "anggota", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan"],
-  waka_kurikulum: ["dashboard", "presensi", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan"],
-  kabid_kesantrian: ["dashboard", "presensi", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan"],
+  super_admin: ["dashboard", "anggota", "presensi", "scan-presensi", "presensi-insidental", "pengaturan-sesi", "kalender", "kesiswaan, "profil"],
+  mudir: ["dashboard", "anggota", "presensi", "scan-presensi", "presensi-insidental", "pengaturan-sesi", "absensi-diri", "kalender", "kesiswaan, "profil"],
+  kepala_sekolah: ["dashboard", "anggota", "presensi", "scan-presensi", "presensi-insidental", "pengaturan-sesi", "absensi-diri", "kalender", "kesiswaan, "profil"],
+  kepala_tu: ["dashboard", "anggota", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan, "profil"],
+  waka_kurikulum: ["dashboard", "presensi", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan, "profil"],
+  kabid_kesantrian: ["dashboard", "presensi", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan, "profil"],
 
-  musyrif_asrama: ["dashboard", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan"],
-  musyrif_halaqoh: ["dashboard", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan"],
-  wali_kelas: ["dashboard", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan"],
-  guru_mapel: ["dashboard", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan"],
-  kepala_rt_sarpras: ["dashboard", "presensi-insidental", "absensi-diri", "kalender"],
-  tendik: ["dashboard", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender"],
-  santri: ["dashboard", "absensi-diri", "mutabaah-saya", "pelanggaran-saya", "kalender"],
+  musyrif_asrama: ["dashboard", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan, "profil"],
+  musyrif_halaqoh: ["dashboard", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan, "profil"],
+  wali_kelas: ["dashboard", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan, "profil"],
+  guru_mapel: ["dashboard", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan, "profil"],
+  kepala_rt_sarpras: ["dashboard", "presensi-insidental", "absensi-diri", "kalender, "profil"],
+  tendik: ["dashboard", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender, "profil"],
+  santri: ["dashboard", "absensi-diri", "mutabaah-saya", "pelanggaran-saya", "kalender, "profil"],
 };
 
 export function navItemsFor(accountType?: string | null): NavItem[] {
-  const keys = MENUS[accountType as AccountType] ?? ["dashboard"];
+  const keys = MENUS[accountType as AccountType] ?? ["dashboard, "profil"];
   return keys.map((key) => NAV_ITEMS[key]);
 }

@@ -219,7 +219,7 @@ export const importMembers = createServerFn({ method: "POST" })
           id: user.user.id,
           name: row.name,
           display_name: row.name,
-          email,
+          email: null,
           phone: empty(row.phone),
           gender: (row.gender ?? null) as "L" | "P" | null,
           status: "Aktif" as const,
