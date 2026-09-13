@@ -1,4 +1,6 @@
 import {
+  BedDouble,
+  BookOpen,
   CalendarDays,
   CalendarPlus,
   ClipboardCheck,
@@ -6,12 +8,14 @@ import {
   LayoutDashboard,
   ListChecks,
   ScanLine,
+  School,
   ShieldAlert,
   Timer,
   UserCheck,
   UserCog,
   Users,
 } from "lucide-react";
+
 import type { LucideIcon } from "lucide-react";
 
 import type { AccountType } from "./roles";
