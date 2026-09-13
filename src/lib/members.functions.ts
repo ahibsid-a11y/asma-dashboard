@@ -67,7 +67,7 @@ export const saveMember = createServerFn({ method: "POST" })
       display_name: data.name,
       email: data.email,
       phone: empty(data.phone),
-      gender: empty(data.gender),
+      gender: (data.gender ?? null) as "L" | "P" | null,
       status: data.status,
       account_type: data.account_type,
       class: isSantri ? empty(data.class) : null,
