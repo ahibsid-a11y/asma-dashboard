@@ -414,10 +414,10 @@ function CalendarPage() {
         ) : (
           <Card className="overflow-hidden p-0">
             <div className="flex border-b border-border bg-muted/40">
-              <div className="w-14 shrink-0" />
+              <div className="w-16 shrink-0" />
               {timeGridDays.map((d) => (
-                <div key={d} className="flex-1 border-s border-border px-2 py-2 text-center">
-                  <p className="text-xs uppercase text-muted-foreground">
+                <div key={d} className="min-w-0 flex-1 border-s border-border px-1.5 py-2 text-center">
+                  <p className="text-[11px] uppercase text-muted-foreground">
                     {DAY_NAMES[(parseISO(d).getDay() + 6) % 7]}
                   </p>
                   <p
@@ -442,50 +442,52 @@ function CalendarPage() {
                 </div>
               ))}
             </div>
-            <div className="flex overflow-x-auto">
-              <div className="w-14 shrink-0">
-                {hours.map((h) => (
-                  <div
-                    key={h}
-                    className="relative border-b border-border text-[11px] text-muted-foreground"
-                    style={{ height: HOUR_PX }}
-                  >
-                    <span className="absolute -top-2 end-1.5">{pad(h)}:00</span>
-                  </div>
-                ))}
-              </div>
-              {timeGridDays.map((d) => (
-                <div key={d} className="relative flex-1 border-s border-border">
+            <div className="max-h-[70vh] overflow-y-auto">
+              <div className="flex">
+                <div className="sticky start-0 z-10 w-16 shrink-0 bg-card">
                   {hours.map((h) => (
                     <div
                       key={h}
-                      className="border-b border-border"
+                      className="flex items-start justify-end border-b border-e border-border pe-2 pt-1 text-[11px] tabular-nums text-muted-foreground"
                       style={{ height: HOUR_PX }}
-                      onDoubleClick={() => canManage && openCreate(d)}
-                    />
+                    >
+                      {pad(h)}:00
+                    </div>
                   ))}
-                  {timedEvents(d).map((e) => {
-                    const start = minutesOf(e.start_time) ?? START_HOUR * 60;
-                    const end = minutesOf(e.end_time) ?? start + 60;
-                    const top = ((start - START_HOUR * 60) / 60) * HOUR_PX;
-                    const height = Math.max(22, ((end - start) / 60) * HOUR_PX - 2);
-                    return (
-                      <button
-                        key={e.id}
-                        type="button"
-                        onClick={() => setDetail(e)}
-                        className={`absolute inset-x-1 overflow-hidden rounded-md border px-1.5 py-1 text-start text-[11px] font-medium shadow-sm ${colorOf(e.color).chip}`}
-                        style={{ top, height }}
-                      >
-                        <span className="block truncate">{e.title}</span>
-                        <span className="block truncate opacity-70">
-                          {hhmm(e.start_time)}–{hhmm(e.end_time)}
-                        </span>
-                      </button>
-                    );
-                  })}
                 </div>
-              ))}
+                {timeGridDays.map((d) => (
+                  <div key={d} className="relative min-w-0 flex-1 border-s border-border">
+                    {hours.map((h) => (
+                      <div
+                        key={h}
+                        className="border-b border-border"
+                        style={{ height: HOUR_PX }}
+                        onDoubleClick={() => canManage && openCreate(d)}
+                      />
+                    ))}
+                    {timedEvents(d).map((e) => {
+                      const start = minutesOf(e.start_time) ?? START_HOUR * 60;
+                      const end = minutesOf(e.end_time) ?? start + 60;
+                      const top = ((start - START_HOUR * 60) / 60) * HOUR_PX;
+                      const height = Math.max(24, ((end - start) / 60) * HOUR_PX - 2);
+                      return (
+                        <button
+                          key={e.id}
+                          type="button"
+                          onClick={() => setDetail(e)}
+                          className={`absolute inset-x-0.5 overflow-hidden rounded-md border px-1.5 py-1 text-start text-[11px] font-medium leading-tight shadow-sm ${colorOf(e.color).chip}`}
+                          style={{ top, height }}
+                        >
+                          <span className="block truncate">{e.title}</span>
+                          <span className="block truncate opacity-70">
+                            {hhmm(e.start_time)}–{hhmm(e.end_time)}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
             </div>
           </Card>
         )}
