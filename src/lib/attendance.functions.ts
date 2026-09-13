@@ -43,7 +43,7 @@ function jakartaMinutes(date = new Date()) {
     minute: "2-digit",
     hour12: false,
   }).format(date);
-  const [h, m] = parts.split(":").map(Number);
+  const [h = 0, m = 0] = parts.split(":").map(Number);
   return h * 60 + m;
 }
 
@@ -57,7 +57,7 @@ function jakartaDate(date = new Date()) {
 }
 
 const toMinutes = (hhmm: string) => {
-  const [h, m] = hhmm.slice(0, 5).split(":").map(Number);
+  const [h = 0, m = 0] = hhmm.slice(0, 5).split(":").map(Number);
   return h * 60 + m;
 };
 
