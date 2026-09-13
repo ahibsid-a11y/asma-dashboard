@@ -11,8 +11,14 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthenticatedAbsensiDiriRouteImport } from './routes/_authenticated/absensi-diri'
 import { Route as AuthenticatedAnggotaRouteImport } from './routes/_authenticated/anggota'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedKalenderRouteImport } from './routes/_authenticated/kalender'
+import { Route as AuthenticatedKesiswaanRouteImport } from './routes/_authenticated/kesiswaan'
+import { Route as AuthenticatedMutabaahSayaRouteImport } from './routes/_authenticated/mutabaah-saya'
+import { Route as AuthenticatedPelanggaranSayaRouteImport } from './routes/_authenticated/pelanggaran-saya'
+import { Route as AuthenticatedPresensiRouteImport } from './routes/_authenticated/presensi'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -23,6 +29,12 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAbsensiDiriRoute =
+  AuthenticatedAbsensiDiriRouteImport.update({
+    id: '/absensi-diri',
+    path: '/absensi-diri',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAnggotaRoute = AuthenticatedAnggotaRouteImport.update({
   id: '/anggota',
   path: '/anggota',
@@ -33,35 +45,104 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedKalenderRoute = AuthenticatedKalenderRouteImport.update({
+  id: '/kalender',
+  path: '/kalender',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedKesiswaanRoute = AuthenticatedKesiswaanRouteImport.update({
+  id: '/kesiswaan',
+  path: '/kesiswaan',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedMutabaahSayaRoute =
+  AuthenticatedMutabaahSayaRouteImport.update({
+    id: '/mutabaah-saya',
+    path: '/mutabaah-saya',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedPelanggaranSayaRoute =
+  AuthenticatedPelanggaranSayaRouteImport.update({
+    id: '/pelanggaran-saya',
+    path: '/pelanggaran-saya',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedPresensiRoute = AuthenticatedPresensiRouteImport.update({
+  id: '/presensi',
+  path: '/presensi',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/absensi-diri': typeof AuthenticatedAbsensiDiriRoute
   '/anggota': typeof AuthenticatedAnggotaRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/kalender': typeof AuthenticatedKalenderRoute
+  '/kesiswaan': typeof AuthenticatedKesiswaanRoute
+  '/mutabaah-saya': typeof AuthenticatedMutabaahSayaRoute
+  '/pelanggaran-saya': typeof AuthenticatedPelanggaranSayaRoute
+  '/presensi': typeof AuthenticatedPresensiRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/absensi-diri': typeof AuthenticatedAbsensiDiriRoute
   '/anggota': typeof AuthenticatedAnggotaRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/kalender': typeof AuthenticatedKalenderRoute
+  '/kesiswaan': typeof AuthenticatedKesiswaanRoute
+  '/mutabaah-saya': typeof AuthenticatedMutabaahSayaRoute
+  '/pelanggaran-saya': typeof AuthenticatedPelanggaranSayaRoute
+  '/presensi': typeof AuthenticatedPresensiRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/_authenticated/absensi-diri': typeof AuthenticatedAbsensiDiriRoute
   '/_authenticated/anggota': typeof AuthenticatedAnggotaRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/kalender': typeof AuthenticatedKalenderRoute
+  '/_authenticated/kesiswaan': typeof AuthenticatedKesiswaanRoute
+  '/_authenticated/mutabaah-saya': typeof AuthenticatedMutabaahSayaRoute
+  '/_authenticated/pelanggaran-saya': typeof AuthenticatedPelanggaranSayaRoute
+  '/_authenticated/presensi': typeof AuthenticatedPresensiRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/anggota' | '/dashboard'
+  fullPaths:
+    | '/'
+    | '/absensi-diri'
+    | '/anggota'
+    | '/dashboard'
+    | '/kalender'
+    | '/kesiswaan'
+    | '/mutabaah-saya'
+    | '/pelanggaran-saya'
+    | '/presensi'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/anggota' | '/dashboard'
+  to:
+    | '/'
+    | '/absensi-diri'
+    | '/anggota'
+    | '/dashboard'
+    | '/kalender'
+    | '/kesiswaan'
+    | '/mutabaah-saya'
+    | '/pelanggaran-saya'
+    | '/presensi'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/_authenticated/absensi-diri'
     | '/_authenticated/anggota'
     | '/_authenticated/dashboard'
+    | '/_authenticated/kalender'
+    | '/_authenticated/kesiswaan'
+    | '/_authenticated/mutabaah-saya'
+    | '/_authenticated/pelanggaran-saya'
+    | '/_authenticated/presensi'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -85,6 +166,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/absensi-diri': {
+      id: '/_authenticated/absensi-diri'
+      path: '/absensi-diri'
+      fullPath: '/absensi-diri'
+      preLoaderRoute: typeof AuthenticatedAbsensiDiriRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/anggota': {
       id: '/_authenticated/anggota'
       path: '/anggota'
@@ -99,17 +187,64 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/kalender': {
+      id: '/_authenticated/kalender'
+      path: '/kalender'
+      fullPath: '/kalender'
+      preLoaderRoute: typeof AuthenticatedKalenderRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/kesiswaan': {
+      id: '/_authenticated/kesiswaan'
+      path: '/kesiswaan'
+      fullPath: '/kesiswaan'
+      preLoaderRoute: typeof AuthenticatedKesiswaanRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/mutabaah-saya': {
+      id: '/_authenticated/mutabaah-saya'
+      path: '/mutabaah-saya'
+      fullPath: '/mutabaah-saya'
+      preLoaderRoute: typeof AuthenticatedMutabaahSayaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/pelanggaran-saya': {
+      id: '/_authenticated/pelanggaran-saya'
+      path: '/pelanggaran-saya'
+      fullPath: '/pelanggaran-saya'
+      preLoaderRoute: typeof AuthenticatedPelanggaranSayaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/presensi': {
+      id: '/_authenticated/presensi'
+      path: '/presensi'
+      fullPath: '/presensi'
+      preLoaderRoute: typeof AuthenticatedPresensiRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAbsensiDiriRoute: typeof AuthenticatedAbsensiDiriRoute
   AuthenticatedAnggotaRoute: typeof AuthenticatedAnggotaRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedKalenderRoute: typeof AuthenticatedKalenderRoute
+  AuthenticatedKesiswaanRoute: typeof AuthenticatedKesiswaanRoute
+  AuthenticatedMutabaahSayaRoute: typeof AuthenticatedMutabaahSayaRoute
+  AuthenticatedPelanggaranSayaRoute: typeof AuthenticatedPelanggaranSayaRoute
+  AuthenticatedPresensiRoute: typeof AuthenticatedPresensiRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAbsensiDiriRoute: AuthenticatedAbsensiDiriRoute,
   AuthenticatedAnggotaRoute: AuthenticatedAnggotaRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedKalenderRoute: AuthenticatedKalenderRoute,
+  AuthenticatedKesiswaanRoute: AuthenticatedKesiswaanRoute,
+  AuthenticatedMutabaahSayaRoute: AuthenticatedMutabaahSayaRoute,
+  AuthenticatedPelanggaranSayaRoute: AuthenticatedPelanggaranSayaRoute,
+  AuthenticatedPresensiRoute: AuthenticatedPresensiRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
