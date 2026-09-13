@@ -4,6 +4,7 @@ import {
   GraduationCap,
   LayoutDashboard,
   ListChecks,
+  ScanLine,
   ShieldAlert,
   Timer,
   UserCheck,
