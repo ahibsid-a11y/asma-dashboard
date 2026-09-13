@@ -16,7 +16,7 @@ const optionalText = (max: number) =>
 const memberSchema = z.object({
   id: z.preprocess(blankToUndefined, z.string().uuid().optional()),
   name: z.string().trim().min(2, "Nama minimal 2 karakter"),
-  email: z.string().trim().email("Email tidak valid"),
+  email: z.preprocess(blankToUndefined, z.string().trim().email("Email tidak valid").optional()),
   password: z.preprocess(
     blankToUndefined,
     z.string().min(8, "Password minimal 8 karakter").optional(),
@@ -24,11 +24,11 @@ const memberSchema = z.object({
   phone: optionalText(30),
   gender: z.preprocess(blankToUndefined, z.enum(["L", "P"]).optional()),
   status: z.enum(["Aktif", "Nonaktif"]).default("Aktif"),
-  account_type: accountTypeSchema,
+  account_type: accountTypeSchema.optional().default("santri"),
   class: optionalText(80),
   dorm: optionalText(120),
   halaqoh: optionalText(120),
-  nis_nip: z.string().trim().min(1, "Nomor induk wajib diisi"),
+  nis_nip: optionalText(60),
   rfid_card: optionalText(60),
   avatar: z.preprocess(
     blankToUndefined,
