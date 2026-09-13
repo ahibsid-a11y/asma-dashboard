@@ -94,14 +94,25 @@ export const listMembers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context as Ctx);
-    const { data, error } = await (context as Ctx).supabase
-      .from("profiles")
-      .select(
-        "id,name,email,phone,gender,status,account_type,class,dorm,halaqoh,nis_nip,rfid_card,avatar,created_at",
-      )
-      .order("created_at", { ascending: true });
+    const ctx = context as Ctx;
+    const [{ data, error }, { data: positions }] = await Promise.all([
+      ctx.supabase
+        .from("profiles")
+        .select(
+          "id,name,email,phone,gender,status,account_type,category,class,dorm,halaqoh,nis_nip,rfid_card,avatar,created_at",
+        )
+        .order("created_at", { ascending: true }),
+      ctx.supabase.from("profile_positions").select("user_id,position"),
+    ]);
     if (error) throw new Error(error.message);
-    return data ?? [];
+    const byUser = new Map<string, string[]>();
+    for (const row of (positions ?? []) as { user_id: string; position: string }[]) {
+      byUser.set(row.user_id, [...(byUser.get(row.user_id) ?? []), row.position]);
+    }
+    return ((data ?? []) as any[]).map((m) => ({
+      ...m,
+      positions: byUser.get(m.id) ?? (m.account_type ? [m.account_type] : []),
+    }));
   });
 
 export const saveMember = createServerFn({ method: "POST" })
@@ -111,13 +122,14 @@ export const saveMember = createServerFn({ method: "POST" })
     await assertAdmin(context as Ctx);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const isSantri = data.account_type === "santri";
+    const { category, positions, primary } = resolveRole(data);
+    const isSantri = category === "siswa";
     // Alamat login internal hanya dipakai sistem bila email tidak diisi; TIDAK disimpan di data anggota.
     const email =
       data.email ??
       `${
         (data.nis_nip ?? data.name).toLowerCase().replace(/[^a-z0-9]/g, "") || "anggota"
-      }${Math.floor(1000 + Math.random() * 9000)}@ahibs.local`;
+      }${Math.floor(100000 + Math.random() * 900000)}@ahibs.local`;
 
     const profileFields = {
       name: data.name,
@@ -126,7 +138,8 @@ export const saveMember = createServerFn({ method: "POST" })
       phone: empty(data.phone),
       gender: (data.gender ?? null) as "L" | "P" | null,
       status: data.status,
-      account_type: data.account_type,
+      category,
+      account_type: primary,
       class: isSantri ? empty(data.class) : null,
       dorm: isSantri ? empty(data.dorm) : null,
       halaqoh: empty(data.halaqoh),
@@ -135,18 +148,32 @@ export const saveMember = createServerFn({ method: "POST" })
       avatar: empty(data.avatar),
     };
 
+    async function syncPositions(userId: string) {
+      await supabaseAdmin.from("profile_positions").delete().eq("user_id", userId);
+      const rows = (positions.length > 0 ? positions : isSantri ? [] : [primary]).map((p) => ({
+        user_id: userId,
+        position: p,
+      }));
+      if (rows.length > 0) {
+        await supabaseAdmin.from("profile_positions").upsert(rows, {
+          onConflict: "user_id,position",
+        });
+      }
+    }
+
     if (data.id) {
       const { error } = await supabaseAdmin
         .from("profiles")
         .update(profileFields)
         .eq("id", data.id);
       if (error) throw new Error(friendlyDbError(error.message));
+      await syncPositions(data.id);
       const authUpdate: Record<string, unknown> = {
         email_confirm: true,
         user_metadata: {
           name: data.name,
           display_name: data.name,
-          account_type: data.account_type,
+          account_type: primary,
         },
       };
       if (data.email) authUpdate["email"] = data.email;
@@ -164,19 +191,24 @@ export const saveMember = createServerFn({ method: "POST" })
       email,
       password: data.password,
       email_confirm: true,
-      user_metadata: { name: data.name, display_name: data.name, account_type: data.account_type },
+      user_metadata: { name: data.name, display_name: data.name, account_type: primary },
     });
     if (createError || !created?.user) {
       throw new Error(friendlyDbError(createError?.message ?? "Gagal membuat akun"));
     }
 
-    const { error } = await supabaseAdmin.from("profiles").upsert({ id: created.user.id, ...profileFields });
+    const { error } = await supabaseAdmin
+      .from("profiles")
+      .upsert({ id: created.user.id, ...profileFields });
     if (error) {
       await supabaseAdmin.auth.admin.deleteUser(created.user.id);
       throw new Error(friendlyDbError(error.message));
     }
+    await syncPositions(created.user.id);
     return { id: created.user.id };
   });
+
+
 
 export const setMemberStatus = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) =>
