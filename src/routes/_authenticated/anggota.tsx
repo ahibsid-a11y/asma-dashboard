@@ -201,7 +201,8 @@ function MembersPage() {
     const list = membersQuery.data ?? [];
     const q = search.trim().toLowerCase();
     return list.filter((m) => {
-      if (filter !== "all" && m.account_type !== filter) return false;
+      const cat = m.category ?? categoryOf(m.account_type);
+      if (filter !== "all" && cat !== filter) return false;
       if (!q) return true;
       return [m.name, m.email, m.nis_nip, m.class, m.dorm, m.halaqoh]
         .filter(Boolean)
@@ -215,15 +216,19 @@ function MembersPage() {
   }
 
   function openEdit(member: Member) {
+    const category = member.category ?? categoryOf(member.account_type);
     setForm({
       id: member.id,
       name: member.name ?? "",
       email: member.email ?? "",
       password: "",
       phone: member.phone ?? "",
-      gender: member.gender ?? "L",
+      gender: member.gender ?? "",
       status: member.status,
-      account_type: member.account_type ?? "santri",
+      category,
+      positions: (member.positions ?? []).filter((p) =>
+        CATEGORY_POSITIONS[category].includes(p),
+      ),
       class: member.class ?? "",
       dorm: member.dorm ?? "",
       halaqoh: member.halaqoh ?? "",
@@ -234,7 +239,17 @@ function MembersPage() {
     setOpen(true);
   }
 
-  const isSantri = form.account_type === "santri";
+  function togglePosition(position: AccountType) {
+    setForm((f) => ({
+      ...f,
+      positions: f.positions.includes(position)
+        ? f.positions.filter((p) => p !== position)
+        : [...f.positions, position],
+    }));
+  }
+
+  const isSantri = form.category === "siswa";
+
 
   return (
     <AppShell accountType={accountType}>
