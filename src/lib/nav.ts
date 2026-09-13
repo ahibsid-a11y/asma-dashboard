@@ -17,6 +17,7 @@ export type NavKey =
   | "dashboard"
   | "anggota"
   | "presensi"
+  | "pengaturan-sesi"
   | "absensi-diri"
   | "kalender"
   | "kesiswaan"
