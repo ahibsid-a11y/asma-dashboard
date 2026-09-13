@@ -42,13 +42,26 @@ function Index() {
     event.preventDefault();
     setError("");
     setLoading(true);
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (signInError) {
-      setError("Email atau kata sandi tidak sesuai.");
-      return;
+    try {
+      const { email: resolved } = await lookupEmail({ data: { identifier: email } });
+      if (!resolved) {
+        setError("Nama atau email tidak ditemukan.");
+        return;
+      }
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: resolved,
+        password,
+      });
+      if (signInError) {
+        setError("Nama/email atau kata sandi tidak sesuai.");
+        return;
+      }
+      await navigate({ to: "/dashboard", replace: true });
+    } catch (err) {
+      setError((err as Error).message || "Gagal masuk. Coba lagi.");
+    } finally {
+      setLoading(false);
     }
-    await navigate({ to: "/dashboard", replace: true });
   }
 
   return (
