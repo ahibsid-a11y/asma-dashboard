@@ -127,7 +127,7 @@ function IncidentalPage() {
   const rosterQuery = useQuery({
     queryKey: ["incidental-roster", selectedEventId],
     queryFn: () =>
-      fetchRoster({ data: { event_id: selectedEventId! } }) as Promise<{
+      fetchRoster({ data: { event_id: selectedEventId! } }) as unknown as Promise<{
         event: EventRow;
         members: Member[];
       }>,

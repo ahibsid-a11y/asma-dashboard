@@ -182,7 +182,10 @@ export const listIncidentalRoster = createServerFn({ method: "GET" })
 
     let query = db.from("profiles").select(MEMBER_SELECT).eq("status", "Aktif");
     if (event.target_type === "ROLE") {
-      query = query.in("account_type", (event.target_roles ?? []).length ? event.target_roles : ["__none__"]);
+      const roles = ((event.target_roles ?? []) as string[]).length
+        ? (event.target_roles as string[])
+        : ["santri__none"];
+      query = query.in("account_type", roles as any);
     } else {
       query = query.in("id", (event.target_user_ids ?? []).length ? event.target_user_ids : [
         "00000000-0000-0000-0000-000000000000",
