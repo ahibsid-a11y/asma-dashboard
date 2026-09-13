@@ -219,7 +219,10 @@ function ScanPresensiPage() {
                 className="mt-5 space-y-2"
                 onSubmit={(e) => {
                   e.preventDefault();
-                  if (!sessionId) return toast.error("Pilih sesi presensi terlebih dahulu");
+                  if (!sessionId) {
+                    toast.error("Pilih sesi presensi terlebih dahulu");
+                    return;
+                  }
                   if (!card.trim()) return;
                   scanMutation.mutate(card.trim());
                 }}
