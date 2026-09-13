@@ -386,11 +386,11 @@ function MembersPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email (opsional)</Label>
                 <Input
                   id="email"
                   type="email"
-                  required
+                  placeholder="Kosongkan bila tidak ada"
                   value={form.email}
                   onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                 />
