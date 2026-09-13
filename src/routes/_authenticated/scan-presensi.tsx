@@ -27,11 +27,14 @@ import {
 import { useCurrentProfile } from "@/hooks/use-current-profile";
 import {
   ATTENDANCE_OFFICER_TYPES,
+  assignRfidCard,
   listScanSessions,
   listTodayAttendance,
   processAbsentToday,
   scanAttendance,
+  searchMembersForCard,
 } from "@/lib/attendance.functions";
+
 import { ACCOUNT_TYPE_LABELS, type AccountType } from "@/lib/roles";
 
 export const Route = createFileRoute("/_authenticated/scan-presensi")({
@@ -67,12 +70,21 @@ type ScanSession = {
 };
 
 type ScanResult = {
+  ok: true;
   member: { id: string; name: string | null; nis_nip: string | null; account_type: string; class: string | null; dorm: string | null };
   status: "Hadir" | "Telat" | "Alfa";
   scan_time: string;
   violation_created: boolean;
   session_name: string;
 };
+
+type ScanFailure = {
+  ok: false;
+  reason: "unknown_card" | "inactive" | "wrong_session";
+  code: string;
+  message: string;
+};
+
 
 const hhmm = (v: string) => v.slice(0, 5);
 
@@ -99,11 +111,19 @@ function ScanPresensiPage() {
   const fetchToday = useServerFn(listTodayAttendance);
   const submitScan = useServerFn(scanAttendance);
   const runAbsent = useServerFn(processAbsentToday);
+  const fetchCandidates = useServerFn(searchMembersForCard);
+  const submitAssign = useServerFn(assignRfidCard);
+
+  const isMemberAdmin = ["super_admin", "mudir", "kepala_sekolah", "kepala_tu"].includes(
+    accountType ?? "",
+  );
 
   const [sessionId, setSessionId] = useState("");
   const [card, setCard] = useState("");
   const [showAll, setShowAll] = useState(false);
   const [results, setResults] = useState<ScanResult[]>([]);
+  const [unknownCard, setUnknownCard] = useState<string | null>(null);
+  const [assignTo, setAssignTo] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const sessionsQuery = useQuery({
@@ -125,13 +145,28 @@ function ScanPresensiPage() {
     enabled: allowed && !!sessionId,
   });
 
+  const candidatesQuery = useQuery({
+    queryKey: ["card-candidates", sessionId],
+    queryFn: () => fetchCandidates({ data: { session_id: sessionId } }) as Promise<any[]>,
+    enabled: allowed && isMemberAdmin && !!sessionId && !!unknownCard,
+  });
+
   const scanMutation = useMutation({
     mutationFn: (rfid: string) =>
-      submitScan({ data: { session_id: sessionId, rfid_card: rfid } }) as Promise<ScanResult>,
+      submitScan({ data: { session_id: sessionId, rfid_card: rfid } }) as Promise<
+        ScanResult | ScanFailure
+      >,
     onSuccess: async (result) => {
-      setResults((prev) => [result, ...prev].slice(0, 20));
       setCard("");
       inputRef.current?.focus();
+      if (!result.ok) {
+        toast.error(result.message);
+        setUnknownCard(result.reason === "unknown_card" ? result.code : null);
+        setAssignTo("");
+        return;
+      }
+      setUnknownCard(null);
+      setResults((prev) => [result, ...prev].slice(0, 20));
       toast.success(`${result.member.name ?? "Anggota"} — ${result.status}`);
       await queryClient.invalidateQueries({ queryKey: ["attendance-today", sessionId] });
     },
@@ -141,6 +176,22 @@ function ScanPresensiPage() {
       inputRef.current?.focus();
     },
   });
+
+  const assignMutation = useMutation({
+    mutationFn: async (vars: { user_id: string; rfid_card: string }) => {
+      await submitAssign({ data: vars });
+      return vars.rfid_card;
+    },
+    onSuccess: async (rfid) => {
+      toast.success("Kartu berhasil didaftarkan, mencatat presensi…");
+      setUnknownCard(null);
+      setAssignTo("");
+      await queryClient.invalidateQueries({ queryKey: ["card-candidates", sessionId] });
+      scanMutation.mutate(rfid);
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
 
   const absentMutation = useMutation({
     mutationFn: () => runAbsent({ data: { session_id: sessionId || undefined } }) as Promise<any>,
@@ -227,14 +278,14 @@ function ScanPresensiPage() {
                   scanMutation.mutate(card.trim());
                 }}
               >
-                <Label htmlFor="rfid">Nomor kartu RFID</Label>
+                <Label htmlFor="rfid">Nomor kartu RFID atau nomor induk</Label>
                 <div className="flex gap-2">
                   <Input
                     id="rfid"
                     ref={inputRef}
                     autoFocus
                     autoComplete="off"
-                    placeholder="Tempel kartu atau ketik nomor…"
+                    placeholder="Tempel kartu, atau ketik nomor kartu / NIS-NIP…"
                     value={card}
                     onChange={(e) => setCard(e.target.value)}
                   />
@@ -243,9 +294,61 @@ function ScanPresensiPage() {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Alat pembaca RFID biasanya mengirim nomor kartu lalu menekan Enter otomatis.
+                  Alat pembaca RFID biasanya mengirim nomor kartu lalu menekan Enter otomatis. Bila
+                  kartu belum terdaftar, Anda tetap bisa mengetik nomor induk (NIS/NIP) anggota.
                 </p>
               </form>
+
+              {unknownCard && (
+                <div className="mt-4 rounded-lg border border-accent/40 bg-accent/10 p-4">
+                  <p className="text-sm font-bold text-foreground">
+                    Kartu "{unknownCard}" belum terdaftar
+                  </p>
+                  {isMemberAdmin ? (
+                    <>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Pilih anggota pemilik kartu ini, lalu kartu langsung didaftarkan dan
+                        presensinya dicatat.
+                      </p>
+                      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                        <Select value={assignTo} onValueChange={setAssignTo}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pilih anggota…" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(candidatesQuery.data ?? []).map((m: any) => (
+                              <SelectItem key={m.id} value={m.id}>
+                                {m.name ?? "Tanpa nama"}
+                                {m.nis_nip ? ` · ${m.nis_nip}` : ""}
+                                {m.rfid_card ? " (sudah ada kartu)" : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          type="button"
+                          disabled={!assignTo || assignMutation.isPending}
+                          onClick={() =>
+                            assignMutation.mutate({ user_id: assignTo, rfid_card: unknownCard })
+                          }
+                        >
+                          Daftarkan & Catat
+                        </Button>
+                        <Button type="button" variant="ghost" onClick={() => setUnknownCard(null)}>
+                          Tutup
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Minta admin (Super Admin / Mudir / Kepala Sekolah / Kepala TU) mendaftarkan
+                      nomor kartu ini pada data anggota, atau ketik nomor induk anggota untuk
+                      mencatat presensi sekarang.
+                    </p>
+                  )}
+                </div>
+              )}
+
 
               <div className="mt-5 border-t border-border pt-4">
                 <Button
