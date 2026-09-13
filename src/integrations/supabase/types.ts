@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      attendance_sessions: {
+        Row: {
+          auto_violation_on_absent: boolean
+          auto_violation_on_late: boolean
+          created_at: string
+          id: string
+          is_active: boolean
+          is_exit: boolean
+          late_cutoff_time: string
+          on_time_deadline: string
+          session_name: string
+          sort_order: number
+          target_role: Database["public"]["Enums"]["app_role"][]
+          updated_at: string
+          violation_points_absent: number
+          violation_points_late: number
+        }
+        Insert: {
+          auto_violation_on_absent?: boolean
+          auto_violation_on_late?: boolean
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_exit?: boolean
+          late_cutoff_time: string
+          on_time_deadline: string
+          session_name: string
+          sort_order?: number
+          target_role?: Database["public"]["Enums"]["app_role"][]
+          updated_at?: string
+          violation_points_absent?: number
+          violation_points_late?: number
+        }
+        Update: {
+          auto_violation_on_absent?: boolean
+          auto_violation_on_late?: boolean
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_exit?: boolean
+          late_cutoff_time?: string
+          on_time_deadline?: string
+          session_name?: string
+          sort_order?: number
+          target_role?: Database["public"]["Enums"]["app_role"][]
+          updated_at?: string
+          violation_points_absent?: number
+          violation_points_late?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           account_type: Database["public"]["Enums"]["app_role"] | null
@@ -111,6 +162,7 @@ export type Database = {
         Returns: boolean
       }
       is_member_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_session_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role:
