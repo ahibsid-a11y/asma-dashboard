@@ -93,13 +93,22 @@ export const saveMember = createServerFn({ method: "POST" })
 
     if (data.id) {
       const { error } = await supabaseAdmin.from("profiles").update(profileFields).eq("id", data.id);
-      if (error) throw new Error(error.message);
-      if (data.password) {
-        const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(data.id, {
-          password: data.password,
-        });
-        if (authError) throw new Error(authError.message);
-      }
+      if (error) throw new Error(friendlyDbError(error.message));
+      const authUpdate: Record<string, unknown> = {
+        email: data.email,
+        email_confirm: true,
+        user_metadata: {
+          name: data.name,
+          display_name: data.name,
+          account_type: data.account_type,
+        },
+      };
+      if (data.password) authUpdate["password"] = data.password;
+      const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
+        data.id,
+        authUpdate,
+      );
+      if (authError) throw new Error(friendlyDbError(authError.message));
       return { id: data.id };
     }
 
@@ -110,10 +119,15 @@ export const saveMember = createServerFn({ method: "POST" })
       email_confirm: true,
       user_metadata: { name: data.name, display_name: data.name, account_type: data.account_type },
     });
-    if (createError || !created?.user) throw new Error(createError?.message ?? "Gagal membuat akun");
+    if (createError || !created?.user) {
+      throw new Error(friendlyDbError(createError?.message ?? "Gagal membuat akun"));
+    }
 
     const { error } = await supabaseAdmin.from("profiles").upsert({ id: created.user.id, ...profileFields });
-    if (error) throw new Error(error.message);
+    if (error) {
+      await supabaseAdmin.auth.admin.deleteUser(created.user.id);
+      throw new Error(friendlyDbError(error.message));
+    }
     return { id: created.user.id };
   });
 
