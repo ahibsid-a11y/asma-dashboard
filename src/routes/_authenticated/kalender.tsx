@@ -93,8 +93,8 @@ const addDays = (iso: string, n: number) => {
 const mondayOf = (iso: string) => addDays(iso, -((parseISO(iso).getDay() + 6) % 7));
 
 const DAY_NAMES = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Ahad"];
-const START_HOUR = 5;
-const END_HOUR = 22;
+const START_HOUR = 0;
+const END_HOUR = 23;
 const HOUR_PX = 56;
 
 const COLORS = [
