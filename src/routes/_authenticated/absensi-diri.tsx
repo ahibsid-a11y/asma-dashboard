@@ -205,6 +205,30 @@ function SelfAttendancePage() {
     { name: "Alfa", value: counts.Alfa, fill: "var(--destructive)" },
   ].filter((d) => d.value > 0);
 
+  const perActivity = useMemo(() => {
+    const map = new Map<
+      string,
+      { label: string; kind: Item["kind"]; total: number; counts: Record<string, number> }
+    >();
+    for (const it of items) {
+      const key = `${it.kind}|${it.label}`;
+      const row =
+        map.get(key) ??
+        {
+          label: it.label,
+          kind: it.kind,
+          total: 0,
+          counts: {} as Record<string, number>,
+        };
+      row.total += 1;
+      row.counts[it.status] = (row.counts[it.status] ?? 0) + 1;
+      map.set(key, row);
+    }
+    return [...map.values()].sort((a, b) =>
+      a.kind === b.kind ? b.total - a.total : a.kind === "Wajib" ? -1 : 1,
+    );
+  }, [items]);
+
   const periodLabel =
     period === "harian"
       ? parseISO(anchor).toLocaleDateString("id-ID", { dateStyle: "full" })
@@ -342,6 +366,51 @@ function SelfAttendancePage() {
             </CardContent>
           </Card>
         </div>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Kehadiran per kegiatan</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {perActivity.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Belum ada kegiatan pada periode ini.
+              </p>
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2">
+                {perActivity.map((row) => (
+                  <div
+                    key={`${row.kind}-${row.label}`}
+                    className="rounded-xl border border-border bg-card/60 p-4"
+                  >
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+                      <p className="truncate font-semibold text-foreground">{row.label}</p>
+                      <Badge variant="outline" className="shrink-0">
+                        {row.kind}
+                      </Badge>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {Object.entries(row.counts).map(([status, n]) => (
+                        <Badge
+                          key={status}
+                          variant="outline"
+                          className={STATUS_STYLE[status] ?? ""}
+                        >
+                          {status} {n}
+                        </Badge>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {row.total} catatan pada periode ini
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+
 
         <Card>
           <CardHeader className="pb-2">

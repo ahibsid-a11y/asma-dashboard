@@ -75,7 +75,7 @@ export const NAV_ITEMS: Record<NavKey, NavItem> = {
 };
 
 const MENUS: Record<AccountType, NavKey[]> = {
-  super_admin: ["dashboard", "anggota", "presensi", "scan-presensi", "presensi-insidental", "pengaturan-sesi", "absensi-diri", "kalender", "kesiswaan"],
+  super_admin: ["dashboard", "anggota", "presensi", "scan-presensi", "presensi-insidental", "pengaturan-sesi", "kalender", "kesiswaan"],
   mudir: ["dashboard", "anggota", "presensi", "scan-presensi", "presensi-insidental", "pengaturan-sesi", "absensi-diri", "kalender", "kesiswaan"],
   kepala_sekolah: ["dashboard", "anggota", "presensi", "scan-presensi", "presensi-insidental", "pengaturan-sesi", "absensi-diri", "kalender", "kesiswaan"],
   kepala_tu: ["dashboard", "anggota", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "kesiswaan"],
