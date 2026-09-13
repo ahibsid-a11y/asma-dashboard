@@ -177,25 +177,26 @@ export const saveMember = createServerFn({ method: "POST" })
         },
       };
       if (data.email) authUpdate["email"] = data.email;
-      if (data.password) authUpdate["password"] = data.password;
       const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
         data.id,
         authUpdate,
       );
       if (authError) throw new Error(friendlyDbError(authError.message));
+      if (data.password) {
+        const { setUserPassword } = await import("./password.server");
+        await setUserPassword(supabaseAdmin, data.id, data.password);
+      }
       return { id: data.id };
     }
 
     if (!data.password) throw new Error("Password wajib diisi untuk anggota baru");
-    const { data: created, error: createError } = await supabaseAdmin.auth.admin.createUser({
+    const { createAuthUser } = await import("./password.server");
+    const createdUser = await createAuthUser(supabaseAdmin, {
       email,
       password: data.password,
-      email_confirm: true,
       user_metadata: { name: data.name, display_name: data.name, account_type: primary },
     });
-    if (createError || !created?.user) {
-      throw new Error(friendlyDbError(createError?.message ?? "Gagal membuat akun"));
-    }
+    const created = { user: createdUser };
 
     const { error } = await supabaseAdmin
       .from("profiles")
