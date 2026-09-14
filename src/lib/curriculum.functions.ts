@@ -98,13 +98,22 @@ export const getCurriculumPlan = createServerFn({ method: "POST" })
     }
 
     if (!plan) {
-      plan = storage.getOrCreatePlan(
-        data.subject_id,
-        data.class_name,
-        data.academic_year,
-        ctx.userId
-      );
+      try {
+        plan = storage.getOrCreatePlan(
+          data.subject_id,
+          data.class_name,
+          data.academic_year,
+          ctx.userId
+        );
+      } catch {
+        // penyimpanan file tidak tersedia di server produksi
+      }
     }
+
+    if (!plan) {
+      throw new Error("Gagal memuat perangkat ajar. Coba muat ulang halaman.");
+    }
+
 
     // 3. Ambil Elemen & Capaian Pembelajaran (CP)
     let elements: CurriculumElement[] = [];
