@@ -61,18 +61,31 @@ function Dashboard() {
             <p className="text-xs font-bold uppercase text-accent-foreground">Akses cepat</p>
             <h2 className="mt-1 text-xl font-extrabold text-foreground">Semua fitur Anda</h2>
           </div>
-          <span className="text-xs font-semibold text-muted-foreground">{features.length} fitur</span>
+          <span className="text-xs font-semibold text-muted-foreground">{featureCount} fitur</span>
         </div>
-        <div className="grid grid-cols-3 gap-x-3 gap-y-6 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
-          {features.map(({ to, label, icon: Icon }, index) => (
-            <Link key={to} to={to} className="group flex min-w-0 flex-col items-center gap-2 text-center">
-              <span className="grid size-16 place-items-center rounded-2xl border border-border bg-card shadow-sm transition duration-200 group-hover:-translate-y-1 group-hover:shadow-md group-active:scale-95">
-                <span className={`grid size-10 place-items-center rounded-xl ${featureTones[index % featureTones.length]}`}>
-                  <Icon className="size-5" />
-                </span>
-              </span>
-              <span className="w-full text-balance text-[11px] font-bold leading-tight text-foreground sm:text-xs">{label}</span>
-            </Link>
+        <div className="flex flex-col gap-8">
+          {groups.map((group) => (
+            <div key={group.category}>
+              <div className="mb-4 flex items-center gap-3">
+                <p className="text-xs font-extrabold uppercase tracking-wide text-muted-foreground">{group.label}</p>
+                <span aria-hidden="true" className="h-px flex-1 bg-border" />
+                <span className="text-[11px] font-semibold text-muted-foreground">{group.items.length}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-x-3 gap-y-6 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
+                {group.items.map(({ to, label, icon: Icon }) => (
+                  <Link key={to} to={to} className="group flex min-w-0 flex-col items-center gap-2 text-center">
+                    <span className="grid size-16 place-items-center rounded-2xl border border-border bg-card shadow-sm transition duration-200 group-hover:-translate-y-1 group-hover:shadow-md group-active:scale-95">
+                      <span className={`grid size-10 place-items-center rounded-xl ${group.tone}`}>
+                        <Icon className="size-5" />
+                      </span>
+                    </span>
+                    <span className="w-full text-balance text-[11px] font-bold leading-tight text-foreground sm:text-xs">
+                      {label}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       </section>
