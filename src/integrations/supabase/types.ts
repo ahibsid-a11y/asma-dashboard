@@ -226,6 +226,203 @@ export type Database = {
           },
         ]
       }
+      curriculum_elements: {
+        Row: {
+          cp_description: string
+          created_at: string
+          id: string
+          name: string
+          order_index: number
+          plan_id: string
+          updated_at: string
+        }
+        Insert: {
+          cp_description?: string
+          created_at?: string
+          id?: string
+          name: string
+          order_index?: number
+          plan_id: string
+          updated_at?: string
+        }
+        Update: {
+          cp_description?: string
+          created_at?: string
+          id?: string
+          name?: string
+          order_index?: number
+          plan_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curriculum_elements_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      curriculum_plans: {
+        Row: {
+          academic_year: string
+          class_name: string
+          completion_percentage: number
+          created_at: string
+          id: string
+          jp_per_week: number
+          phase: string
+          realization_ganjil_percentage: number
+          realization_genap_percentage: number
+          subject_id: string
+          teacher_id: string | null
+          total_tp_count: number
+          updated_at: string
+        }
+        Insert: {
+          academic_year: string
+          class_name: string
+          completion_percentage?: number
+          created_at?: string
+          id?: string
+          jp_per_week?: number
+          phase?: string
+          realization_ganjil_percentage?: number
+          realization_genap_percentage?: number
+          subject_id: string
+          teacher_id?: string | null
+          total_tp_count?: number
+          updated_at?: string
+        }
+        Update: {
+          academic_year?: string
+          class_name?: string
+          completion_percentage?: number
+          created_at?: string
+          id?: string
+          jp_per_week?: number
+          phase?: string
+          realization_ganjil_percentage?: number
+          realization_genap_percentage?: number
+          subject_id?: string
+          teacher_id?: string | null
+          total_tp_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curriculum_plans_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      curriculum_promes_entries: {
+        Row: {
+          activity_type: string
+          allocated_jp: number
+          created_at: string
+          id: string
+          month_name: string
+          notes: string | null
+          plan_id: string
+          semester: string
+          tp_id: string
+          updated_at: string
+          week_number: number
+        }
+        Insert: {
+          activity_type?: string
+          allocated_jp?: number
+          created_at?: string
+          id?: string
+          month_name: string
+          notes?: string | null
+          plan_id: string
+          semester: string
+          tp_id: string
+          updated_at?: string
+          week_number: number
+        }
+        Update: {
+          activity_type?: string
+          allocated_jp?: number
+          created_at?: string
+          id?: string
+          month_name?: string
+          notes?: string | null
+          plan_id?: string
+          semester?: string
+          tp_id?: string
+          updated_at?: string
+          week_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curriculum_promes_entries_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      curriculum_time_allocations: {
+        Row: {
+          calendar_weeks: number
+          created_at: string
+          effective_jp: number
+          effective_weeks: number
+          id: string
+          month_name: string
+          month_order: number
+          non_effective_weeks: number
+          notes: string | null
+          plan_id: string
+          semester: string
+          updated_at: string
+        }
+        Insert: {
+          calendar_weeks?: number
+          created_at?: string
+          effective_jp?: number
+          effective_weeks?: number
+          id?: string
+          month_name: string
+          month_order?: number
+          non_effective_weeks?: number
+          notes?: string | null
+          plan_id: string
+          semester: string
+          updated_at?: string
+        }
+        Update: {
+          calendar_weeks?: number
+          created_at?: string
+          effective_jp?: number
+          effective_weeks?: number
+          id?: string
+          month_name?: string
+          month_order?: number
+          non_effective_weeks?: number
+          notes?: string | null
+          plan_id?: string
+          semester?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curriculum_time_allocations_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dorms: {
         Row: {
           created_at: string
@@ -388,6 +585,92 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      learning_objectives: {
+        Row: {
+          academic_year: string
+          alokasi_jp: number
+          assessment_method: string
+          atp_flow: string | null
+          atp_order: number
+          class_name: string
+          code: string
+          cognitive_level: string
+          cp_code: string | null
+          created_at: string
+          description: string
+          dimension: string
+          element_name: string | null
+          id: string
+          order_index: number
+          plan_id: string | null
+          semester: string
+          status_asesmen: boolean
+          status_atp: boolean
+          status_realisasi: string
+          status_tp: boolean
+          subject_id: string
+          updated_at: string
+        }
+        Insert: {
+          academic_year: string
+          alokasi_jp?: number
+          assessment_method?: string
+          atp_flow?: string | null
+          atp_order?: number
+          class_name: string
+          code: string
+          cognitive_level?: string
+          cp_code?: string | null
+          created_at?: string
+          description: string
+          dimension?: string
+          element_name?: string | null
+          id?: string
+          order_index?: number
+          plan_id?: string | null
+          semester?: string
+          status_asesmen?: boolean
+          status_atp?: boolean
+          status_realisasi?: string
+          status_tp?: boolean
+          subject_id: string
+          updated_at?: string
+        }
+        Update: {
+          academic_year?: string
+          alokasi_jp?: number
+          assessment_method?: string
+          atp_flow?: string | null
+          atp_order?: number
+          class_name?: string
+          code?: string
+          cognitive_level?: string
+          cp_code?: string | null
+          created_at?: string
+          description?: string
+          dimension?: string
+          element_name?: string | null
+          id?: string
+          order_index?: number
+          plan_id?: string | null
+          semester?: string
+          status_asesmen?: boolean
+          status_atp?: boolean
+          status_realisasi?: string
+          status_tp?: boolean
+          subject_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_objectives_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_plans"
             referencedColumns: ["id"]
           },
         ]
