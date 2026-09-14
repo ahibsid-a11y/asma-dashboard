@@ -11,7 +11,8 @@ import {
   type CurriculumPromesEntry,
   type CurriculumTimeAllocation,
   type CurriculumTp,
-} from "@/lib/curriculum.storage.server";
+} from "@/lib/curriculum.types";
+
 
 export type {
   CurriculumElement,
