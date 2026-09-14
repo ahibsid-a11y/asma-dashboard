@@ -552,36 +552,46 @@ export const saveCurriculumPromesGrid = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const storage = await import("./curriculum.storage.server");
 
-    const storageRes = storage.savePromesGrid(
-      data.plan_id,
-      data.semester,
-      data.entries as any,
-      data.tpStatuses
-    );
+    const rows = data.entries.map((e) => ({
+      plan_id: data.plan_id,
+      tp_id: e.tp_id,
+      semester: data.semester,
+      month_name: e.month_name,
+      week_number: e.week_number,
+      allocated_jp: e.allocated_jp,
+      activity_type: e.activity_type,
+      notes: e.notes || null,
+      updated_at: new Date().toISOString(),
+    }));
+
+    if (rows.length > 0) {
+      const { error } = await (supabaseAdmin as any)
+        .from("curriculum_promes_entries")
+        .upsert(rows, { onConflict: "plan_id,tp_id,semester,month_name,week_number" });
+      if (error) throw new Error(error.message);
+    }
+
+    // Perbarui status realisasi TP bila ada perubahan
+    if (data.tpStatuses) {
+      for (const [tpId, status] of Object.entries(data.tpStatuses)) {
+        try {
+          await (supabaseAdmin as any)
+            .from("learning_objectives")
+            .update({ status_realisasi: status, updated_at: new Date().toISOString() })
+            .eq("id", tpId);
+        } catch {}
+      }
+    }
 
     try {
-      const rows = data.entries.map((e) => ({
-        plan_id: data.plan_id,
-        tp_id: e.tp_id,
-        semester: data.semester,
-        month_name: e.month_name,
-        week_number: e.week_number,
-        allocated_jp: e.allocated_jp,
-        activity_type: e.activity_type,
-        notes: e.notes || null,
-        updated_at: new Date().toISOString(),
-      }));
-      if (rows.length > 0) {
-        await (supabaseAdmin as any)
-          .from("curriculum_promes_entries")
-          .upsert(rows, { onConflict: "plan_id,tp_id,semester,month_name,week_number" });
-      }
+      const storage = await import("./curriculum.storage.server");
+      storage.savePromesGrid(data.plan_id, data.semester, data.entries as any, data.tpStatuses);
     } catch {}
 
-    return storageRes;
+    return { success: true };
   });
+
 
 /** 8. Rekapitulasi & Supervisi Perangkat Ajar Seluruh Guru (Waka Kurikulum & Kepala Sekolah) */
 export const getCurriculumSupervisionRecap = createServerFn({ method: "POST" })
