@@ -274,25 +274,26 @@ export const updateCurriculumPlanMeta = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const storage = await import("./curriculum.storage.server");
 
-    const updated = storage.updatePlanMeta(data);
+    const updates: Record<string, any> = {
+      phase: data.phase,
+      jp_per_week: data.jp_per_week,
+      updated_at: new Date().toISOString(),
+    };
+    if (data.teacher_id !== undefined) updates["teacher_id"] = data.teacher_id;
+
+    const { error } = await (supabaseAdmin as any)
+      .from("curriculum_plans")
+      .update(updates)
+      .eq("id", data.plan_id);
+    if (error) throw new Error(error.message);
 
     try {
-      const updates: Record<string, any> = {
-        phase: data.phase,
-        jp_per_week: data.jp_per_week,
-        updated_at: new Date().toISOString(),
-      };
-      if (data.teacher_id !== undefined) updates["teacher_id"] = data.teacher_id;
-
-      await (supabaseAdmin as any)
-        .from("curriculum_plans")
-        .update(updates)
-        .eq("id", data.plan_id);
+      const storage = await import("./curriculum.storage.server");
+      storage.updatePlanMeta(data);
     } catch {}
 
-    return { success: true, updated };
+    return { success: true };
   });
 
 /** 3. Simpan Elemen & Capaian Pembelajaran (CP) */
@@ -312,39 +313,46 @@ export const saveCurriculumElement = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const storage = await import("./curriculum.storage.server");
+    const table = () => (supabaseAdmin as any).from("curriculum_elements");
 
-    // Simpan ke storage lokal persisten
-    const storageRes = storage.saveElement(data);
+    let created: CurriculumElement | null = null;
 
-    // Coba simpan ke Supabase jika tabel ada
-    try {
-      const table = (supabaseAdmin as any).from("curriculum_elements");
-      if (data.action === "create") {
-        if (!data.name) throw new Error("Nama elemen wajib diisi");
-        await table.insert({
-          id: storageRes.created?.id,
+    if (data.action === "create") {
+      if (!data.name) throw new Error("Nama elemen wajib diisi");
+      const { data: row, error } = await table()
+        .insert({
           plan_id: data.plan_id,
           name: data.name,
           cp_description: data.cp_description || "",
           order_index: data.order_index || 1,
-        });
-      } else if (data.action === "update" && data.id) {
-        await table
-          .update({
-            name: data.name,
-            cp_description: data.cp_description,
-            order_index: data.order_index,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", data.id);
-      } else if (data.action === "delete" && data.id) {
-        await table.delete().eq("id", data.id);
-      }
+        })
+        .select()
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      created = (row as CurriculumElement) || null;
+    } else if (data.action === "update" && data.id) {
+      const { error } = await table()
+        .update({
+          name: data.name,
+          cp_description: data.cp_description,
+          order_index: data.order_index,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", data.id);
+      if (error) throw new Error(error.message);
+    } else if (data.action === "delete" && data.id) {
+      const { error } = await table().delete().eq("id", data.id);
+      if (error) throw new Error(error.message);
+    }
+
+    try {
+      const storage = await import("./curriculum.storage.server");
+      storage.saveElement(data);
     } catch {}
 
-    return storageRes;
+    return { success: true, created };
   });
+
 
 /** 4. Simpan / Perbarui Batch TP & ATP */
 export const saveCurriculumTpBatch = createServerFn({ method: "POST" })
