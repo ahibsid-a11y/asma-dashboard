@@ -151,8 +151,11 @@ export const getCurriculumPlan = createServerFn({ method: "POST" })
     } catch {}
 
     if (tps.length === 0) {
-      tps = storage.getTps(data.subject_id, data.class_name, data.academic_year);
+      try {
+        tps = storage.getTps(data.subject_id, data.class_name, data.academic_year);
+      } catch {}
     }
+
 
     // 5. Ambil Analisis Alokasi Waktu
     let timeAllocations: CurriculumTimeAllocation[] = [];
