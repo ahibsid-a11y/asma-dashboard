@@ -78,12 +78,12 @@ import {
 export const Route = createFileRoute("/_authenticated/rekap-pelanggaran")({
   head: () => ({
     meta: [
-      { title: "Rekap Pelanggaran & Poin Santri | ASMA" },
+      { title: "Rekap Pelanggaran & Poin Santri | SIM-AHIBS" },
       {
         name: "description",
         content: "Rekapitulasi poin pelanggaran, statistik kedisiplinan, pemantauan SP 1/2/3, dan evaluasi pembinaan santri AHIBS.",
       },
-      { property: "og:title", content: "Rekap Pelanggaran & Poin Santri | ASMA" },
+      { property: "og:title", content: "Rekap Pelanggaran & Poin Santri | SIM-AHIBS" },
       {
         property: "og:description",
         content: "Rekapitulasi poin pelanggaran, statistik kedisiplinan, pemantauan SP 1/2/3, dan evaluasi pembinaan santri AHIBS.",

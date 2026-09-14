@@ -8,13 +8,13 @@ import { isMemberAdmin } from "@/lib/roles";
 export const Route = createFileRoute("/_authenticated/manajemen-halaqoh")({
   head: () => ({
     meta: [
-      { title: "Manajemen Halaqoh | ASMA" },
+      { title: "Manajemen Halaqoh | SIM-AHIBS" },
       {
         name: "description",
         content:
           "Atur jumlah halaqoh, nama halaqoh, musyrif halaqoh, dan anggota setiap halaqoh di SMPIT Putra Al-Hanif.",
       },
-      { property: "og:title", content: "Manajemen Halaqoh | ASMA" },
+      { property: "og:title", content: "Manajemen Halaqoh | SIM-AHIBS" },
       {
         property: "og:description",
         content: "Atur nama halaqoh, musyrif halaqoh, dan anggota setiap halaqoh.",

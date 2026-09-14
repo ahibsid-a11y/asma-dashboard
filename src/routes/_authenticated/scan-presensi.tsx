@@ -40,13 +40,13 @@ import { ACCOUNT_TYPE_LABELS, type AccountType } from "@/lib/roles";
 export const Route = createFileRoute("/_authenticated/scan-presensi")({
   head: () => ({
     meta: [
-      { title: "Scan Presensi RFID | ASMA" },
+      { title: "Scan Presensi RFID | SIM-AHIBS" },
       {
         name: "description",
         content:
           "Catat kehadiran santri dan pegawai SMPIT Putra Al-Hanif dengan scan kartu RFID atau input manual.",
       },
-      { property: "og:title", content: "Scan Presensi RFID | ASMA" },
+      { property: "og:title", content: "Scan Presensi RFID | SIM-AHIBS" },
       {
         property: "og:description",
         content:

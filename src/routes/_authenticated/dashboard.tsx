@@ -12,10 +12,10 @@ import { ACCOUNT_TYPE_LABELS, type AccountType } from "@/lib/roles";
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
-      { title: "Dashboard | ASMA" },
-      { name: "description", content: "Dashboard Aplikasi Sistem Manajemen AHIBS." },
-      { property: "og:title", content: "Dashboard | ASMA" },
-      { property: "og:description", content: "Dashboard Aplikasi Sistem Manajemen AHIBS." },
+      { title: "Dashboard | SIM-AHIBS" },
+      { name: "description", content: "Dashboard SIM-AHIBS (Sistem Informasi Manajemen AHIBS)." },
+      { property: "og:title", content: "Dashboard | SIM-AHIBS" },
+      { property: "og:description", content: "Dashboard SIM-AHIBS (Sistem Informasi Manajemen AHIBS)." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -45,7 +45,7 @@ function Dashboard() {
         <div className="relative z-10 max-w-2xl">
           <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase text-primary-foreground/70">
             <Sparkles className="size-4 text-accent" />
-            Selamat datang di ASMA
+            Selamat datang di SIM-AHIBS
           </div>
           <h1 className="text-2xl font-extrabold md:text-3xl">Assalamu'alaikum, {profile?.name ?? "Pengguna"}</h1>
           <p className="mt-2 text-sm text-primary-foreground/75">

@@ -53,12 +53,12 @@ import {
 export const Route = createFileRoute("/_authenticated/anggota")({
   head: () => ({
     meta: [
-      { title: "Manajemen Anggota | ASMA" },
+      { title: "Manajemen Anggota | SIM-AHIBS" },
       {
         name: "description",
         content: "Kelola data guru, tendik, dan santri SMPIT Putra Al-Hanif dalam satu tempat.",
       },
-      { property: "og:title", content: "Manajemen Anggota | ASMA" },
+      { property: "og:title", content: "Manajemen Anggota | SIM-AHIBS" },
       {
         property: "og:description",
         content: "Kelola data guru, tendik, dan santri SMPIT Putra Al-Hanif dalam satu tempat.",

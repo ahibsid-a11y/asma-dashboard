@@ -24,15 +24,15 @@ import { ACCOUNT_TYPE_LABELS, type AccountType } from "@/lib/roles";
 export const Route = createFileRoute("/_authenticated/profil")({
   head: () => ({
     meta: [
-      { title: "Profil Saya | ASMA" },
+      { title: "Profil Saya | SIM-AHIBS" },
       {
         name: "description",
-        content: "Lihat dan perbarui data pribadi Anda di ASMA SMPIT Putra Al-Hanif.",
+        content: "Lihat dan perbarui data pribadi Anda di SIM-AHIBS SMPIT Putra Al-Hanif.",
       },
-      { property: "og:title", content: "Profil Saya | ASMA" },
+      { property: "og:title", content: "Profil Saya | SIM-AHIBS" },
       {
         property: "og:description",
-        content: "Lihat dan perbarui data pribadi Anda di ASMA SMPIT Putra Al-Hanif.",
+        content: "Lihat dan perbarui data pribadi Anda di SIM-AHIBS SMPIT Putra Al-Hanif.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

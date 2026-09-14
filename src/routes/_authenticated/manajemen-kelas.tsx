@@ -8,13 +8,13 @@ import { isMemberAdmin } from "@/lib/roles";
 export const Route = createFileRoute("/_authenticated/manajemen-kelas")({
   head: () => ({
     meta: [
-      { title: "Manajemen Kelas | ASMA" },
+      { title: "Manajemen Kelas | SIM-AHIBS" },
       {
         name: "description",
         content:
           "Atur jumlah kelas 7-12, rombel per angkatan, wali kelas, dan daftar siswa per kelas di SMPIT Putra Al-Hanif.",
       },
-      { property: "og:title", content: "Manajemen Kelas | ASMA" },
+      { property: "og:title", content: "Manajemen Kelas | SIM-AHIBS" },
       {
         property: "og:description",
         content: "Atur rombel per angkatan, wali kelas, dan daftar siswa per kelas.",

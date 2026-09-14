@@ -85,12 +85,12 @@ import {
 export const Route = createFileRoute("/_authenticated/perizinan")({
   head: () => ({
     meta: [
-      { title: "Perizinan Santri | ASMA" },
+      { title: "Perizinan Santri | SIM-AHIBS" },
       {
         name: "description",
         content: "Sistem pengajuan perizinan santri AHIBS dengan matriks persetujuan 3-pihak (Kurikulum, Kesantrian, Kepsek) dan UKS.",
       },
-      { property: "og:title", content: "Perizinan Santri | ASMA" },
+      { property: "og:title", content: "Perizinan Santri | SIM-AHIBS" },
       {
         property: "og:description",
         content: "Sistem pengajuan perizinan santri AHIBS dengan matriks persetujuan 3-pihak (Kurikulum, Kesantrian, Kepsek) dan UKS.",

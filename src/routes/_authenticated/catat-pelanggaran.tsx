@@ -59,12 +59,12 @@ import {
 export const Route = createFileRoute("/_authenticated/catat-pelanggaran")({
   head: () => ({
     meta: [
-      { title: "Catat Pelanggaran Santri | ASMA" },
+      { title: "Catat Pelanggaran Santri | SIM-AHIBS" },
       {
         name: "description",
         content: "Pencatatan pelanggaran, penentuan sanksi pembinaan, dan akumulasi poin kedisiplinan santri AHIBS.",
       },
-      { property: "og:title", content: "Catat Pelanggaran Santri | ASMA" },
+      { property: "og:title", content: "Catat Pelanggaran Santri | SIM-AHIBS" },
       {
         property: "og:description",
         content: "Pencatatan pelanggaran, penentuan sanksi pembinaan, dan akumulasi poin kedisiplinan santri AHIBS.",

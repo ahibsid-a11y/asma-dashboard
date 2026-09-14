@@ -51,12 +51,12 @@ import {
 export const Route = createFileRoute("/_authenticated/input-mutabaah")({
   head: () => ({
     meta: [
-      { title: "Input Mutaba'ah Harian | ASMA" },
+      { title: "Input Mutaba'ah Harian | SIM-AHIBS" },
       {
         name: "description",
         content: "Pencatatan mutaba'ah amal yaumi santri AHIBS oleh musyrif asrama dan admin.",
       },
-      { property: "og:title", content: "Input Mutaba'ah Harian | ASMA" },
+      { property: "og:title", content: "Input Mutaba'ah Harian | SIM-AHIBS" },
       {
         property: "og:description",
         content: "Pencatatan mutaba'ah amal yaumi santri AHIBS oleh musyrif asrama dan admin.",

@@ -49,13 +49,13 @@ import {
 export const Route = createFileRoute("/_authenticated/rekap-presensi")({
   head: () => ({
     meta: [
-      { title: "Rekap Presensi | ASMA" },
+      { title: "Rekap Presensi | SIM-AHIBS" },
       {
         name: "description",
         content:
           "Rekap kehadiran harian, mingguan, dan bulanan santri serta pegawai SMPIT Putra Al-Hanif.",
       },
-      { property: "og:title", content: "Rekap Presensi | ASMA" },
+      { property: "og:title", content: "Rekap Presensi | SIM-AHIBS" },
       {
         property: "og:description",
         content:

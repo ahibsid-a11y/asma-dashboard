@@ -8,13 +8,13 @@ import { isMemberAdmin } from "@/lib/roles";
 export const Route = createFileRoute("/_authenticated/manajemen-asrama")({
   head: () => ({
     meta: [
-      { title: "Manajemen Asrama | ASMA" },
+      { title: "Manajemen Asrama | SIM-AHIBS" },
       {
         name: "description",
         content:
           "Atur jumlah asrama, nama asrama, musyrif asrama, dan anggota setiap asrama di SMPIT Putra Al-Hanif.",
       },
-      { property: "og:title", content: "Manajemen Asrama | ASMA" },
+      { property: "og:title", content: "Manajemen Asrama | SIM-AHIBS" },
       {
         property: "og:description",
         content: "Atur nama asrama, musyrif asrama, dan anggota setiap asrama.",

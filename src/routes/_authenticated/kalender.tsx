@@ -47,12 +47,12 @@ import { ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS, type AccountType } from "@/lib/role
 export const Route = createFileRoute("/_authenticated/kalender")({
   head: () => ({
     meta: [
-      { title: "Kalender Pendidikan | ASMA" },
+      { title: "Kalender Pendidikan | SIM-AHIBS" },
       {
         name: "description",
         content: "Agenda harian, pekanan, dan bulanan kegiatan SMPIT Putra Al-Hanif.",
       },
-      { property: "og:title", content: "Kalender Pendidikan | ASMA" },
+      { property: "og:title", content: "Kalender Pendidikan | SIM-AHIBS" },
       {
         property: "og:description",
         content: "Agenda harian, pekanan, dan bulanan kegiatan SMPIT Putra Al-Hanif.",

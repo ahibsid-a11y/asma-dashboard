@@ -36,13 +36,13 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/_authenticated/absensi-diri")({
   head: () => ({
     meta: [
-      { title: "Absensi Diri | ASMA" },
+      { title: "Absensi Diri | SIM-AHIBS" },
       {
         name: "description",
         content:
           "Rekap kehadiran pribadi harian, pekanan, dan bulanan dari kegiatan wajib dan insidental.",
       },
-      { property: "og:title", content: "Absensi Diri | ASMA" },
+      { property: "og:title", content: "Absensi Diri | SIM-AHIBS" },
       {
         property: "og:description",
         content:

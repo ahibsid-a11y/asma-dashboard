@@ -20,24 +20,18 @@ import { cn } from "@/lib/utils";
 function Brand({ inverted = false }: { inverted?: boolean }) {
   return (
     <div className="flex items-center gap-3">
-      <div
-        className={cn(
-          "grid size-10 shrink-0 place-items-center rounded-lg text-lg font-extrabold shadow-sm",
-          inverted ? "bg-primary-foreground text-primary" : "bg-primary text-primary-foreground",
-        )}
-      >
-        A
-      </div>
+      <img
+        src="/logo-alhanif.png"
+        alt="Logo AHIBS"
+        className="size-10 shrink-0 rounded-lg object-contain bg-white p-0.5 shadow-sm"
+      />
       <div>
         <div className="flex items-center gap-2">
-          <span className={cn("text-xl font-extrabold", inverted ? "text-primary-foreground" : "text-foreground")}>
-            ASMA
-          </span>
-          <span className="rounded bg-accent px-1.5 py-0.5 text-[9px] font-extrabold text-accent-foreground">
-            AHIBS
+          <span className={cn("text-xl font-extrabold tracking-tight", inverted ? "text-primary-foreground" : "text-foreground")}>
+            SIM-AHIBS
           </span>
         </div>
-        <span className={cn("text-[10px] font-medium", inverted ? "text-primary-foreground/65" : "text-muted-foreground")}>
+        <span className={cn("text-[10px] font-medium", inverted ? "text-primary-foreground/75" : "text-muted-foreground")}>
           SMPIT Putra Al-Hanif
         </span>
       </div>
@@ -109,7 +103,7 @@ export function AppShell({
               </SheetTrigger>
               <SheetContent side="left" className="flex w-[86%] max-w-80 flex-col border-none bg-primary p-5 text-primary-foreground">
                 <SheetHeader className="text-left">
-                  <SheetTitle className="sr-only">Semua fitur ASMA</SheetTitle>
+                  <SheetTitle className="sr-only">Semua fitur SIM-AHIBS</SheetTitle>
                   <SheetDescription className="sr-only">Pilih fitur sesuai akses akun Anda.</SheetDescription>
                   <Brand inverted />
                 </SheetHeader>
@@ -152,8 +146,8 @@ export function AppShell({
             <Brand />
           </div>
           <div className="hidden md:block">
-            <p className="text-xs font-semibold text-muted-foreground">Aplikasi Sistem Manajemen AHIBS</p>
-            <p className="text-sm font-bold text-foreground">SMPIT Putra Al-Hanif</p>
+            <p className="text-xs font-bold text-primary">SIM-AHIBS</p>
+            <p className="text-sm font-bold text-foreground">SMPIT Putra Al-Hanif Cilegon</p>
           </div>
           <Button
             type="button"

@@ -51,12 +51,12 @@ import { getMutabaahSummary } from "@/lib/mutabaah.functions";
 export const Route = createFileRoute("/_authenticated/rekap-mutabaah")({
   head: () => ({
     meta: [
-      { title: "Rekap Mutaba'ah Santri | ASMA" },
+      { title: "Rekap Mutaba'ah Santri | SIM-AHIBS" },
       {
         name: "description",
         content: "Ringkasan statistik, tren grafik, dan lembar bulanan amal yaumi santri AHIBS.",
       },
-      { property: "og:title", content: "Rekap Mutaba'ah Santri | ASMA" },
+      { property: "og:title", content: "Rekap Mutaba'ah Santri | SIM-AHIBS" },
       {
         property: "og:description",
         content: "Ringkasan statistik, tren grafik, dan lembar bulanan amal yaumi santri AHIBS.",

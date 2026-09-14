@@ -29,12 +29,12 @@ import { getMyViolations } from "@/lib/violations.functions";
 export const Route = createFileRoute("/_authenticated/pelanggaran-saya")({
   head: () => ({
     meta: [
-      { title: "Pelanggaran Saya | ASMA" },
+      { title: "Pelanggaran Saya | SIM-AHIBS" },
       {
         name: "description",
         content: "Pantau catatan kedisiplinan pribadi, akumulasi poin, status peringatan (SP), dan nasihat pembinaan santri AHIBS.",
       },
-      { property: "og:title", content: "Pelanggaran Saya | ASMA" },
+      { property: "og:title", content: "Pelanggaran Saya | SIM-AHIBS" },
       {
         property: "og:description",
         content: "Pantau catatan kedisiplinan pribadi, akumulasi poin, status peringatan (SP), dan nasihat pembinaan santri AHIBS.",

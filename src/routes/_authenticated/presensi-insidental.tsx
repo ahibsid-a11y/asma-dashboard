@@ -26,13 +26,13 @@ import { ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS, type AccountType } from "@/lib/role
 export const Route = createFileRoute("/_authenticated/presensi-insidental")({
   head: () => ({
     meta: [
-      { title: "Presensi Insidental | ASMA" },
+      { title: "Presensi Insidental | SIM-AHIBS" },
       {
         name: "description",
         content:
           "Buat kegiatan insidental dan catat kehadiran anggota secara manual (Hadir, Izin, Sakit, Alfa) di SMPIT Putra Al-Hanif.",
       },
-      { property: "og:title", content: "Presensi Insidental | ASMA" },
+      { property: "og:title", content: "Presensi Insidental | SIM-AHIBS" },
       {
         property: "og:description",
         content:

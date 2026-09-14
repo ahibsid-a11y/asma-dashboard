@@ -24,12 +24,12 @@ import { getMyMutabaah } from "@/lib/mutabaah.functions";
 export const Route = createFileRoute("/_authenticated/mutabaah-saya")({
   head: () => ({
     meta: [
-      { title: "Mutaba'ah Saya | ASMA" },
+      { title: "Mutaba'ah Saya | SIM-AHIBS" },
       {
         name: "description",
         content: "Pantau catatan amal yaumi dan kedisiplinan ibadah harian pribadi santri AHIBS.",
       },
-      { property: "og:title", content: "Mutaba'ah Saya | ASMA" },
+      { property: "og:title", content: "Mutaba'ah Saya | SIM-AHIBS" },
       {
         property: "og:description",
         content: "Pantau catatan amal yaumi dan kedisiplinan ibadah harian pribadi santri AHIBS.",

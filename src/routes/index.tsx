@@ -14,10 +14,10 @@ import { resolveLoginEmail } from "@/lib/auth.functions";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Masuk | ASMA" },
-      { name: "description", content: "Masuk ke Aplikasi Sistem Manajemen AHIBS." },
-      { property: "og:title", content: "Masuk | ASMA" },
-      { property: "og:description", content: "Masuk ke Aplikasi Sistem Manajemen AHIBS." },
+      { title: "Masuk | SIM-AHIBS" },
+      { name: "description", content: "Masuk ke SIM-AHIBS (Sistem Informasi Manajemen AHIBS)." },
+      { property: "og:title", content: "Masuk | SIM-AHIBS" },
+      { property: "og:description", content: "Masuk ke SIM-AHIBS (Sistem Informasi Manajemen AHIBS)." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -72,13 +72,16 @@ function Index() {
       <div aria-hidden="true" className="absolute inset-x-0 top-0 h-1.5 bg-accent" />
       <section className="relative w-full max-w-md">
         <div className="mb-8 flex items-center justify-center gap-3">
-          <div className="grid size-12 place-items-center rounded-lg bg-primary text-xl font-extrabold text-primary-foreground shadow-lg shadow-primary/15">A</div>
+          <img
+            src="/logo-alhanif.png"
+            alt="Logo Al-Hanif"
+            className="size-16 shrink-0 rounded-xl object-contain bg-white p-1 shadow-md"
+          />
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-2xl font-extrabold text-primary">ASMA</span>
-              <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-extrabold text-accent-foreground">AHIBS</span>
+              <span className="text-2xl font-extrabold text-primary">SIM-AHIBS</span>
             </div>
-            <p className="text-xs font-medium text-muted-foreground">SMPIT Putra Al-Hanif</p>
+            <p className="text-xs font-medium text-muted-foreground">SMPIT Putra Al-Hanif Cilegon</p>
           </div>
         </div>
 
@@ -112,7 +115,7 @@ function Index() {
             </Button>
           </form>
         </div>
-        <p className="mt-6 text-center text-xs text-muted-foreground">Aplikasi Sistem Manajemen AHIBS</p>
+        <p className="mt-6 text-center text-xs text-muted-foreground">SIM-AHIBS • Sistem Informasi Manajemen SMPIT Putra Al-Hanif</p>
       </section>
     </main>
   );

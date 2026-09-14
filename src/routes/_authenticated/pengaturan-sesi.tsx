@@ -27,13 +27,13 @@ import { ACCOUNT_TYPE_LABELS, type AccountType } from "@/lib/roles";
 export const Route = createFileRoute("/_authenticated/pengaturan-sesi")({
   head: () => ({
     meta: [
-      { title: "Pengaturan Sesi Presensi | ASMA" },
+      { title: "Pengaturan Sesi Presensi | SIM-AHIBS" },
       {
         name: "description",
         content:
           "Atur jadwal sesi presensi, batas tepat waktu, batas telat, dan pelanggaran otomatis di SMPIT Putra Al-Hanif.",
       },
-      { property: "og:title", content: "Pengaturan Sesi Presensi | ASMA" },
+      { property: "og:title", content: "Pengaturan Sesi Presensi | SIM-AHIBS" },
       {
         property: "og:description",
         content:

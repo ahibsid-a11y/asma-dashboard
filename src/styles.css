@@ -159,3 +159,47 @@
     letter-spacing: 0;
   }
 }
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm 15mm 15mm;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .no-print,
+  [data-slot="dialog-overlay"],
+  header,
+  nav,
+  aside {
+    display: none !important;
+  }
+
+  [data-slot="dialog-content"] {
+    position: static !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    background: transparent !important;
+  }
+
+  #official-report-card {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+

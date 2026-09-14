@@ -5,9 +5,9 @@ import { PlaceholderPage } from "@/components/placeholder-page";
 export const Route = createFileRoute("/_authenticated/input-nilai-tahfiz")({
   head: () => ({
     meta: [
-      { title: "Input Nilai Tahfiz | ASMA" },
+      { title: "Input Nilai Tahfiz | SIM-AHIBS" },
       { name: "description", content: "Pencatatan setoran dan nilai hafalan santri oleh musyrif AHIBS." },
-      { property: "og:title", content: "Input Nilai Tahfiz | ASMA" },
+      { property: "og:title", content: "Input Nilai Tahfiz | SIM-AHIBS" },
       { property: "og:description", content: "Pencatatan setoran dan nilai hafalan santri oleh musyrif AHIBS." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

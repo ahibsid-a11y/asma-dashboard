@@ -5,9 +5,9 @@ import { PlaceholderPage } from "@/components/placeholder-page";
 export const Route = createFileRoute("/_authenticated/rekap-tahfiz")({
   head: () => ({
     meta: [
-      { title: "Rekap Tahfiz | ASMA" },
+      { title: "Rekap Tahfiz | SIM-AHIBS" },
       { name: "description", content: "Rekap capaian hafalan Al-Qur'an santri AHIBS." },
-      { property: "og:title", content: "Rekap Tahfiz | ASMA" },
+      { property: "og:title", content: "Rekap Tahfiz | SIM-AHIBS" },
       { property: "og:description", content: "Rekap capaian hafalan Al-Qur'an santri AHIBS." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
