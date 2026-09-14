@@ -25,6 +25,7 @@ const optionalText = (max: number) =>
 const memberSchema = z.object({
   id: z.preprocess(blankToUndefined, z.string().uuid().optional()),
   name: z.string().trim().min(1, "Nama wajib diisi"),
+  display_name: optionalText(100),
   email: z.preprocess(blankToUndefined, z.string().trim().email("Email tidak valid").optional()),
   password: z.preprocess(
     blankToUndefined,
@@ -99,7 +100,7 @@ export const listMembers = createServerFn({ method: "GET" })
       ctx.supabase
         .from("profiles")
         .select(
-          "id,name,email,phone,gender,status,account_type,category,class,dorm,halaqoh,nis_nip,rfid_card,avatar,created_at",
+          "id,name,display_name,email,phone,gender,status,account_type,category,class,dorm,halaqoh,nis_nip,rfid_card,avatar,preferences,created_at",
         )
         .order("created_at", { ascending: true }),
       ctx.supabase.from("profile_positions").select("user_id,position"),
@@ -111,6 +112,10 @@ export const listMembers = createServerFn({ method: "GET" })
     }
     return ((data ?? []) as any[]).map((m) => ({
       ...m,
+      display_name: m.display_name ?? null,
+      password_hint: ((m.preferences as Record<string, any> | null)?.[
+        "password_hint"
+      ] as string | null) ?? null,
       positions: byUser.get(m.id) ?? (m.account_type ? [m.account_type] : []),
     }));
   });
@@ -129,9 +134,10 @@ export const saveMember = createServerFn({ method: "POST" })
       (data.nis_nip ?? data.name).toLowerCase().replace(/[^a-z0-9]/g, "") || "anggota";
     const email = data.email ?? `${cleanId}@ahibs.local`;
 
-    const profileFields = {
+    const displayName = empty(data.display_name) ?? data.name;
+    const profileFields: Record<string, unknown> = {
       name: data.name,
-      display_name: data.name,
+      display_name: displayName,
       email,
       phone: empty(data.phone),
       gender: (data.gender ?? null) as "L" | "P" | null,
@@ -160,8 +166,20 @@ export const saveMember = createServerFn({ method: "POST" })
     }
 
     if (data.id) {
-      const { error } = await supabaseAdmin
-        .from("profiles")
+      if (data.password) {
+        const { data: cur } = await supabaseAdmin
+          .from("profiles")
+          .select("preferences")
+          .eq("id", data.id)
+          .maybeSingle();
+        const curPrefs = (cur as any)?.preferences as Record<string, unknown> | null;
+        profileFields["preferences"] = {
+          ...(curPrefs || {}),
+          password_hint: data.password,
+        };
+      }
+      const { error } = await (supabaseAdmin
+        .from("profiles") as any)
         .update(profileFields)
         .eq("id", data.id);
       if (error) throw new Error(friendlyDbError(error.message));
@@ -170,7 +188,7 @@ export const saveMember = createServerFn({ method: "POST" })
         email_confirm: true,
         user_metadata: {
           name: data.name,
-          display_name: data.name,
+          display_name: displayName,
           account_type: primary,
         },
       };
@@ -188,11 +206,13 @@ export const saveMember = createServerFn({ method: "POST" })
     }
 
     if (!data.password) throw new Error("Password wajib diisi untuk anggota baru");
+    profileFields["preferences"] = { password_hint: data.password };
+
     const { createAuthUser } = await import("./password.server");
     const createdUser = await createAuthUser(supabaseAdmin, {
       email,
       password: data.password,
-      user_metadata: { name: data.name, display_name: data.name, account_type: primary },
+      user_metadata: { name: data.name, display_name: displayName, account_type: primary },
     });
     const created = { user: createdUser };
 
@@ -284,6 +304,7 @@ export const importMembers = createServerFn({ method: "POST" })
           halaqoh: empty(row.halaqoh),
           nis_nip: row.nis_nip,
           rfid_card: empty(row.rfid_card),
+          preferences: { password_hint: "Ahibs1234" },
         });
         if (error) throw new Error(error.message);
         created += 1;

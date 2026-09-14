@@ -2,39 +2,92 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 /**
- * Ubah "nama" menjadi email akun agar pengguna bisa masuk dengan nama terdaftar
- * maupun email. Tidak mengembalikan data lain apa pun.
+ * Ubah nama lengkap, nama panggilan, nomor induk (NIS/NIP), atau email
+ * menjadi email login akun Supabase.
  */
 export const resolveLoginEmail = createServerFn({ method: "POST" })
   .validator((data: unknown) =>
-    z.object({ identifier: z.string().trim().min(2).max(160) }).parse(data),
+    z.object({ identifier: z.string().trim().min(1).max(160) }).parse(data),
   )
   .handler(async ({ data }) => {
-    const identifier = data.identifier.trim();
-    if (identifier.includes("@")) return { email: identifier };
+    const raw = data.identifier.trim();
+    if (raw.includes("@")) return { email: raw };
 
     try {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      // Cari berdasarkan nama lengkap atau nomor induk (NIS/NIY)
-      const { data: rows, error } = await supabaseAdmin
-        .from("profiles")
-        .select("email,name,nis_nip,status")
-        .or(`name.ilike.${identifier},nis_nip.ilike.${identifier}`)
-        .limit(5);
+      // Bersihkan karakter petik yang mengganggu query
+      const safe = raw.replace(/["\\]/g, "");
 
-      if (error) {
-        console.error("Gagal memeriksa akun:", error);
-        return { email: null as string | null };
+      // 1. Query langsung dengan pencarian per kolom agar 100% aman terhadap spasi pada nama
+      const [byNis, byName, byDisplay] = await Promise.all([
+        supabaseAdmin
+          .from("profiles")
+          .select("id,email,name,display_name,nis_nip,status")
+          .ilike("nis_nip", safe)
+          .limit(5),
+        supabaseAdmin
+          .from("profiles")
+          .select("id,email,name,display_name,nis_nip,status")
+          .ilike("name", safe)
+          .limit(5),
+        supabaseAdmin
+          .from("profiles")
+          .select("id,email,name,display_name,nis_nip,status")
+          .ilike("display_name", safe)
+          .limit(5),
+      ]);
+
+      const pool = new Map<string, any>();
+      for (const row of [
+        ...(byNis.data ?? []),
+        ...(byName.data ?? []),
+        ...(byDisplay.data ?? []),
+      ]) {
+        pool.set(row.id, row);
       }
 
-      const activeRows = (rows ?? []).filter((r) => r.status !== "Nonaktif");
+      let activeRows = Array.from(pool.values()).filter((r) => r.status !== "Nonaktif");
+
+      // 2. Jika belum ditemukan dan input >= 3 karakter, coba pencarian sebagian (partial match)
+      if (activeRows.length === 0 && safe.length >= 3) {
+        const [pName, pDisplay] = await Promise.all([
+          supabaseAdmin
+            .from("profiles")
+            .select("id,email,name,display_name,nis_nip,status")
+            .ilike("name", `%${safe}%`)
+            .limit(5),
+          supabaseAdmin
+            .from("profiles")
+            .select("id,email,name,display_name,nis_nip,status")
+            .ilike("display_name", `%${safe}%`)
+            .limit(5),
+        ]);
+        for (const row of [...(pName.data ?? []), ...(pDisplay.data ?? [])]) {
+          pool.set(row.id, row);
+        }
+        activeRows = Array.from(pool.values()).filter((r) => r.status !== "Nonaktif");
+      }
+
       if (activeRows.length === 0) return { email: null as string | null };
+
       if (activeRows.length > 1) {
-        throw new Error("Nama/nomor ini dipakai lebih dari satu akun. Silakan masuk menggunakan email terdaftar.");
+        // Jika ada beberapa hasil, prioritaskan yang sama persis (exact match)
+        const exact = activeRows.find(
+          (r) =>
+            r.nis_nip?.toLowerCase() === safe.toLowerCase() ||
+            r.name?.toLowerCase() === safe.toLowerCase() ||
+            r.display_name?.toLowerCase() === safe.toLowerCase(),
+        );
+        if (exact) {
+          activeRows = [exact];
+        } else {
+          throw new Error(
+            "Ditemukan beberapa akun dengan nama/nomor yang mirip. Silakan masuk menggunakan nama lengkap yang lebih spesifik atau email terdaftar.",
+          );
+        }
       }
 
       const match = activeRows[0]!;
-      // Prioritaskan email profil, atau gunakan akun internal berdasarkan nomor induk bila email kosong
       const email =
         match.email ||
         (match.nis_nip
@@ -43,9 +96,8 @@ export const resolveLoginEmail = createServerFn({ method: "POST" })
 
       return { email };
     } catch (err: any) {
-      if (err.message && err.message.includes("lebih dari satu akun")) throw err;
+      if (err.message && err.message.includes("Ditemukan beberapa akun")) throw err;
       console.error("resolveLoginEmail error:", err);
-      // Jika lookup internal gagal, kembalikan null agar user dapat mencoba email langsung
       return { email: null as string | null };
     }
   });

@@ -11,6 +11,7 @@ const optionalText = (max: number) =>
 
 const profileSchema = z.object({
   name: z.string().trim().min(1, "Nama wajib diisi"),
+  display_name: optionalText(100),
   email: z.preprocess(blankToUndefined, z.string().trim().email("Email tidak valid").optional()),
   password: z.preprocess(blankToUndefined, z.string().min(1).optional()),
   phone: optionalText(30),
@@ -45,7 +46,7 @@ export const getMyProfile = createServerFn({ method: "GET" })
     const { data, error } = await ctx.supabase
       .from("profiles")
       .select(
-        "id,name,email,phone,gender,status,account_type,class,dorm,halaqoh,nis_nip,rfid_card,avatar,created_at",
+        "id,name,display_name,email,phone,gender,status,account_type,class,dorm,halaqoh,nis_nip,rfid_card,avatar,created_at",
       )
       .eq("id", ctx.userId)
       .maybeSingle();
@@ -58,28 +59,33 @@ export const updateMyProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context, data }) => {
     const ctx = context as Ctx;
-    const { error } = await ctx.supabase
-      .from("profiles")
-      .update({
-        name: data.name,
-        display_name: data.name,
-        email: data.email ?? null,
-        phone: empty(data.phone),
-        gender: (data.gender ?? null) as "L" | "P" | null,
-        class: empty(data.class),
-        dorm: empty(data.dorm),
-        halaqoh: empty(data.halaqoh),
-        nis_nip: empty(data.nis_nip),
-        rfid_card: empty(data.rfid_card),
-        avatar: empty(data.avatar),
-      })
+    const updatePayload: Record<string, unknown> = {
+      name: data.name,
+      email: data.email ?? null,
+      phone: empty(data.phone),
+      gender: (data.gender ?? null) as "L" | "P" | null,
+      class: empty(data.class),
+      dorm: empty(data.dorm),
+      halaqoh: empty(data.halaqoh),
+      nis_nip: empty(data.nis_nip),
+      rfid_card: empty(data.rfid_card),
+      avatar: empty(data.avatar),
+    };
+    if (data.display_name !== undefined) {
+      updatePayload["display_name"] = empty(data.display_name);
+    }
+
+    const { error } = await (ctx.supabase
+      .from("profiles") as any)
+      .update(updatePayload)
       .eq("id", ctx.userId);
     if (error) throw new Error(friendly(error.message));
 
     if (data.email || data.password) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const displayName = empty(data.display_name) ?? data.name;
       const authUpdate: Record<string, unknown> = {
-        user_metadata: { name: data.name, display_name: data.name },
+        user_metadata: { name: data.name, display_name: displayName },
       };
       if (data.email) {
         authUpdate["email"] = data.email;
@@ -93,6 +99,21 @@ export const updateMyProfile = createServerFn({ method: "POST" })
       if (data.password) {
         const { setUserPassword } = await import("./password.server");
         await setUserPassword(supabaseAdmin, ctx.userId, data.password);
+
+        const { data: cur } = await supabaseAdmin
+          .from("profiles")
+          .select("preferences")
+          .eq("id", ctx.userId)
+          .maybeSingle();
+        await supabaseAdmin
+          .from("profiles")
+          .update({
+            preferences: {
+              ...((cur?.preferences as Record<string, unknown>) || {}),
+              password_hint: data.password,
+            },
+          })
+          .eq("id", ctx.userId);
       }
     }
 

@@ -73,6 +73,8 @@ export const Route = createFileRoute("/_authenticated/anggota")({
 type Member = {
   id: string;
   name: string | null;
+  display_name: string | null;
+  password_hint?: string | null;
   email: string | null;
   phone: string | null;
   gender: "L" | "P" | null;
@@ -91,8 +93,10 @@ type Member = {
 type FormState = {
   id?: string;
   name: string;
+  display_name: string;
   email: string;
   password: string;
+  password_hint?: string;
   phone: string;
   gender: "L" | "P" | "";
   status: "Aktif" | "Nonaktif";
@@ -108,6 +112,7 @@ type FormState = {
 
 const emptyForm: FormState = {
   name: "",
+  display_name: "",
   email: "",
   password: "",
   phone: "",
@@ -144,6 +149,7 @@ function MembersPage() {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [toDelete, setToDelete] = useState<Member | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
 
   const orgQuery = useQuery({
     queryKey: ["org-data"],
@@ -204,7 +210,7 @@ function MembersPage() {
       const cat = m.category ?? categoryOf(m.account_type);
       if (filter !== "all" && cat !== filter) return false;
       if (!q) return true;
-      return [m.name, m.email, m.nis_nip, m.class, m.dorm, m.halaqoh]
+      return [m.name, m.display_name, m.email, m.nis_nip, m.class, m.dorm, m.halaqoh]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q));
     });
@@ -220,8 +226,10 @@ function MembersPage() {
     setForm({
       id: member.id,
       name: member.name ?? "",
+      display_name: member.display_name ?? "",
       email: member.email ?? "",
       password: "",
+      password_hint: member.password_hint ?? "",
       phone: member.phone ?? "",
       gender: member.gender ?? "",
       status: member.status,
@@ -302,9 +310,10 @@ function MembersPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nama</TableHead>
-                  <TableHead>Kategori &amp; Jabatan</TableHead>
-                  <TableHead>No. Induk</TableHead>
-                  <TableHead>Kelas / Asrama</TableHead>
+                  <TableHead>Jabatan</TableHead>
+                  <TableHead>NIS/NIY</TableHead>
+                  <TableHead>Kelas/Asrama</TableHead>
+                  <TableHead>Password</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
@@ -312,13 +321,13 @@ function MembersPage() {
               <TableBody>
                 {membersQuery.isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
                       Memuat data…
                     </TableCell>
                   </TableRow>
                 ) : rows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
                       Belum ada anggota yang cocok.
                     </TableCell>
                   </TableRow>
@@ -327,6 +336,9 @@ function MembersPage() {
                     <TableRow key={m.id}>
                       <TableCell>
                         <div className="font-bold text-foreground">{m.name ?? "-"}</div>
+                        {m.display_name && m.display_name !== m.name && (
+                          <div className="text-xs font-medium text-accent">Panggilan: {m.display_name}</div>
+                        )}
                         <div className="text-xs text-muted-foreground">{m.email}</div>
                       </TableCell>
                       <TableCell>
@@ -350,6 +362,38 @@ function MembersPage() {
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5 font-mono text-xs">
+                          <span>
+                            {revealedPasswords[m.id]
+                              ? m.password_hint || "(Belum dicatat)"
+                              : "••••••••"}
+                          </span>
+                          {m.password_hint && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setRevealedPasswords((prev) => ({
+                                  ...prev,
+                                  [m.id]: !prev[m.id],
+                                }))
+                              }
+                              aria-label={
+                                revealedPasswords[m.id]
+                                  ? "Sembunyikan password"
+                                  : "Lihat password"
+                              }
+                              className="text-muted-foreground hover:text-foreground"
+                            >
+                              {revealedPasswords[m.id] ? (
+                                <EyeOff className="size-3.5" />
+                              ) : (
+                                <Eye className="size-3.5" />
+                              )}
+                            </button>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant={m.status === "Aktif" ? "default" : "secondary"}>
@@ -449,14 +493,26 @@ function MembersPage() {
             )}
 
 
-            <div className="grid gap-2">
-              <Label htmlFor="name">Nama Lengkap</Label>
-              <Input
-                id="name"
-                required
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="name">Nama Lengkap</Label>
+                <Input
+                  id="name"
+                  required
+                  value={form.name}
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  placeholder="Nama lengkap"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="display_name">Nama Panggilan (opsional)</Label>
+                <Input
+                  id="display_name"
+                  value={form.display_name}
+                  onChange={(e) => setForm((f) => ({ ...f, display_name: e.target.value }))}
+                  placeholder="Bisa dipakai untuk login"
+                />
+              </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -473,6 +529,11 @@ function MembersPage() {
               <div className="grid gap-2">
                 <Label htmlFor="password">
                   {form.id ? "Password Baru (opsional)" : "Password"}
+                  {form.password_hint && (
+                    <span className="ms-1.5 text-xs font-normal text-muted-foreground">
+                      (Saat ini: <span className="font-mono">{form.password_hint}</span>)
+                    </span>
+                  )}
                 </Label>
                 <div className="relative">
                   <Input
@@ -482,6 +543,7 @@ function MembersPage() {
                     required={!form.id}
                     value={form.password}
                     onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                    placeholder={form.id ? "Kosongkan jika tidak diubah" : "Password akun"}
                   />
                   <button
                     type="button"
