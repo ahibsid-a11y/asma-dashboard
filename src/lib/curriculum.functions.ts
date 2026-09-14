@@ -389,49 +389,60 @@ export const saveCurriculumTpBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const storage = await import("./curriculum.storage.server");
 
-    // Simpan ke storage lokal
-    const storageRes = storage.saveTpBatch(
-      data.plan_id,
-      data.subject_id,
-      data.class_name,
-      data.academic_year,
-      data.tps as any
-    );
+    const upsertRows = data.tps.map((tp, idx) => ({
+      plan_id: data.plan_id,
+      subject_id: data.subject_id,
+      class_name: data.class_name,
+      academic_year: data.academic_year,
+      semester: tp.semester || "1",
+      code: tp.code,
+      description: tp.description,
+      element_name: tp.element_name || null,
+      cognitive_level: tp.cognitive_level || "C2 - Memahami",
+      dimension: tp.dimension || "Pengetahuan",
+      atp_order: tp.atp_order || idx + 1,
+      atp_flow: tp.atp_flow || null,
+      alokasi_jp: tp.alokasi_jp || 2,
+      assessment_method: tp.assessment_method || "Tes Tertulis",
+      status_tp: tp.status_tp ?? true,
+      status_atp: tp.status_atp ?? true,
+      status_asesmen: tp.status_asesmen ?? true,
+      status_realisasi: tp.status_realisasi || "Belum Terlaksana",
+      order_index: tp.order_index || idx + 1,
+      updated_at: new Date().toISOString(),
+    }));
 
-    // Coba sinkronkan ke Supabase jika tabel learning_objectives ada
+    let saved: CurriculumTp[] = [];
+    if (upsertRows.length > 0) {
+      const { data: rows, error } = await (supabaseAdmin as any)
+        .from("learning_objectives")
+        .upsert(upsertRows, { onConflict: "subject_id,class_name,academic_year,code" })
+        .select();
+      if (error) throw new Error(error.message);
+      saved = (rows as CurriculumTp[]) || [];
+
+      // Perbarui ringkasan jumlah TP pada perangkat ajar
+      try {
+        await (supabaseAdmin as any)
+          .from("curriculum_plans")
+          .update({ total_tp_count: upsertRows.length, updated_at: new Date().toISOString() })
+          .eq("id", data.plan_id);
+      } catch {}
+    }
+
     try {
-      const table = (supabaseAdmin as any).from("learning_objectives");
-      const upsertRows = data.tps.map((tp, idx) => ({
-        plan_id: data.plan_id,
-        subject_id: data.subject_id,
-        class_name: data.class_name,
-        academic_year: data.academic_year,
-        semester: tp.semester || "1",
-        code: tp.code,
-        description: tp.description,
-        element_name: tp.element_name || null,
-        cognitive_level: tp.cognitive_level || "C2 - Memahami",
-        dimension: tp.dimension || "Pengetahuan",
-        atp_order: tp.atp_order || idx + 1,
-        atp_flow: tp.atp_flow || null,
-        alokasi_jp: tp.alokasi_jp || 2,
-        assessment_method: tp.assessment_method || "Tes Tertulis",
-        status_tp: tp.status_tp ?? true,
-        status_atp: tp.status_atp ?? true,
-        status_asesmen: tp.status_asesmen ?? true,
-        status_realisasi: tp.status_realisasi || "Belum Terlaksana",
-        order_index: tp.order_index || idx + 1,
-        updated_at: new Date().toISOString(),
-      }));
-
-      if (upsertRows.length > 0) {
-        await table.upsert(upsertRows);
-      }
+      const storage = await import("./curriculum.storage.server");
+      storage.saveTpBatch(
+        data.plan_id,
+        data.subject_id,
+        data.class_name,
+        data.academic_year,
+        data.tps as any
+      );
     } catch {}
 
-    return storageRes;
+    return { success: true, saved };
   });
 
 /** 5. Hapus 1 TP */
@@ -446,14 +457,21 @@ export const deleteCurriculumTp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const storage = await import("./curriculum.storage.server");
 
-    const res = storage.deleteTp(data.id);
+    const { error } = await (supabaseAdmin as any)
+      .from("learning_objectives")
+      .delete()
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+
     try {
-      await (supabaseAdmin as any).from("learning_objectives").delete().eq("id", data.id);
+      const storage = await import("./curriculum.storage.server");
+      storage.deleteTp(data.id);
     } catch {}
-    return res;
+
+    return { success: true };
   });
+
 
 /** 6. Simpan Analisis Alokasi Waktu (Pekan Kalender & Efektif) */
 export const saveCurriculumTimeAllocations = createServerFn({ method: "POST" })
