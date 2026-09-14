@@ -61,7 +61,12 @@ import {
   saveCurriculumTimeAllocations,
   saveCurriculumTpBatch,
   updateCurriculumPlanMeta,
+  DEFAULT_MONTHS_GANJIL,
+  DEFAULT_MONTHS_GENAP,
   type CurriculumElement,
+  type CurriculumPlan,
+  type CurriculumPromesEntry,
+  type CurriculumTimeAllocation,
   type CurriculumTp,
 } from "@/lib/curriculum.functions";
 import { getAcademicSubjects, type AcademicSubject } from "@/lib/grades.functions";
@@ -160,6 +165,13 @@ function PerangkatAjarPage() {
   const timeAllocations = useMemo(() => planData?.timeAllocations ?? [], [planData?.timeAllocations]);
   const promesEntries = useMemo(() => planData?.promesEntries ?? [], [planData?.promesEntries]);
 
+  // ID Plan persisten dan aman
+  const activePlanId = useMemo(() => {
+    if (plan?.id) return plan.id;
+    const cleanYear = selectedYear.replace(/[^a-zA-Z0-9]/g, "_");
+    return `plan_${currentSubjectId || "sbj"}_${selectedClass}_${cleanYear}`;
+  }, [plan?.id, currentSubjectId, selectedClass, selectedYear]);
+
   // Local state for editable TP list
   const [localTps, setLocalTps] = useState<CurriculumTp[]>([]);
   const [hasUnsavedTp, setHasUnsavedTp] = useState(false);
@@ -172,13 +184,69 @@ function PerangkatAjarPage() {
     }
   }, [serverTps]);
 
+  const activePlan: CurriculumPlan = useMemo(() => {
+    if (plan) return plan;
+    const now = new Date().toISOString();
+    return {
+      id: activePlanId,
+      subject_id: currentSubjectId,
+      class_name: selectedClass,
+      academic_year: selectedYear,
+      teacher_id: profile?.id ?? null,
+      phase: "D",
+      jp_per_week: 2,
+      total_tp_count: localTps.length,
+      completion_percentage: 0,
+      realization_ganjil_percentage: 0,
+      realization_genap_percentage: 0,
+      created_at: now,
+      updated_at: now,
+    };
+  }, [plan, activePlanId, currentSubjectId, selectedClass, selectedYear, profile?.id, localTps.length]);
+
+  // 12 Bulan Alokasi Waktu Default
+  const defaultAllocations = useMemo(() => {
+    const list: CurriculumTimeAllocation[] = [];
+    DEFAULT_MONTHS_GANJIL.forEach((m) => {
+      list.push({
+        id: `alloc_${activePlanId}_1_${m.order}`,
+        plan_id: activePlanId,
+        semester: "1",
+        month_name: m.name,
+        month_order: m.order,
+        calendar_weeks: m.calendar,
+        non_effective_weeks: m.nonEffective,
+        effective_weeks: m.effective,
+        effective_jp: Math.round((m.effective ?? 0) * (activePlan.jp_per_week || 2) * 10) / 10,
+        notes: null,
+      });
+    });
+    DEFAULT_MONTHS_GENAP.forEach((m) => {
+      list.push({
+        id: `alloc_${activePlanId}_2_${m.order}`,
+        plan_id: activePlanId,
+        semester: "2",
+        month_name: m.name,
+        month_order: m.order,
+        calendar_weeks: m.calendar,
+        non_effective_weeks: m.nonEffective,
+        effective_weeks: m.effective,
+        effective_jp: Math.round((m.effective ?? 0) * (activePlan.jp_per_week || 2) * 10) / 10,
+        notes: null,
+      });
+    });
+    return list;
+  }, [activePlanId, activePlan.jp_per_week]);
+
   // Local state for time allocations
-  const [localTimeAlloc, setLocalTimeAlloc] = useState<any[]>([]);
+  const [localTimeAlloc, setLocalTimeAlloc] = useState<CurriculumTimeAllocation[]>([]);
   useMemo(() => {
-    if (timeAllocations) {
+    if (timeAllocations && timeAllocations.length > 0) {
       setLocalTimeAlloc(timeAllocations);
+    } else {
+      setLocalTimeAlloc(defaultAllocations);
     }
-  }, [timeAllocations]);
+  }, [timeAllocations, defaultAllocations]);
 
   // Local state for promes cell entries: key = `${tp_id}_${month_name}_${week_number}` -> value: number
   const [localPromesGrid, setLocalPromesGrid] = useState<Record<string, number>>({});
@@ -201,14 +269,13 @@ function PerangkatAjarPage() {
 
   // Handle Meta Change (JP per minggu)
   const handleJpPerWeekChange = async (valStr: string) => {
-    if (!plan) return;
     const num = Number(valStr) || 2;
     try {
       await savePlanMetaFn({
         data: {
-          plan_id: plan.id,
+          plan_id: activePlanId,
           jp_per_week: num,
-          phase: plan.phase,
+          phase: activePlan.phase || "D",
         },
       });
       toast.success("Beban JP per pekan diperbarui");
@@ -221,19 +288,21 @@ function PerangkatAjarPage() {
   // Element Save Mutation
   const elementMutation = useMutation({
     mutationFn: async (action: "create" | "update" | "delete") => {
-      if (!plan) return;
+      if (action !== "delete" && !elementNameInput.trim()) {
+        throw new Error("Nama elemen materi wajib diisi");
+      }
       return saveElementFn({
         data: {
           action,
           id: editingElement?.id,
-          plan_id: plan.id,
-          name: elementNameInput,
-          cp_description: elementCpInput,
+          plan_id: activePlanId,
+          name: elementNameInput.trim(),
+          cp_description: elementCpInput.trim(),
         },
       });
     },
     onSuccess: () => {
-      toast.success("Elemen & CP berhasil disimpan");
+      toast.success("Elemen & Capaian Pembelajaran (CP) berhasil disimpan");
       setElementDialogOpen(false);
       setEditingElement(null);
       setElementNameInput("");
@@ -258,10 +327,10 @@ function PerangkatAjarPage() {
   };
 
   const handleDeleteElement = async (id: string) => {
-    if (!plan || !confirm("Hapus elemen ini?")) return;
+    if (!confirm("Hapus elemen ini?")) return;
     try {
       await saveElementFn({
-        data: { action: "delete", id, plan_id: plan.id },
+        data: { action: "delete", id, plan_id: activePlanId },
       });
       toast.success("Elemen dihapus");
       queryClient.invalidateQueries({ queryKey: ["curriculum-plan"] });
@@ -322,9 +391,8 @@ function PerangkatAjarPage() {
   // Save TP Batch Mutation
   const saveTpMutation = useMutation({
     mutationFn: async () => {
-      if (!plan) return;
       const payload = localTps.map((tp, idx) => ({
-        id: tp.id.startsWith("temp_") ? undefined : tp.id,
+        id: tp.id && !tp.id.startsWith("temp_") ? tp.id : undefined,
         code: tp.code.trim() || `TP-${idx + 1}`,
         description: tp.description.trim() || "Tujuan pembelajaran",
         semester: tp.semester || "1",
@@ -344,7 +412,7 @@ function PerangkatAjarPage() {
 
       return saveTpBatchFn({
         data: {
-          plan_id: plan.id,
+          plan_id: activePlanId,
           subject_id: currentSubjectId,
           class_name: selectedClass,
           academic_year: selectedYear,
@@ -352,7 +420,7 @@ function PerangkatAjarPage() {
         },
       });
     },
-    onSuccess: (res) => {
+    onSuccess: () => {
       toast.success("Tujuan Pembelajaran (TP & ATP) berhasil disimpan dan disinkronkan!");
       setHasUnsavedTp(false);
       queryClient.invalidateQueries({ queryKey: ["curriculum-plan"] });
@@ -361,38 +429,52 @@ function PerangkatAjarPage() {
     onError: (err: any) => toast.error(err.message || "Gagal menyimpan TP"),
   });
 
-  // Time Allocations Save
-  const handleTimeAllocChange = (index: number, field: string, valStr: string) => {
-    const val = Number(valStr) || 0;
-    setLocalTimeAlloc((prev) => {
-      const copy = [...prev];
-      const item = { ...copy[index], [field]: val };
-      if (field === "calendar_weeks" || field === "non_effective_weeks") {
-        item.effective_weeks = Math.max(0, item.calendar_weeks - item.non_effective_weeks);
-        item.effective_jp = Math.round(item.effective_weeks * (plan?.jp_per_week || 2) * 10) / 10;
-      }
-      copy[index] = item;
-      return copy;
-    });
+  // Time Allocations Change Handler
+  const handleTimeAllocChange = (
+    semester: "1" | "2",
+    monthName: string,
+    field: "calendar_weeks" | "non_effective_weeks",
+    valStr: string
+  ) => {
+    const val = Math.max(0, Number(valStr) || 0);
+    setLocalTimeAlloc((prev) =>
+      prev.map((item) => {
+        if (item.semester === semester && item.month_name === monthName) {
+          const cal = field === "calendar_weeks" ? val : Number(item.calendar_weeks) || 0;
+          const nonEff = field === "non_effective_weeks" ? val : Number(item.non_effective_weeks) || 0;
+          const effWeeks = Math.max(0, cal - nonEff);
+          const jpRate = activePlan.jp_per_week || 2;
+          const effJp = Math.round(effWeeks * jpRate * 10) / 10;
+          return {
+            ...item,
+            [field]: val,
+            effective_weeks: effWeeks,
+            effective_jp: effJp,
+          };
+        }
+        return item;
+      })
+    );
   };
 
   const saveTimeAllocMutation = useMutation({
     mutationFn: async () => {
-      if (!plan) return;
+      const payload = (localTimeAlloc.length > 0 ? localTimeAlloc : defaultAllocations).map((a) => ({
+        id: a.id,
+        semester: a.semester,
+        month_name: a.month_name,
+        month_order: a.month_order,
+        calendar_weeks: Number(a.calendar_weeks) || 0,
+        non_effective_weeks: Number(a.non_effective_weeks) || 0,
+        effective_weeks: Number(a.effective_weeks) || 0,
+        effective_jp: Number(a.effective_jp) || 0,
+        notes: a.notes || null,
+      }));
+
       return saveTimeAllocFn({
         data: {
-          plan_id: plan.id,
-          allocations: localTimeAlloc.map((a) => ({
-            id: a.id,
-            semester: a.semester,
-            month_name: a.month_name,
-            month_order: a.month_order,
-            calendar_weeks: Number(a.calendar_weeks),
-            non_effective_weeks: Number(a.non_effective_weeks),
-            effective_weeks: Number(a.effective_weeks),
-            effective_jp: Number(a.effective_jp),
-            notes: a.notes,
-          })),
+          plan_id: activePlanId,
+          allocations: payload,
         },
       });
     },
@@ -418,7 +500,6 @@ function PerangkatAjarPage() {
 
   const savePromesMutation = useMutation({
     mutationFn: async () => {
-      if (!plan) return;
       const entriesPayload: any[] = [];
       const activeMonths =
         promesSemester === "1"
@@ -437,7 +518,7 @@ function PerangkatAjarPage() {
                 month_name: m,
                 week_number: w,
                 allocated_jp: val,
-                activity_type: "kbm",
+                activity_type: "kbm" as const,
               });
             }
           }
@@ -446,7 +527,7 @@ function PerangkatAjarPage() {
 
       return savePromesFn({
         data: {
-          plan_id: plan.id,
+          plan_id: activePlanId,
           semester: promesSemester,
           entries: entriesPayload,
           tpStatuses: localTpStatuses,
@@ -461,6 +542,36 @@ function PerangkatAjarPage() {
   });
 
   const activeSubject = subjects.find((s) => s.id === currentSubjectId);
+
+  // Active Print Data (Pastikan selalu memiliki fallback lengkap jika data baru / lokal)
+  const activePrintData = useMemo(() => {
+    if (!activeSubject) return null;
+    return {
+      plan: activePlan,
+      subject: activeSubject,
+      teacher: planData?.teacher || (profile ? {
+        id: profile.id,
+        name: profile.name,
+        display_name: (profile as any).display_name || profile.name || "Ustadz Pengampu",
+        nis_nip: (profile as any).nis_nip || null,
+      } : null),
+      headmasterName: planData?.headmasterName || "Mudir / Kepala Sekolah SMPIT Putra Al-Hanif",
+      elements: elements.length > 0 ? elements : (planData?.elements ?? []),
+      tps: localTps.length > 0 ? localTps : (planData?.tps ?? []),
+      timeAllocations: localTimeAlloc.length > 0 ? localTimeAlloc : (planData?.timeAllocations ?? defaultAllocations),
+      promesEntries: promesEntries.length > 0 ? promesEntries : (planData?.promesEntries ?? []),
+    };
+  }, [
+    activeSubject,
+    activePlan,
+    planData,
+    profile,
+    elements,
+    localTps,
+    localTimeAlloc,
+    defaultAllocations,
+    promesEntries,
+  ]);
 
   return (
     <AppShell accountType={profile?.account_type ?? null}>
@@ -487,7 +598,7 @@ function PerangkatAjarPage() {
               variant="outline"
               size="sm"
               onClick={() => setPrintDialogCpOpen(true)}
-              disabled={!planData}
+              disabled={!activeSubject}
               className="gap-1.5 font-medium shadow-xs"
             >
               <Printer className="w-4 h-4 text-primary" />
@@ -497,7 +608,7 @@ function PerangkatAjarPage() {
               variant="outline"
               size="sm"
               onClick={() => setPrintDialogProtaOpen(true)}
-              disabled={!planData}
+              disabled={!activeSubject}
               className="gap-1.5 font-medium shadow-xs"
             >
               <Printer className="w-4 h-4 text-emerald-600" />
@@ -1035,41 +1146,70 @@ function PerangkatAjarPage() {
                     <tbody className="divide-y divide-border/60">
                       {localTimeAlloc
                         .filter((a) => a.semester === "1")
-                        .map((alloc, idx) => {
-                          const realIdx = localTimeAlloc.findIndex((x) => x.id === alloc.id);
-                          return (
-                            <tr key={alloc.id || idx}>
-                              <td className="px-3 py-2 font-medium">{alloc.month_name}</td>
-                              <td className="px-2 py-2 text-center">
-                                <Input
-                                  type="number"
-                                  step="0.5"
-                                  min={0}
-                                  value={alloc.calendar_weeks}
-                                  onChange={(e) => handleTimeAllocChange(realIdx, "calendar_weeks", e.target.value)}
-                                  className="h-7 w-16 text-center text-xs mx-auto"
-                                />
-                              </td>
-                              <td className="px-2 py-2 text-center">
-                                <Input
-                                  type="number"
-                                  step="0.5"
-                                  min={0}
-                                  value={alloc.non_effective_weeks}
-                                  onChange={(e) => handleTimeAllocChange(realIdx, "non_effective_weeks", e.target.value)}
-                                  className="h-7 w-16 text-center text-xs mx-auto text-amber-600 font-semibold"
-                                />
-                              </td>
-                              <td className="px-2 py-2 text-center font-bold">
-                                {alloc.effective_weeks}
-                              </td>
-                              <td className="px-3 py-2 text-center font-mono font-bold text-primary">
-                                {alloc.effective_jp} JP
-                              </td>
-                            </tr>
-                          );
-                        })}
+                        .map((alloc, idx) => (
+                          <tr key={alloc.id || `alloc_1_${idx}`}>
+                            <td className="px-3 py-2 font-medium">{alloc.month_name}</td>
+                            <td className="px-2 py-2 text-center">
+                              <Input
+                                type="number"
+                                step="0.5"
+                                min={0}
+                                value={alloc.calendar_weeks}
+                                onChange={(e) =>
+                                  handleTimeAllocChange("1", alloc.month_name, "calendar_weeks", e.target.value)
+                                }
+                                className="h-7 w-16 text-center text-xs mx-auto"
+                              />
+                            </td>
+                            <td className="px-2 py-2 text-center">
+                              <Input
+                                type="number"
+                                step="0.5"
+                                min={0}
+                                value={alloc.non_effective_weeks}
+                                onChange={(e) =>
+                                  handleTimeAllocChange("1", alloc.month_name, "non_effective_weeks", e.target.value)
+                                }
+                                className="h-7 w-16 text-center text-xs mx-auto text-amber-600 font-semibold"
+                              />
+                            </td>
+                            <td className="px-2 py-2 text-center font-bold">
+                              {alloc.effective_weeks}
+                            </td>
+                            <td className="px-3 py-2 text-center font-mono font-bold text-primary">
+                              {alloc.effective_jp} JP
+                            </td>
+                          </tr>
+                        ))}
                     </tbody>
+                    <tfoot className="bg-muted/30 border-t-2 border-border/80 font-semibold text-xs">
+                      <tr>
+                        <td className="px-3 py-2 font-bold">Total Ganjil</td>
+                        <td className="px-2 py-2 text-center">
+                          {localTimeAlloc
+                            .filter((a) => a.semester === "1")
+                            .reduce((acc, c) => acc + Number(c.calendar_weeks || 0), 0)}
+                        </td>
+                        <td className="px-2 py-2 text-center text-amber-600">
+                          {localTimeAlloc
+                            .filter((a) => a.semester === "1")
+                            .reduce((acc, c) => acc + Number(c.non_effective_weeks || 0), 0)}
+                        </td>
+                        <td className="px-2 py-2 text-center font-bold text-foreground">
+                          {localTimeAlloc
+                            .filter((a) => a.semester === "1")
+                            .reduce((acc, c) => acc + Number(c.effective_weeks || 0), 0)}
+                        </td>
+                        <td className="px-3 py-2 text-center font-mono font-bold text-primary">
+                          {Math.round(
+                            localTimeAlloc
+                              .filter((a) => a.semester === "1")
+                              .reduce((acc, c) => acc + Number(c.effective_jp || 0), 0) * 10
+                          ) / 10}{" "}
+                          JP
+                        </td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </CardContent>
               </Card>
@@ -1095,41 +1235,70 @@ function PerangkatAjarPage() {
                     <tbody className="divide-y divide-border/60">
                       {localTimeAlloc
                         .filter((a) => a.semester === "2")
-                        .map((alloc, idx) => {
-                          const realIdx = localTimeAlloc.findIndex((x) => x.id === alloc.id);
-                          return (
-                            <tr key={alloc.id || idx}>
-                              <td className="px-3 py-2 font-medium">{alloc.month_name}</td>
-                              <td className="px-2 py-2 text-center">
-                                <Input
-                                  type="number"
-                                  step="0.5"
-                                  min={0}
-                                  value={alloc.calendar_weeks}
-                                  onChange={(e) => handleTimeAllocChange(realIdx, "calendar_weeks", e.target.value)}
-                                  className="h-7 w-16 text-center text-xs mx-auto"
-                                />
-                              </td>
-                              <td className="px-2 py-2 text-center">
-                                <Input
-                                  type="number"
-                                  step="0.5"
-                                  min={0}
-                                  value={alloc.non_effective_weeks}
-                                  onChange={(e) => handleTimeAllocChange(realIdx, "non_effective_weeks", e.target.value)}
-                                  className="h-7 w-16 text-center text-xs mx-auto text-amber-600 font-semibold"
-                                />
-                              </td>
-                              <td className="px-2 py-2 text-center font-bold">
-                                {alloc.effective_weeks}
-                              </td>
-                              <td className="px-3 py-2 text-center font-mono font-bold text-primary">
-                                {alloc.effective_jp} JP
-                              </td>
-                            </tr>
-                          );
-                        })}
+                        .map((alloc, idx) => (
+                          <tr key={alloc.id || `alloc_2_${idx}`}>
+                            <td className="px-3 py-2 font-medium">{alloc.month_name}</td>
+                            <td className="px-2 py-2 text-center">
+                              <Input
+                                type="number"
+                                step="0.5"
+                                min={0}
+                                value={alloc.calendar_weeks}
+                                onChange={(e) =>
+                                  handleTimeAllocChange("2", alloc.month_name, "calendar_weeks", e.target.value)
+                                }
+                                className="h-7 w-16 text-center text-xs mx-auto"
+                              />
+                            </td>
+                            <td className="px-2 py-2 text-center">
+                              <Input
+                                type="number"
+                                step="0.5"
+                                min={0}
+                                value={alloc.non_effective_weeks}
+                                onChange={(e) =>
+                                  handleTimeAllocChange("2", alloc.month_name, "non_effective_weeks", e.target.value)
+                                }
+                                className="h-7 w-16 text-center text-xs mx-auto text-amber-600 font-semibold"
+                              />
+                            </td>
+                            <td className="px-2 py-2 text-center font-bold">
+                              {alloc.effective_weeks}
+                            </td>
+                            <td className="px-3 py-2 text-center font-mono font-bold text-primary">
+                              {alloc.effective_jp} JP
+                            </td>
+                          </tr>
+                        ))}
                     </tbody>
+                    <tfoot className="bg-muted/30 border-t-2 border-border/80 font-semibold text-xs">
+                      <tr>
+                        <td className="px-3 py-2 font-bold">Total Genap</td>
+                        <td className="px-2 py-2 text-center">
+                          {localTimeAlloc
+                            .filter((a) => a.semester === "2")
+                            .reduce((acc, c) => acc + Number(c.calendar_weeks || 0), 0)}
+                        </td>
+                        <td className="px-2 py-2 text-center text-amber-600">
+                          {localTimeAlloc
+                            .filter((a) => a.semester === "2")
+                            .reduce((acc, c) => acc + Number(c.non_effective_weeks || 0), 0)}
+                        </td>
+                        <td className="px-2 py-2 text-center font-bold text-foreground">
+                          {localTimeAlloc
+                            .filter((a) => a.semester === "2")
+                            .reduce((acc, c) => acc + Number(c.effective_weeks || 0), 0)}
+                        </td>
+                        <td className="px-3 py-2 text-center font-mono font-bold text-primary">
+                          {Math.round(
+                            localTimeAlloc
+                              .filter((a) => a.semester === "2")
+                              .reduce((acc, c) => acc + Number(c.effective_jp || 0), 0) * 10
+                          ) / 10}{" "}
+                          JP
+                        </td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </CardContent>
               </Card>
@@ -1443,14 +1612,14 @@ function PerangkatAjarPage() {
       <CurriculumCpTpAtpPrintDialog
         open={printDialogCpOpen}
         onOpenChange={setPrintDialogCpOpen}
-        data={planData || null}
+        data={activePrintData}
       />
 
       {/* Official Print Dialog 2: Alokasi Waktu, Prota, Promes */}
       <CurriculumProtaPromesPrintDialog
         open={printDialogProtaOpen}
         onOpenChange={setPrintDialogProtaOpen}
-        data={planData || null}
+        data={activePrintData}
       />
     </AppShell>
   );

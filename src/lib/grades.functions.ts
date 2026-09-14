@@ -216,7 +216,7 @@ export const getLearningObjectives = createServerFn({ method: "POST" })
   .validator((data: unknown) =>
     z
       .object({
-        subject_id: z.string().uuid(),
+        subject_id: z.string().min(1),
         class_name: z.string(),
         semester: z.string().default("1"),
         academic_year: z.string().default("2026/2027"),
@@ -227,17 +227,29 @@ export const getLearningObjectives = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: tps, error } = await (supabaseAdmin as any)
-      .from("learning_objectives")
-      .select("*")
-      .eq("subject_id", data.subject_id)
-      .eq("class_name", data.class_name)
-      .eq("semester", data.semester)
-      .eq("academic_year", data.academic_year)
-      .order("order_index", { ascending: true });
+    let tps: LearningObjective[] = [];
+    try {
+      const { data: tpData, error } = await (supabaseAdmin as any)
+        .from("learning_objectives")
+        .select("*")
+        .eq("subject_id", data.subject_id)
+        .eq("class_name", data.class_name)
+        .eq("semester", data.semester)
+        .eq("academic_year", data.academic_year)
+        .order("order_index", { ascending: true });
 
-    if (error) throw new Error(error.message);
-    return (tps ?? []) as LearningObjective[];
+      if (!error && tpData && tpData.length > 0) {
+        tps = tpData as LearningObjective[];
+      }
+    } catch {}
+
+    if (tps.length === 0) {
+      const storage = await import("./curriculum.storage.server");
+      const cTps = storage.getTps(data.subject_id, data.class_name, data.academic_year);
+      tps = cTps.filter((t) => t.semester === data.semester) as any;
+    }
+
+    return tps;
   });
 
 /** 4. Kelola Tujuan Pembelajaran (TP & CP) */
@@ -246,13 +258,13 @@ export const manageLearningObjective = createServerFn({ method: "POST" })
     z
       .object({
         action: z.enum(["create", "update", "delete"]),
-        id: z.string().optional(),
-        subject_id: z.string().uuid().optional(),
+        id: z.string().min(1).optional(),
+        subject_id: z.string().min(1).optional(),
         class_name: z.string().optional(),
         semester: z.string().default("1"),
         academic_year: z.string().default("2026/2027"),
         code: z.string().trim().min(2).optional(),
-        description: z.string().trim().min(5).optional(),
+        description: z.string().trim().min(2).optional(),
         cp_code: z.string().trim().optional().nullable(),
         order_index: z.number().int().optional(),
       })
@@ -261,48 +273,72 @@ export const manageLearningObjective = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const table = (supabaseAdmin as any).from("learning_objectives");
+    const storage = await import("./curriculum.storage.server");
 
     if (data.action === "create") {
       if (!data.subject_id || !data.class_name || !data.code || !data.description) {
         throw new Error("Data TP belum lengkap");
       }
 
-      const { data: created, error } = await table
-        .insert({
-          subject_id: data.subject_id,
-          class_name: data.class_name,
-          semester: data.semester,
-          academic_year: data.academic_year,
-          code: data.code,
-          description: data.description,
-          cp_code: data.cp_code || null,
-          order_index: data.order_index || 1,
-        })
-        .select()
-        .single();
+      const planKey = storage.buildPlanKey(data.subject_id, data.class_name, data.academic_year);
+      const newTp = {
+        id: `tp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        plan_id: planKey,
+        subject_id: data.subject_id,
+        class_name: data.class_name,
+        semester: data.semester,
+        academic_year: data.academic_year,
+        code: data.code,
+        description: data.description,
+        cp_code: data.cp_code || null,
+        element_name: null,
+        cognitive_level: "C2 - Memahami",
+        dimension: "Pengetahuan",
+        atp_order: data.order_index || 1,
+        atp_flow: null,
+        alokasi_jp: 2,
+        assessment_method: "Tes Tertulis",
+        status_tp: true,
+        status_atp: true,
+        status_asesmen: true,
+        status_realisasi: "Belum Terlaksana",
+        order_index: data.order_index || 1,
+      };
 
-      if (error) throw new Error(error.message);
-      return { success: true, created };
+      const existingTps = storage.getTps(data.subject_id, data.class_name, data.academic_year);
+      storage.saveTpBatch(planKey, data.subject_id, data.class_name, data.academic_year, [...existingTps, newTp]);
+
+      try {
+        const table = (supabaseAdmin as any).from("learning_objectives");
+        await table.insert(newTp);
+      } catch {}
+
+      return { success: true, created: newTp };
     }
 
     if (!data.id) throw new Error("ID TP wajib diisi");
 
     if (data.action === "update") {
-      const updates: Record<string, any> = { updated_at: new Date().toISOString() };
-      if ("code" in data && data.code !== undefined) updates["code"] = data.code;
-      if ("description" in data && data.description !== undefined) updates["description"] = data.description;
-      if ("cp_code" in data && data.cp_code !== undefined) updates["cp_code"] = data.cp_code;
-      if ("order_index" in data && data.order_index !== undefined) updates["order_index"] = data.order_index;
+      try {
+        const table = (supabaseAdmin as any).from("learning_objectives");
+        const updates: Record<string, any> = { updated_at: new Date().toISOString() };
+        if ("code" in data && data.code !== undefined) updates["code"] = data.code;
+        if ("description" in data && data.description !== undefined) updates["description"] = data.description;
+        if ("cp_code" in data && data.cp_code !== undefined) updates["cp_code"] = data.cp_code;
+        if ("order_index" in data && data.order_index !== undefined) updates["order_index"] = data.order_index;
+        await table.update(updates).eq("id", data.id);
+      } catch {}
 
-      const { data: updated, error } = await table.update(updates).eq("id", data.id).select().single();
-      if (error) throw new Error(error.message);
-      return { success: true, updated };
+      return { success: true, updated: { id: data.id, ...data } };
     }
 
     if (data.action === "delete") {
-      const { error } = await table.delete().eq("id", data.id);
-      if (error) throw new Error(error.message);
+      storage.deleteTp(data.id);
+      try {
+        const table = (supabaseAdmin as any).from("learning_objectives");
+        await table.delete().eq("id", data.id);
+      } catch {}
+
       return { success: true, deletedId: data.id };
     }
 
@@ -314,7 +350,7 @@ export const getInputGradesSheet = createServerFn({ method: "POST" })
   .validator((data: unknown) =>
     z
       .object({
-        subject_id: z.string().uuid(),
+        subject_id: z.string().min(1),
         class_name: z.string(),
         semester: z.string().default("1"),
         academic_year: z.string().default("2026/2027"),
@@ -325,90 +361,121 @@ export const getInputGradesSheet = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // Mapel
-    const { data: subject, error: sErr } = await (supabaseAdmin as any)
-      .from("academic_subjects")
-      .select("*")
-      .eq("id", data.subject_id)
-      .maybeSingle();
-
-    if (sErr || !subject) throw new Error("Mata pelajaran tidak ditemukan");
-
-    // TP aktif
-    const { data: tps } = await (supabaseAdmin as any)
-      .from("learning_objectives")
-      .select("*")
-      .eq("subject_id", data.subject_id)
-      .eq("class_name", data.class_name)
-      .eq("semester", data.semester)
-      .eq("academic_year", data.academic_year)
-      .order("order_index", { ascending: true });
-
-    // Santri di kelas tersebut
-    const { data: students, error: stdErr } = await (supabaseAdmin as any)
-      .from("profiles")
-      .select("id,name,display_name,nis_nip,dorm,class,avatar")
-      .eq("account_type", "santri")
-      .eq("status", "Aktif")
-      .eq("class", data.class_name)
-      .order("name", { ascending: true });
-
-    if (stdErr) throw new Error(stdErr.message);
-
-    const studentIds = (students ?? []).map((s: any) => s.id);
-
-    // Nilai Formatif TP
-    const tpGradesMap: Record<string, number> = {};
-    if (tps && tps.length > 0 && studentIds.length > 0) {
-      const tpIds = tps.map((t: any) => t.id);
-      const { data: tpGrades } = await (supabaseAdmin as any)
-        .from("student_tp_grades")
-        .select("tp_id,student_id,score")
-        .in("tp_id", tpIds)
-        .in("student_id", studentIds);
-
-      for (const g of tpGrades ?? []) {
-        tpGradesMap[`${g.student_id}_${g.tp_id}`] = Number(g.score);
-      }
+    // Mapel (selalu fallback aman)
+    const subjects = await ensureSubjects(supabaseAdmin);
+    let subject = subjects.find((s) => s.id === data.subject_id);
+    if (!subject) {
+      subject = subjects[0] || {
+        id: data.subject_id,
+        code: "MAPEL",
+        name: "Mata Pelajaran",
+        group: "Umum",
+        kkm: 75,
+        order_index: 1,
+        is_active: true,
+      };
     }
 
-    // Nilai Rangkuman Mapel (STS, SAS, Nilai Akhir)
-    const summariesMap: Record<string, StudentSubjectSummary> = {};
-    if (studentIds.length > 0) {
-      const { data: summaries } = await (supabaseAdmin as any)
-        .from("student_subject_summaries")
+    // TP aktif
+    let tps: LearningObjective[] = [];
+    try {
+      const { data: tpData } = await (supabaseAdmin as any)
+        .from("learning_objectives")
         .select("*")
         .eq("subject_id", data.subject_id)
         .eq("class_name", data.class_name)
         .eq("semester", data.semester)
         .eq("academic_year", data.academic_year)
-        .in("student_id", studentIds);
-
-      for (const sum of summaries ?? []) {
-        summariesMap[sum.student_id] = sum as StudentSubjectSummary;
+        .order("order_index", { ascending: true });
+      if (tpData && tpData.length > 0) {
+        tps = tpData as LearningObjective[];
       }
+    } catch {}
+
+    if (tps.length === 0) {
+      const storage = await import("./curriculum.storage.server");
+      const cTps = storage.getTps(data.subject_id, data.class_name, data.academic_year);
+      tps = cTps.filter((t) => t.semester === data.semester) as any;
+    }
+
+    // Santri di kelas tersebut
+    let students: any[] = [];
+    try {
+      const { data: stdData, error: stdErr } = await (supabaseAdmin as any)
+        .from("profiles")
+        .select("id,name,display_name,nis_nip,dorm,class,avatar")
+        .eq("account_type", "santri")
+        .eq("status", "Aktif")
+        .eq("class", data.class_name)
+        .order("name", { ascending: true });
+      if (!stdErr && stdData) {
+        students = stdData;
+      }
+    } catch {}
+
+    const studentIds = students.map((s: any) => s.id);
+
+    // Nilai Formatif TP
+    const tpGradesMap: Record<string, number> = {};
+    if (tps && tps.length > 0 && studentIds.length > 0) {
+      try {
+        const tpIds = tps.map((t: any) => t.id);
+        const { data: tpGrades } = await (supabaseAdmin as any)
+          .from("student_tp_grades")
+          .select("tp_id,student_id,score")
+          .in("tp_id", tpIds)
+          .in("student_id", studentIds);
+
+        for (const g of tpGrades ?? []) {
+          tpGradesMap[`${g.student_id}_${g.tp_id}`] = Number(g.score);
+        }
+      } catch {}
+    }
+
+    // Nilai Rangkuman Mapel (STS, SAS, Nilai Akhir)
+    const summariesMap: Record<string, StudentSubjectSummary> = {};
+    if (studentIds.length > 0) {
+      try {
+        const { data: summaries } = await (supabaseAdmin as any)
+          .from("student_subject_summaries")
+          .select("*")
+          .eq("subject_id", data.subject_id)
+          .eq("class_name", data.class_name)
+          .eq("semester", data.semester)
+          .eq("academic_year", data.academic_year)
+          .in("student_id", studentIds);
+
+        for (const sum of summaries ?? []) {
+          summariesMap[sum.student_id] = sum as StudentSubjectSummary;
+        }
+      } catch {}
     }
 
     // Pengaturan Bobot
-    const { data: settingsRow } = await (supabaseAdmin as any)
-      .from("grading_settings")
-      .select("*")
-      .eq("academic_year", data.academic_year)
-      .eq("semester", data.semester)
-      .maybeSingle();
-
-    const settings: GradingSettings = settingsRow || {
+    let settings: GradingSettings = {
       academic_year: data.academic_year,
       semester: data.semester,
       weight_tp: 50,
       weight_sts: 25,
       weight_sas: 25,
     };
+    try {
+      const { data: settingsRow } = await (supabaseAdmin as any)
+        .from("grading_settings")
+        .select("*")
+        .eq("academic_year", data.academic_year)
+        .eq("semester", data.semester)
+        .maybeSingle();
+
+      if (settingsRow) {
+        settings = settingsRow;
+      }
+    } catch {}
 
     return {
       subject: subject as AcademicSubject,
-      tps: (tps ?? []) as LearningObjective[],
-      students: students ?? [],
+      tps,
+      students,
       tpGradesMap,
       summariesMap,
       settings,
@@ -420,13 +487,13 @@ export const saveGradesBatch = createServerFn({ method: "POST" })
   .validator((data: unknown) =>
     z
       .object({
-        subject_id: z.string().uuid(),
+        subject_id: z.string().min(1),
         class_name: z.string(),
         semester: z.string().default("1"),
         academic_year: z.string().default("2026/2027"),
         grades: z.array(
           z.object({
-            student_id: z.string().uuid(),
+            student_id: z.string().min(1),
             tp_scores: z.record(z.string(), z.number().min(0).max(100)),
             sts_score: z.number().min(0).max(100).default(0),
             sas_score: z.number().min(0).max(100).default(0),

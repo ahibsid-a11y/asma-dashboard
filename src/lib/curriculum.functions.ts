@@ -2,108 +2,35 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { isMemberAdmin } from "@/lib/roles";
 import { ensureSubjects } from "@/lib/grades.functions";
+import {
+  DEFAULT_MONTHS_GANJIL,
+  DEFAULT_MONTHS_GENAP,
+  type CurriculumElement,
+  type CurriculumPlan,
+  type CurriculumPromesEntry,
+  type CurriculumTimeAllocation,
+  type CurriculumTp,
+} from "@/lib/curriculum.storage.server";
+
+export type {
+  CurriculumElement,
+  CurriculumPlan,
+  CurriculumPromesEntry,
+  CurriculumTimeAllocation,
+  CurriculumTp,
+};
+
+export { DEFAULT_MONTHS_GANJIL, DEFAULT_MONTHS_GENAP };
 
 type Ctx = { supabase: any; userId: string };
-
-export type CurriculumPlan = {
-  id: string;
-  subject_id: string;
-  class_name: string;
-  academic_year: string;
-  teacher_id: string | null;
-  phase: string;
-  jp_per_week: number;
-  total_tp_count: number;
-  completion_percentage: number;
-  realization_ganjil_percentage: number;
-  realization_genap_percentage: number;
-  created_at?: string;
-  updated_at?: string;
-};
-
-export type CurriculumElement = {
-  id: string;
-  plan_id: string;
-  order_index: number;
-  name: string;
-  cp_description: string;
-};
-
-export type CurriculumTp = {
-  id: string;
-  plan_id: string | null;
-  subject_id: string;
-  class_name: string;
-  semester: string; // '1' | '2'
-  academic_year: string;
-  code: string;
-  description: string;
-  cp_code: string | null;
-  element_name: string | null;
-  cognitive_level: string; // e.g. "C2 - Memahami"
-  dimension: string; // "Pengetahuan" | "Keterampilan" | "Sikap"
-  atp_order: number;
-  atp_flow: string | null;
-  alokasi_jp: number;
-  assessment_method: string;
-  status_tp: boolean;
-  status_atp: boolean;
-  status_asesmen: boolean;
-  status_realisasi: string; // 'Belum Terlaksana' | 'Sedang Berjalan' | 'Terlaksana'
-  order_index: number;
-};
-
-export type CurriculumTimeAllocation = {
-  id: string;
-  plan_id: string;
-  semester: "1" | "2";
-  month_name: string;
-  month_order: number;
-  calendar_weeks: number;
-  non_effective_weeks: number;
-  effective_weeks: number;
-  effective_jp: number;
-  notes: string | null;
-};
-
-export type CurriculumPromesEntry = {
-  id: string;
-  plan_id: string;
-  tp_id: string;
-  semester: "1" | "2";
-  month_name: string;
-  week_number: number;
-  allocated_jp: number;
-  activity_type: "kbm" | "formatif" | "sts" | "sas" | "libur" | "remedial";
-  notes: string | null;
-};
-
-export const DEFAULT_MONTHS_GANJIL = [
-  { name: "Juli", order: 1, calendar: 4.5, nonEffective: 2.0, effective: 2.5 },
-  { name: "Agustus", order: 2, calendar: 5.0, nonEffective: 0.0, effective: 5.0 },
-  { name: "September", order: 3, calendar: 4.5, nonEffective: 1.0, effective: 3.5 },
-  { name: "Oktober", order: 4, calendar: 4.5, nonEffective: 0.0, effective: 4.5 },
-  { name: "November", order: 5, calendar: 4.5, nonEffective: 0.0, effective: 4.5 },
-  { name: "Desember", order: 6, calendar: 4.5, nonEffective: 2.5, effective: 2.0 },
-];
-
-export const DEFAULT_MONTHS_GENAP = [
-  { name: "Januari", order: 7, calendar: 4.5, nonEffective: 1.0, effective: 3.5 },
-  { name: "Februari", order: 8, calendar: 4.0, nonEffective: 0.0, effective: 4.0 },
-  { name: "Maret", order: 9, calendar: 4.5, nonEffective: 1.0, effective: 3.5 },
-  { name: "April", order: 10, calendar: 4.5, nonEffective: 0.5, effective: 4.0 },
-  { name: "Mei", order: 11, calendar: 4.5, nonEffective: 0.5, effective: 4.0 },
-  { name: "Juni", order: 12, calendar: 4.5, nonEffective: 3.0, effective: 1.5 },
-];
 
 /** 1. Ambil Perangkat Ajar Lengkap untuk 1 Mapel & Kelas */
 export const getCurriculumPlan = createServerFn({ method: "POST" })
   .validator((data: unknown) =>
     z
       .object({
-        subject_id: z.string().uuid(),
+        subject_id: z.string().min(1),
         class_name: z.string(),
         academic_year: z.string().default("2026/2027"),
       })
@@ -113,117 +40,164 @@ export const getCurriculumPlan = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     const ctx = context as Ctx;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const storage = await import("./curriculum.storage.server");
 
-    // Mapel
-    const { data: subject, error: sErr } = await (supabaseAdmin as any)
-      .from("academic_subjects")
-      .select("*")
-      .eq("id", data.subject_id)
-      .single();
+    // 1. Ambil Mata Pelajaran (pastikan selalu ditemukan, tidak pernah throw)
+    const subjects = await ensureSubjects(supabaseAdmin);
+    let subject = subjects.find((s) => s.id === data.subject_id);
+    if (!subject) {
+      subject = subjects[0] || {
+        id: data.subject_id,
+        code: "MAPEL",
+        name: "Mata Pelajaran",
+        group: "Umum",
+        kkm: 75,
+        order_index: 1,
+        is_active: true,
+      };
+    }
 
-    if (sErr || !subject) throw new Error("Mata pelajaran tidak ditemukan");
+    // 2. Ambil atau Inisialisasi Plan
+    let plan: CurriculumPlan | null = null;
+    try {
+      const { data: pData, error: pErr } = await (supabaseAdmin as any)
+        .from("curriculum_plans")
+        .select("*")
+        .eq("subject_id", data.subject_id)
+        .eq("class_name", data.class_name)
+        .eq("academic_year", data.academic_year)
+        .maybeSingle();
 
-    // Ambil atau inisialisasi curriculum_plans
-    let { data: plan } = await (supabaseAdmin as any)
-      .from("curriculum_plans")
-      .select("*")
-      .eq("subject_id", data.subject_id)
-      .eq("class_name", data.class_name)
-      .eq("academic_year", data.academic_year)
-      .maybeSingle();
+      if (!pErr && pData) {
+        plan = pData as CurriculumPlan;
+      } else if (!pErr && !pData) {
+        const { data: createdPlan, error: cErr } = await (supabaseAdmin as any)
+          .from("curriculum_plans")
+          .insert({
+            subject_id: data.subject_id,
+            class_name: data.class_name,
+            academic_year: data.academic_year,
+            teacher_id: ctx.userId,
+            phase: "D",
+            jp_per_week: 2,
+            total_tp_count: 0,
+            completion_percentage: 0,
+            realization_ganjil_percentage: 0,
+            realization_genap_percentage: 0,
+          })
+          .select()
+          .maybeSingle();
+
+        if (!cErr && createdPlan) {
+          plan = createdPlan as CurriculumPlan;
+        }
+      }
+    } catch {
+      // Supabase remote table missing or cache error
+    }
 
     if (!plan) {
-      const { data: createdPlan, error: pErr } = await (supabaseAdmin as any)
-        .from("curriculum_plans")
-        .insert({
-          subject_id: data.subject_id,
-          class_name: data.class_name,
-          academic_year: data.academic_year,
-          teacher_id: ctx.userId,
-          phase: "D",
-          jp_per_week: 2,
-          total_tp_count: 0,
-          completion_percentage: 0,
-          realization_ganjil_percentage: 0,
-          realization_genap_percentage: 0,
-        })
-        .select()
-        .single();
-
-      if (pErr) throw new Error(pErr.message);
-      plan = createdPlan;
-
-      // Inisialisasi 12 bulan alokasi waktu default
-      const timeAllocRows: any[] = [];
-      for (const m of DEFAULT_MONTHS_GANJIL) {
-        timeAllocRows.push({
-          plan_id: plan.id,
-          semester: "1",
-          month_name: m.name,
-          month_order: m.order,
-          calendar_weeks: m.calendar,
-          non_effective_weeks: m.nonEffective,
-          effective_weeks: m.effective,
-          effective_jp: m.effective * 2,
-        });
-      }
-      for (const m of DEFAULT_MONTHS_GENAP) {
-        timeAllocRows.push({
-          plan_id: plan.id,
-          semester: "2",
-          month_name: m.name,
-          month_order: m.order,
-          calendar_weeks: m.calendar,
-          non_effective_weeks: m.nonEffective,
-          effective_weeks: m.effective,
-          effective_jp: m.effective * 2,
-        });
-      }
-
-      await (supabaseAdmin as any).from("curriculum_time_allocations").insert(timeAllocRows);
+      plan = storage.getOrCreatePlan(
+        data.subject_id,
+        data.class_name,
+        data.academic_year,
+        ctx.userId
+      );
     }
 
-    // Ambil Elemen & CP
-    const { data: elements } = await (supabaseAdmin as any)
-      .from("curriculum_elements")
-      .select("*")
-      .eq("plan_id", plan.id)
-      .order("order_index", { ascending: true });
+    // 3. Ambil Elemen & Capaian Pembelajaran (CP)
+    let elements: CurriculumElement[] = [];
+    try {
+      const { data: elData, error: elErr } = await (supabaseAdmin as any)
+        .from("curriculum_elements")
+        .select("*")
+        .eq("plan_id", plan.id)
+        .order("order_index", { ascending: true });
+      if (!elErr && elData && elData.length > 0) {
+        elements = elData as CurriculumElement[];
+      }
+    } catch {}
 
-    // Ambil TPs (terhubung ke learning_objectives)
-    const { data: tps } = await (supabaseAdmin as any)
-      .from("learning_objectives")
-      .select("*")
-      .eq("subject_id", data.subject_id)
-      .eq("class_name", data.class_name)
-      .eq("academic_year", data.academic_year)
-      .order("order_index", { ascending: true });
+    if (elements.length === 0) {
+      elements = storage.getElementsByPlanId(plan.id);
+    }
 
-    // Ambil Alokasi Waktu
-    const { data: timeAllocations } = await (supabaseAdmin as any)
-      .from("curriculum_time_allocations")
-      .select("*")
-      .eq("plan_id", plan.id)
-      .order("month_order", { ascending: true });
+    // 4. Ambil TP & ATP (Tujuan Pembelajaran)
+    let tps: CurriculumTp[] = [];
+    try {
+      const { data: tpData, error: tpErr } = await (supabaseAdmin as any)
+        .from("learning_objectives")
+        .select("*")
+        .eq("subject_id", data.subject_id)
+        .eq("class_name", data.class_name)
+        .eq("academic_year", data.academic_year)
+        .order("order_index", { ascending: true });
+      if (!tpErr && tpData && tpData.length > 0) {
+        tps = tpData as CurriculumTp[];
+      }
+    } catch {}
 
-    // Ambil Promes Entries
-    const { data: promesEntries } = await (supabaseAdmin as any)
-      .from("curriculum_promes_entries")
-      .select("*")
-      .eq("plan_id", plan.id);
+    if (tps.length === 0) {
+      tps = storage.getTps(data.subject_id, data.class_name, data.academic_year);
+    }
 
-    // Guru info
-    let teacher = null;
+    // 5. Ambil Analisis Alokasi Waktu
+    let timeAllocations: CurriculumTimeAllocation[] = [];
+    try {
+      const { data: aData, error: aErr } = await (supabaseAdmin as any)
+        .from("curriculum_time_allocations")
+        .select("*")
+        .eq("plan_id", plan.id)
+        .order("month_order", { ascending: true });
+      if (!aErr && aData && aData.length > 0) {
+        timeAllocations = aData as CurriculumTimeAllocation[];
+      }
+    } catch {}
+
+    if (timeAllocations.length === 0) {
+      timeAllocations = storage.getTimeAllocations(plan.id, plan.jp_per_week || 2);
+    }
+
+    // 6. Ambil Grid Matriks PROMES
+    let promesEntries: CurriculumPromesEntry[] = [];
+    try {
+      const { data: prData, error: prErr } = await (supabaseAdmin as any)
+        .from("curriculum_promes_entries")
+        .select("*")
+        .eq("plan_id", plan.id);
+      if (!prErr && prData && prData.length > 0) {
+        promesEntries = prData as CurriculumPromesEntry[];
+      }
+    } catch {}
+
+    if (promesEntries.length === 0) {
+      promesEntries = storage.getPromesEntries(plan.id);
+    }
+
+    // 7. Guru Info
+    let teacher: any = null;
     if (plan.teacher_id) {
-      const { data: tProfile } = await (supabaseAdmin as any)
-        .from("profiles")
-        .select("id,name,display_name,nis_nip")
-        .eq("id", plan.teacher_id)
-        .maybeSingle();
-      teacher = tProfile;
+      try {
+        const { data: tProfile } = await (supabaseAdmin as any)
+          .from("profiles")
+          .select("id,name,display_name,nis_nip")
+          .eq("id", plan.teacher_id)
+          .maybeSingle();
+        teacher = tProfile;
+      } catch {}
+    }
+    if (!teacher && ctx.userId) {
+      try {
+        const { data: myProfile } = await (supabaseAdmin as any)
+          .from("profiles")
+          .select("id,name,display_name,nis_nip")
+          .eq("id", ctx.userId)
+          .maybeSingle();
+        teacher = myProfile;
+      } catch {}
     }
 
-    // Kepala Sekolah info
+    // 8. Kepala Sekolah Info
     let headmasterName = "Mudir / Kepala Sekolah SMPIT Putra Al-Hanif";
     try {
       const { data: hm } = await (supabaseAdmin as any)
@@ -231,20 +205,18 @@ export const getCurriculumPlan = createServerFn({ method: "POST" })
         .select("name")
         .in("account_type", ["kepala_sekolah", "mudir"])
         .limit(1);
-      if (hm && hm[0]) headmasterName = hm[0].name;
-    } catch {
-      // ignore
-    }
+      if (hm && hm[0]?.name) headmasterName = hm[0].name;
+    } catch {}
 
     return {
-      plan: plan as CurriculumPlan,
+      plan,
       subject,
       teacher,
       headmasterName,
-      elements: (elements ?? []) as CurriculumElement[],
-      tps: (tps ?? []) as CurriculumTp[],
-      timeAllocations: (timeAllocations ?? []) as CurriculumTimeAllocation[],
-      promesEntries: (promesEntries ?? []) as CurriculumPromesEntry[],
+      elements,
+      tps,
+      timeAllocations,
+      promesEntries,
     };
   });
 
@@ -253,32 +225,34 @@ export const updateCurriculumPlanMeta = createServerFn({ method: "POST" })
   .validator((data: unknown) =>
     z
       .object({
-        plan_id: z.string().uuid(),
+        plan_id: z.string().min(1),
         phase: z.string().default("D"),
         jp_per_week: z.number().int().min(1).max(10).default(2),
-        teacher_id: z.string().uuid().optional().nullable(),
+        teacher_id: z.string().optional().nullable(),
       })
       .parse(data),
   )
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const storage = await import("./curriculum.storage.server");
 
-    const updates: Record<string, any> = {
-      phase: data.phase,
-      jp_per_week: data.jp_per_week,
-      updated_at: new Date().toISOString(),
-    };
-    if (data.teacher_id !== undefined) updates["teacher_id"] = data.teacher_id;
+    const updated = storage.updatePlanMeta(data);
 
-    const { data: updated, error } = await (supabaseAdmin as any)
-      .from("curriculum_plans")
-      .update(updates)
-      .eq("id", data.plan_id)
-      .select()
-      .single();
+    try {
+      const updates: Record<string, any> = {
+        phase: data.phase,
+        jp_per_week: data.jp_per_week,
+        updated_at: new Date().toISOString(),
+      };
+      if (data.teacher_id !== undefined) updates["teacher_id"] = data.teacher_id;
 
-    if (error) throw new Error(error.message);
+      await (supabaseAdmin as any)
+        .from("curriculum_plans")
+        .update(updates)
+        .eq("id", data.plan_id);
+    } catch {}
+
     return { success: true, updated };
   });
 
@@ -288,8 +262,8 @@ export const saveCurriculumElement = createServerFn({ method: "POST" })
     z
       .object({
         action: z.enum(["create", "update", "delete"]),
-        id: z.string().uuid().optional(),
-        plan_id: z.string().uuid(),
+        id: z.string().min(1).optional(),
+        plan_id: z.string().min(1),
         name: z.string().trim().min(2).optional(),
         cp_description: z.string().trim().optional(),
         order_index: z.number().int().optional(),
@@ -299,66 +273,61 @@ export const saveCurriculumElement = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const table = (supabaseAdmin as any).from("curriculum_elements");
+    const storage = await import("./curriculum.storage.server");
 
-    if (data.action === "create") {
-      if (!data.name) throw new Error("Nama elemen wajib diisi");
-      const { data: created, error } = await table
-        .insert({
+    // Simpan ke storage lokal persisten
+    const storageRes = storage.saveElement(data);
+
+    // Coba simpan ke Supabase jika tabel ada
+    try {
+      const table = (supabaseAdmin as any).from("curriculum_elements");
+      if (data.action === "create") {
+        if (!data.name) throw new Error("Nama elemen wajib diisi");
+        await table.insert({
+          id: storageRes.created?.id,
           plan_id: data.plan_id,
           name: data.name,
           cp_description: data.cp_description || "",
           order_index: data.order_index || 1,
-        })
-        .select()
-        .single();
-      if (error) throw new Error(error.message);
-      return { success: true, created };
-    }
+        });
+      } else if (data.action === "update" && data.id) {
+        await table
+          .update({
+            name: data.name,
+            cp_description: data.cp_description,
+            order_index: data.order_index,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", data.id);
+      } else if (data.action === "delete" && data.id) {
+        await table.delete().eq("id", data.id);
+      }
+    } catch {}
 
-    if (!data.id) throw new Error("ID elemen wajib diisi");
-
-    if (data.action === "update") {
-      const updates: Record<string, any> = { updated_at: new Date().toISOString() };
-      if (data.name !== undefined) updates["name"] = data.name;
-      if (data.cp_description !== undefined) updates["cp_description"] = data.cp_description;
-      if (data.order_index !== undefined) updates["order_index"] = data.order_index;
-
-      const { data: updated, error } = await table.update(updates).eq("id", data.id).select().single();
-      if (error) throw new Error(error.message);
-      return { success: true, updated };
-    }
-
-    if (data.action === "delete") {
-      const { error } = await table.delete().eq("id", data.id);
-      if (error) throw new Error(error.message);
-      return { success: true, deletedId: data.id };
-    }
-
-    return { success: false };
+    return storageRes;
   });
 
-/** 4. Simpan / Perbarui Batch TP & ATP (Sinkron Langsung ke learning_objectives) */
+/** 4. Simpan / Perbarui Batch TP & ATP */
 export const saveCurriculumTpBatch = createServerFn({ method: "POST" })
   .validator((data: unknown) =>
     z
       .object({
-        plan_id: z.string().uuid(),
-        subject_id: z.string().uuid(),
+        plan_id: z.string().min(1),
+        subject_id: z.string().min(1),
         class_name: z.string(),
         academic_year: z.string(),
         tps: z.array(
           z.object({
-            id: z.string().uuid().optional(),
+            id: z.string().min(1).optional(),
             code: z.string().trim().min(2),
-            description: z.string().trim().min(5),
+            description: z.string().trim().min(2),
             semester: z.string().default("1"),
             element_name: z.string().optional().nullable(),
             cognitive_level: z.string().default("C2 - Memahami"),
             dimension: z.string().default("Pengetahuan"),
             atp_order: z.number().int().default(1),
             atp_flow: z.string().optional().nullable(),
-            alokasi_jp: z.number().int().min(1).default(2),
+            alokasi_jp: z.number().min(0.5).default(2),
             assessment_method: z.string().default("Tes Tertulis"),
             status_tp: z.boolean().default(true),
             status_atp: z.boolean().default(true),
@@ -373,10 +342,21 @@ export const saveCurriculumTpBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const table = (supabaseAdmin as any).from("learning_objectives");
+    const storage = await import("./curriculum.storage.server");
 
-    const upsertRows = data.tps.map((tp, idx) => {
-      const row: Record<string, any> = {
+    // Simpan ke storage lokal
+    const storageRes = storage.saveTpBatch(
+      data.plan_id,
+      data.subject_id,
+      data.class_name,
+      data.academic_year,
+      data.tps as any
+    );
+
+    // Coba sinkronkan ke Supabase jika tabel learning_objectives ada
+    try {
+      const table = (supabaseAdmin as any).from("learning_objectives");
+      const upsertRows = data.tps.map((tp, idx) => ({
         plan_id: data.plan_id,
         subject_id: data.subject_id,
         class_name: data.class_name,
@@ -397,37 +377,14 @@ export const saveCurriculumTpBatch = createServerFn({ method: "POST" })
         status_realisasi: tp.status_realisasi || "Belum Terlaksana",
         order_index: tp.order_index || idx + 1,
         updated_at: new Date().toISOString(),
-      };
-      if (tp.id) row["id"] = tp.id;
-      return row;
-    });
+      }));
 
-    if (upsertRows.length > 0) {
-      const { error } = await table.upsert(upsertRows);
-      if (error) throw new Error(error.message);
-    }
+      if (upsertRows.length > 0) {
+        await table.upsert(upsertRows);
+      }
+    } catch {}
 
-    // Hitung % kelengkapan dan jumlah TP
-    const totalTpCount = data.tps.length;
-    let completePoints = 0;
-    for (const t of data.tps) {
-      if (t.code && t.description) completePoints += 1;
-      if (t.atp_flow) completePoints += 0.5;
-      if (t.alokasi_jp > 0) completePoints += 0.5;
-    }
-    const maxPoints = Math.max(1, totalTpCount * 2);
-    const completionPct = Math.min(100, Math.round((completePoints / maxPoints) * 100));
-
-    await (supabaseAdmin as any)
-      .from("curriculum_plans")
-      .update({
-        total_tp_count: totalTpCount,
-        completion_percentage: completionPct,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", data.plan_id);
-
-    return { success: true, count: upsertRows.length, completionPercentage: completionPct };
+    return storageRes;
   });
 
 /** 5. Hapus 1 TP */
@@ -435,16 +392,20 @@ export const deleteCurriculumTp = createServerFn({ method: "POST" })
   .validator((data: unknown) =>
     z
       .object({
-        id: z.string().uuid(),
+        id: z.string().min(1),
       })
       .parse(data),
   )
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await (supabaseAdmin as any).from("learning_objectives").delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
-    return { success: true, deletedId: data.id };
+    const storage = await import("./curriculum.storage.server");
+
+    const res = storage.deleteTp(data.id);
+    try {
+      await (supabaseAdmin as any).from("learning_objectives").delete().eq("id", data.id);
+    } catch {}
+    return res;
   });
 
 /** 6. Simpan Analisis Alokasi Waktu (Pekan Kalender & Efektif) */
@@ -452,13 +413,13 @@ export const saveCurriculumTimeAllocations = createServerFn({ method: "POST" })
   .validator((data: unknown) =>
     z
       .object({
-        plan_id: z.string().uuid(),
+        plan_id: z.string().min(1),
         allocations: z.array(
           z.object({
-            id: z.string().uuid().optional(),
+            id: z.string().min(1).optional(),
             semester: z.enum(["1", "2"]),
             month_name: z.string(),
-            month_order: z.number().int(),
+            month_order: z.number(),
             calendar_weeks: z.number().min(0),
             non_effective_weeks: z.number().min(0),
             effective_weeks: z.number().min(0),
@@ -472,10 +433,13 @@ export const saveCurriculumTimeAllocations = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const table = (supabaseAdmin as any).from("curriculum_time_allocations");
+    const storage = await import("./curriculum.storage.server");
 
-    const rows = data.allocations.map((a) => {
-      const row: Record<string, any> = {
+    const storageRes = storage.saveTimeAllocations(data.plan_id, data.allocations as any);
+
+    try {
+      const table = (supabaseAdmin as any).from("curriculum_time_allocations");
+      const rows = data.allocations.map((a) => ({
         plan_id: data.plan_id,
         semester: a.semester,
         month_name: a.month_name,
@@ -486,15 +450,11 @@ export const saveCurriculumTimeAllocations = createServerFn({ method: "POST" })
         effective_jp: a.effective_jp,
         notes: a.notes || null,
         updated_at: new Date().toISOString(),
-      };
-      if (a.id) row["id"] = a.id;
-      return row;
-    });
+      }));
+      await table.upsert(rows, { onConflict: "plan_id,semester,month_name" });
+    } catch {}
 
-    const { error } = await table.upsert(rows, { onConflict: "plan_id,semester,month_name" });
-    if (error) throw new Error(error.message);
-
-    return { success: true, count: rows.length };
+    return storageRes;
   });
 
 /** 7. Simpan Grid Matriks Program Semester (PROMES) */
@@ -502,73 +462,54 @@ export const saveCurriculumPromesGrid = createServerFn({ method: "POST" })
   .validator((data: unknown) =>
     z
       .object({
-        plan_id: z.string().uuid(),
+        plan_id: z.string().min(1),
         semester: z.enum(["1", "2"]),
         entries: z.array(
           z.object({
-            tp_id: z.string().uuid(),
+            tp_id: z.string().min(1),
             month_name: z.string(),
             week_number: z.number().int().min(1).max(5),
-            allocated_jp: z.number().int().min(0).max(20),
+            allocated_jp: z.number().min(0).max(20),
             activity_type: z.enum(["kbm", "formatif", "sts", "sas", "libur", "remedial"]).default("kbm"),
             notes: z.string().optional().nullable(),
           }),
         ),
-        tpStatuses: z.record(z.string(), z.string()).optional(), // tp_id -> status_realisasi
+        tpStatuses: z.record(z.string(), z.string()).optional(),
       })
       .parse(data),
   )
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const storage = await import("./curriculum.storage.server");
 
-    // Upsert entries
-    const rows = data.entries.map((e) => ({
-      plan_id: data.plan_id,
-      tp_id: e.tp_id,
-      semester: data.semester,
-      month_name: e.month_name,
-      week_number: e.week_number,
-      allocated_jp: e.allocated_jp,
-      activity_type: e.activity_type,
-      notes: e.notes || null,
-      updated_at: new Date().toISOString(),
-    }));
+    const storageRes = storage.savePromesGrid(
+      data.plan_id,
+      data.semester,
+      data.entries as any,
+      data.tpStatuses
+    );
 
-    if (rows.length > 0) {
-      const { error } = await (supabaseAdmin as any)
-        .from("curriculum_promes_entries")
-        .upsert(rows, { onConflict: "plan_id,tp_id,semester,month_name,week_number" });
-      if (error) throw new Error(error.message);
-    }
-
-    // Update status realisasi pada learning_objectives jika dikirimkan
-    if (data.tpStatuses) {
-      for (const [tpId, status] of Object.entries(data.tpStatuses)) {
+    try {
+      const rows = data.entries.map((e) => ({
+        plan_id: data.plan_id,
+        tp_id: e.tp_id,
+        semester: data.semester,
+        month_name: e.month_name,
+        week_number: e.week_number,
+        allocated_jp: e.allocated_jp,
+        activity_type: e.activity_type,
+        notes: e.notes || null,
+        updated_at: new Date().toISOString(),
+      }));
+      if (rows.length > 0) {
         await (supabaseAdmin as any)
-          .from("learning_objectives")
-          .update({ status_realisasi: status, updated_at: new Date().toISOString() })
-          .eq("id", tpId);
+          .from("curriculum_promes_entries")
+          .upsert(rows, { onConflict: "plan_id,tp_id,semester,month_name,week_number" });
       }
-    }
+    } catch {}
 
-    // Hitung % realisasi mengajar
-    let totalAssignedJp = 0;
-    for (const r of rows) {
-      if (r.allocated_jp > 0) totalAssignedJp += r.allocated_jp;
-    }
-
-    const fieldToUpdate =
-      data.semester === "1" ? "realization_ganjil_percentage" : "realization_genap_percentage";
-    const estimatedMaxJp = 36; // ~18 pekan x 2 JP
-    const realPct = Math.min(100, Math.round((totalAssignedJp / estimatedMaxJp) * 100));
-
-    await (supabaseAdmin as any)
-      .from("curriculum_plans")
-      .update({ [fieldToUpdate]: realPct, updated_at: new Date().toISOString() })
-      .eq("id", data.plan_id);
-
-    return { success: true, count: rows.length, realizationPercentage: realPct };
+    return storageRes;
   });
 
 /** 8. Rekapitulasi & Supervisi Perangkat Ajar Seluruh Guru (Waka Kurikulum & Kepala Sekolah) */
@@ -584,80 +525,85 @@ export const getCurriculumSupervisionRecap = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const storage = await import("./curriculum.storage.server");
 
-    // Ambil seluruh mapel aktif
     const subjects = await ensureSubjects(supabaseAdmin);
     const activeSubjects = subjects.filter((s: any) => s.is_active);
 
-    // Ambil seluruh plans
-    let query = (supabaseAdmin as any)
-      .from("curriculum_plans")
-      .select("*, profiles:teacher_id(id,name,display_name,nis_nip)")
-      .eq("academic_year", data.academic_year);
+    try {
+      let query = (supabaseAdmin as any)
+        .from("curriculum_plans")
+        .select("*, profiles:teacher_id(id,name,display_name,nis_nip)")
+        .eq("academic_year", data.academic_year);
 
-    if (data.class_name && data.class_name !== "all") {
-      query = query.eq("class_name", data.class_name);
-    }
+      if (data.class_name && data.class_name !== "all") {
+        query = query.eq("class_name", data.class_name);
+      }
 
-    const { data: plans } = await query;
-
-    const planMap = new Map<string, any>();
-    for (const p of plans ?? []) {
-      planMap.set(`${p.subject_id}_${p.class_name}`, p);
-    }
-
-    const classList = data.class_name && data.class_name !== "all" 
-      ? [data.class_name] 
-      : ["7A", "7B", "8A", "8B", "9A", "9B"];
-
-    const auditList: any[] = [];
-    let completedCount = 0;
-    let draftCount = 0;
-    let emptyCount = 0;
-
-    for (const cls of classList) {
-      for (const sbj of activeSubjects) {
-        const plan = planMap.get(`${sbj.id}_${cls}`);
-
-        const tpCount = plan?.total_tp_count || 0;
-        const completionPct = Number(plan?.completion_percentage) || 0;
-        const realGanjil = Number(plan?.realization_ganjil_percentage) || 0;
-        const realGenap = Number(plan?.realization_genap_percentage) || 0;
-
-        let status: "Lengkap" | "Proses" | "Belum Mengisi" = "Belum Mengisi";
-        if (completionPct >= 80 && tpCount > 0) {
-          status = "Lengkap";
-          completedCount++;
-        } else if (tpCount > 0 || completionPct > 0) {
-          status = "Proses";
-          draftCount++;
-        } else {
-          emptyCount++;
+      const { data: plans, error: pErr } = await query;
+      if (!pErr && plans && plans.length > 0) {
+        const planMap = new Map<string, any>();
+        for (const p of plans) {
+          planMap.set(`${p.subject_id}_${p.class_name}`, p);
         }
 
-        auditList.push({
-          subject: sbj,
-          className: cls,
-          planId: plan?.id || null,
-          teacher: plan?.profiles || null,
-          phase: plan?.phase || "D",
-          jpPerWeek: plan?.jp_per_week || 2,
-          tpCount,
-          completionPercentage: completionPct,
-          realizationGanjil: realGanjil,
-          realizationGenap: realGenap,
-          status,
-        });
-      }
-    }
+        const classList =
+          data.class_name && data.class_name !== "all"
+            ? [data.class_name]
+            : ["7A", "7B", "8A", "8B", "9A", "9B"];
 
-    return {
-      totalSubjectsCovered: auditList.length,
-      kpi: {
-        completed: completedCount,
-        draft: draftCount,
-        empty: emptyCount,
-      },
-      auditList,
-    };
+        const auditList: any[] = [];
+        let completedCount = 0;
+        let draftCount = 0;
+        let emptyCount = 0;
+
+        for (const cls of classList) {
+          for (const sbj of activeSubjects) {
+            const plan = planMap.get(`${sbj.id}_${cls}`);
+            const tpCount = plan?.total_tp_count || 0;
+            const completionPct = Number(plan?.completion_percentage) || 0;
+            const realGanjil = Number(plan?.realization_ganjil_percentage) || 0;
+            const realGenap = Number(plan?.realization_genap_percentage) || 0;
+
+            let status: "Lengkap" | "Proses" | "Belum Mengisi" = "Belum Mengisi";
+            if (completionPct >= 80 && tpCount > 0) {
+              status = "Lengkap";
+              completedCount++;
+            } else if (tpCount > 0 || completionPct > 0) {
+              status = "Proses";
+              draftCount++;
+            } else {
+              emptyCount++;
+            }
+
+            auditList.push({
+              subject: sbj,
+              className: cls,
+              planId: plan?.id || null,
+              teacher: plan?.profiles || null,
+              phase: plan?.phase || "D",
+              jpPerWeek: plan?.jp_per_week || 2,
+              tpCount,
+              completionPercentage: completionPct,
+              realizationGanjil: realGanjil,
+              realizationGenap: realGenap,
+              status,
+            });
+          }
+        }
+
+        return {
+          totalSubjectsCovered: auditList.length,
+          kpi: {
+            completed: completedCount,
+            draft: draftCount,
+            empty: emptyCount,
+          },
+          auditList,
+        };
+      }
+    } catch {}
+
+    // Fallback ke penyimpanan storage lokal
+    return storage.getSupervisionRecap(data.academic_year, data.class_name, activeSubjects);
   });
