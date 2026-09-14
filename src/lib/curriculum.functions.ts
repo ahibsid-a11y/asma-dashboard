@@ -498,29 +498,35 @@ export const saveCurriculumTimeAllocations = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const storage = await import("./curriculum.storage.server");
 
-    const storageRes = storage.saveTimeAllocations(data.plan_id, data.allocations as any);
+    const rows = data.allocations.map((a) => ({
+      plan_id: data.plan_id,
+      semester: a.semester,
+      month_name: a.month_name,
+      month_order: a.month_order,
+      calendar_weeks: a.calendar_weeks,
+      non_effective_weeks: a.non_effective_weeks,
+      effective_weeks: a.effective_weeks,
+      effective_jp: a.effective_jp,
+      notes: a.notes || null,
+      updated_at: new Date().toISOString(),
+    }));
+
+    if (rows.length > 0) {
+      const { error } = await (supabaseAdmin as any)
+        .from("curriculum_time_allocations")
+        .upsert(rows, { onConflict: "plan_id,semester,month_name" });
+      if (error) throw new Error(error.message);
+    }
 
     try {
-      const table = (supabaseAdmin as any).from("curriculum_time_allocations");
-      const rows = data.allocations.map((a) => ({
-        plan_id: data.plan_id,
-        semester: a.semester,
-        month_name: a.month_name,
-        month_order: a.month_order,
-        calendar_weeks: a.calendar_weeks,
-        non_effective_weeks: a.non_effective_weeks,
-        effective_weeks: a.effective_weeks,
-        effective_jp: a.effective_jp,
-        notes: a.notes || null,
-        updated_at: new Date().toISOString(),
-      }));
-      await table.upsert(rows, { onConflict: "plan_id,semester,month_name" });
+      const storage = await import("./curriculum.storage.server");
+      storage.saveTimeAllocations(data.plan_id, data.allocations as any);
     } catch {}
 
-    return storageRes;
+    return { success: true };
   });
+
 
 /** 7. Simpan Grid Matriks Program Semester (PROMES) */
 export const saveCurriculumPromesGrid = createServerFn({ method: "POST" })
