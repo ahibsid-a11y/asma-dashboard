@@ -171,8 +171,28 @@ export const getCurriculumPlan = createServerFn({ method: "POST" })
     } catch {}
 
     if (timeAllocations.length === 0) {
-      timeAllocations = storage.getTimeAllocations(plan.id, plan.jp_per_week || 2);
+      try {
+        timeAllocations = storage.getTimeAllocations(plan.id, plan.jp_per_week || 2);
+      } catch {
+        const jp = plan.jp_per_week || 2;
+        timeAllocations = [
+          ...DEFAULT_MONTHS_GANJIL.map((m) => ({ ...m, semester: "1" as const })),
+          ...DEFAULT_MONTHS_GENAP.map((m) => ({ ...m, semester: "2" as const })),
+        ].map((m) => ({
+          id: `${plan!.id}_${m.semester}_${m.name}`,
+          plan_id: plan!.id,
+          semester: m.semester,
+          month_name: m.name,
+          month_order: m.order,
+          calendar_weeks: m.calendar,
+          non_effective_weeks: m.nonEffective,
+          effective_weeks: m.effective,
+          effective_jp: m.effective * jp,
+          notes: null,
+        }));
+      }
     }
+
 
     // 6. Ambil Grid Matriks PROMES
     let promesEntries: CurriculumPromesEntry[] = [];
