@@ -129,8 +129,11 @@ export const getCurriculumPlan = createServerFn({ method: "POST" })
     } catch {}
 
     if (elements.length === 0) {
-      elements = storage.getElementsByPlanId(plan.id);
+      try {
+        elements = storage.getElementsByPlanId(plan.id);
+      } catch {}
     }
+
 
     // 4. Ambil TP & ATP (Tujuan Pembelajaran)
     let tps: CurriculumTp[] = [];
