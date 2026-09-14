@@ -13,18 +13,28 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedAbsensiDiriRouteImport } from './routes/_authenticated/absensi-diri'
 import { Route as AuthenticatedAnggotaRouteImport } from './routes/_authenticated/anggota'
+import { Route as AuthenticatedCatatPelanggaranRouteImport } from './routes/_authenticated/catat-pelanggaran'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedInputMutabaahRouteImport } from './routes/_authenticated/input-mutabaah'
+import { Route as AuthenticatedInputNilaiRouteImport } from './routes/_authenticated/input-nilai'
+import { Route as AuthenticatedInputNilaiTahfizRouteImport } from './routes/_authenticated/input-nilai-tahfiz'
 import { Route as AuthenticatedKalenderRouteImport } from './routes/_authenticated/kalender'
-import { Route as AuthenticatedKesiswaanRouteImport } from './routes/_authenticated/kesiswaan'
 import { Route as AuthenticatedManajemenAsramaRouteImport } from './routes/_authenticated/manajemen-asrama'
 import { Route as AuthenticatedManajemenHalaqohRouteImport } from './routes/_authenticated/manajemen-halaqoh'
 import { Route as AuthenticatedManajemenKelasRouteImport } from './routes/_authenticated/manajemen-kelas'
 import { Route as AuthenticatedMutabaahSayaRouteImport } from './routes/_authenticated/mutabaah-saya'
+import { Route as AuthenticatedNilaiPelajaranRouteImport } from './routes/_authenticated/nilai-pelajaran'
+import { Route as AuthenticatedNilaiTahfizSayaRouteImport } from './routes/_authenticated/nilai-tahfiz-saya'
 import { Route as AuthenticatedPelanggaranSayaRouteImport } from './routes/_authenticated/pelanggaran-saya'
 import { Route as AuthenticatedPengaturanSesiRouteImport } from './routes/_authenticated/pengaturan-sesi'
+import { Route as AuthenticatedPerizinanRouteImport } from './routes/_authenticated/perizinan'
 import { Route as AuthenticatedPresensiInsidentalRouteImport } from './routes/_authenticated/presensi-insidental'
 import { Route as AuthenticatedProfilRouteImport } from './routes/_authenticated/profil'
+import { Route as AuthenticatedRekapMutabaahRouteImport } from './routes/_authenticated/rekap-mutabaah'
+import { Route as AuthenticatedRekapNilaiRouteImport } from './routes/_authenticated/rekap-nilai'
+import { Route as AuthenticatedRekapPelanggaranRouteImport } from './routes/_authenticated/rekap-pelanggaran'
 import { Route as AuthenticatedRekapPresensiRouteImport } from './routes/_authenticated/rekap-presensi'
+import { Route as AuthenticatedRekapTahfizRouteImport } from './routes/_authenticated/rekap-tahfiz'
 import { Route as AuthenticatedScanPresensiRouteImport } from './routes/_authenticated/scan-presensi'
 
 const IndexRoute = IndexRouteImport.update({
@@ -47,19 +57,37 @@ const AuthenticatedAnggotaRoute = AuthenticatedAnggotaRouteImport.update({
   path: '/anggota',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCatatPelanggaranRoute =
+  AuthenticatedCatatPelanggaranRouteImport.update({
+    id: '/catat-pelanggaran',
+    path: '/catat-pelanggaran',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedInputMutabaahRoute =
+  AuthenticatedInputMutabaahRouteImport.update({
+    id: '/input-mutabaah',
+    path: '/input-mutabaah',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedInputNilaiRoute = AuthenticatedInputNilaiRouteImport.update({
+  id: '/input-nilai',
+  path: '/input-nilai',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedInputNilaiTahfizRoute =
+  AuthenticatedInputNilaiTahfizRouteImport.update({
+    id: '/input-nilai-tahfiz',
+    path: '/input-nilai-tahfiz',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedKalenderRoute = AuthenticatedKalenderRouteImport.update({
   id: '/kalender',
   path: '/kalender',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedKesiswaanRoute = AuthenticatedKesiswaanRouteImport.update({
-  id: '/kesiswaan',
-  path: '/kesiswaan',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedManajemenAsramaRoute =
@@ -86,6 +114,18 @@ const AuthenticatedMutabaahSayaRoute =
     path: '/mutabaah-saya',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedNilaiPelajaranRoute =
+  AuthenticatedNilaiPelajaranRouteImport.update({
+    id: '/nilai-pelajaran',
+    path: '/nilai-pelajaran',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedNilaiTahfizSayaRoute =
+  AuthenticatedNilaiTahfizSayaRouteImport.update({
+    id: '/nilai-tahfiz-saya',
+    path: '/nilai-tahfiz-saya',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedPelanggaranSayaRoute =
   AuthenticatedPelanggaranSayaRouteImport.update({
     id: '/pelanggaran-saya',
@@ -98,6 +138,11 @@ const AuthenticatedPengaturanSesiRoute =
     path: '/pengaturan-sesi',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedPerizinanRoute = AuthenticatedPerizinanRouteImport.update({
+  id: '/perizinan',
+  path: '/perizinan',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPresensiInsidentalRoute =
   AuthenticatedPresensiInsidentalRouteImport.update({
     id: '/presensi-insidental',
@@ -109,10 +154,33 @@ const AuthenticatedProfilRoute = AuthenticatedProfilRouteImport.update({
   path: '/profil',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedRekapMutabaahRoute =
+  AuthenticatedRekapMutabaahRouteImport.update({
+    id: '/rekap-mutabaah',
+    path: '/rekap-mutabaah',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedRekapNilaiRoute = AuthenticatedRekapNilaiRouteImport.update({
+  id: '/rekap-nilai',
+  path: '/rekap-nilai',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedRekapPelanggaranRoute =
+  AuthenticatedRekapPelanggaranRouteImport.update({
+    id: '/rekap-pelanggaran',
+    path: '/rekap-pelanggaran',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedRekapPresensiRoute =
   AuthenticatedRekapPresensiRouteImport.update({
     id: '/rekap-presensi',
     path: '/rekap-presensi',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedRekapTahfizRoute =
+  AuthenticatedRekapTahfizRouteImport.update({
+    id: '/rekap-tahfiz',
+    path: '/rekap-tahfiz',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedScanPresensiRoute =
@@ -126,36 +194,56 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/absensi-diri': typeof AuthenticatedAbsensiDiriRoute
   '/anggota': typeof AuthenticatedAnggotaRoute
+  '/catat-pelanggaran': typeof AuthenticatedCatatPelanggaranRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/input-mutabaah': typeof AuthenticatedInputMutabaahRoute
+  '/input-nilai': typeof AuthenticatedInputNilaiRoute
+  '/input-nilai-tahfiz': typeof AuthenticatedInputNilaiTahfizRoute
   '/kalender': typeof AuthenticatedKalenderRoute
-  '/kesiswaan': typeof AuthenticatedKesiswaanRoute
   '/manajemen-asrama': typeof AuthenticatedManajemenAsramaRoute
   '/manajemen-halaqoh': typeof AuthenticatedManajemenHalaqohRoute
   '/manajemen-kelas': typeof AuthenticatedManajemenKelasRoute
   '/mutabaah-saya': typeof AuthenticatedMutabaahSayaRoute
+  '/nilai-pelajaran': typeof AuthenticatedNilaiPelajaranRoute
+  '/nilai-tahfiz-saya': typeof AuthenticatedNilaiTahfizSayaRoute
   '/pelanggaran-saya': typeof AuthenticatedPelanggaranSayaRoute
   '/pengaturan-sesi': typeof AuthenticatedPengaturanSesiRoute
+  '/perizinan': typeof AuthenticatedPerizinanRoute
   '/presensi-insidental': typeof AuthenticatedPresensiInsidentalRoute
   '/profil': typeof AuthenticatedProfilRoute
+  '/rekap-mutabaah': typeof AuthenticatedRekapMutabaahRoute
+  '/rekap-nilai': typeof AuthenticatedRekapNilaiRoute
+  '/rekap-pelanggaran': typeof AuthenticatedRekapPelanggaranRoute
   '/rekap-presensi': typeof AuthenticatedRekapPresensiRoute
+  '/rekap-tahfiz': typeof AuthenticatedRekapTahfizRoute
   '/scan-presensi': typeof AuthenticatedScanPresensiRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/absensi-diri': typeof AuthenticatedAbsensiDiriRoute
   '/anggota': typeof AuthenticatedAnggotaRoute
+  '/catat-pelanggaran': typeof AuthenticatedCatatPelanggaranRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/input-mutabaah': typeof AuthenticatedInputMutabaahRoute
+  '/input-nilai': typeof AuthenticatedInputNilaiRoute
+  '/input-nilai-tahfiz': typeof AuthenticatedInputNilaiTahfizRoute
   '/kalender': typeof AuthenticatedKalenderRoute
-  '/kesiswaan': typeof AuthenticatedKesiswaanRoute
   '/manajemen-asrama': typeof AuthenticatedManajemenAsramaRoute
   '/manajemen-halaqoh': typeof AuthenticatedManajemenHalaqohRoute
   '/manajemen-kelas': typeof AuthenticatedManajemenKelasRoute
   '/mutabaah-saya': typeof AuthenticatedMutabaahSayaRoute
+  '/nilai-pelajaran': typeof AuthenticatedNilaiPelajaranRoute
+  '/nilai-tahfiz-saya': typeof AuthenticatedNilaiTahfizSayaRoute
   '/pelanggaran-saya': typeof AuthenticatedPelanggaranSayaRoute
   '/pengaturan-sesi': typeof AuthenticatedPengaturanSesiRoute
+  '/perizinan': typeof AuthenticatedPerizinanRoute
   '/presensi-insidental': typeof AuthenticatedPresensiInsidentalRoute
   '/profil': typeof AuthenticatedProfilRoute
+  '/rekap-mutabaah': typeof AuthenticatedRekapMutabaahRoute
+  '/rekap-nilai': typeof AuthenticatedRekapNilaiRoute
+  '/rekap-pelanggaran': typeof AuthenticatedRekapPelanggaranRoute
   '/rekap-presensi': typeof AuthenticatedRekapPresensiRoute
+  '/rekap-tahfiz': typeof AuthenticatedRekapTahfizRoute
   '/scan-presensi': typeof AuthenticatedScanPresensiRoute
 }
 export interface FileRoutesById {
@@ -164,18 +252,28 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/_authenticated/absensi-diri': typeof AuthenticatedAbsensiDiriRoute
   '/_authenticated/anggota': typeof AuthenticatedAnggotaRoute
+  '/_authenticated/catat-pelanggaran': typeof AuthenticatedCatatPelanggaranRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/input-mutabaah': typeof AuthenticatedInputMutabaahRoute
+  '/_authenticated/input-nilai': typeof AuthenticatedInputNilaiRoute
+  '/_authenticated/input-nilai-tahfiz': typeof AuthenticatedInputNilaiTahfizRoute
   '/_authenticated/kalender': typeof AuthenticatedKalenderRoute
-  '/_authenticated/kesiswaan': typeof AuthenticatedKesiswaanRoute
   '/_authenticated/manajemen-asrama': typeof AuthenticatedManajemenAsramaRoute
   '/_authenticated/manajemen-halaqoh': typeof AuthenticatedManajemenHalaqohRoute
   '/_authenticated/manajemen-kelas': typeof AuthenticatedManajemenKelasRoute
   '/_authenticated/mutabaah-saya': typeof AuthenticatedMutabaahSayaRoute
+  '/_authenticated/nilai-pelajaran': typeof AuthenticatedNilaiPelajaranRoute
+  '/_authenticated/nilai-tahfiz-saya': typeof AuthenticatedNilaiTahfizSayaRoute
   '/_authenticated/pelanggaran-saya': typeof AuthenticatedPelanggaranSayaRoute
   '/_authenticated/pengaturan-sesi': typeof AuthenticatedPengaturanSesiRoute
+  '/_authenticated/perizinan': typeof AuthenticatedPerizinanRoute
   '/_authenticated/presensi-insidental': typeof AuthenticatedPresensiInsidentalRoute
   '/_authenticated/profil': typeof AuthenticatedProfilRoute
+  '/_authenticated/rekap-mutabaah': typeof AuthenticatedRekapMutabaahRoute
+  '/_authenticated/rekap-nilai': typeof AuthenticatedRekapNilaiRoute
+  '/_authenticated/rekap-pelanggaran': typeof AuthenticatedRekapPelanggaranRoute
   '/_authenticated/rekap-presensi': typeof AuthenticatedRekapPresensiRoute
+  '/_authenticated/rekap-tahfiz': typeof AuthenticatedRekapTahfizRoute
   '/_authenticated/scan-presensi': typeof AuthenticatedScanPresensiRoute
 }
 export interface FileRouteTypes {
@@ -184,36 +282,56 @@ export interface FileRouteTypes {
     | '/'
     | '/absensi-diri'
     | '/anggota'
+    | '/catat-pelanggaran'
     | '/dashboard'
+    | '/input-mutabaah'
+    | '/input-nilai'
+    | '/input-nilai-tahfiz'
     | '/kalender'
-    | '/kesiswaan'
     | '/manajemen-asrama'
     | '/manajemen-halaqoh'
     | '/manajemen-kelas'
     | '/mutabaah-saya'
+    | '/nilai-pelajaran'
+    | '/nilai-tahfiz-saya'
     | '/pelanggaran-saya'
     | '/pengaturan-sesi'
+    | '/perizinan'
     | '/presensi-insidental'
     | '/profil'
+    | '/rekap-mutabaah'
+    | '/rekap-nilai'
+    | '/rekap-pelanggaran'
     | '/rekap-presensi'
+    | '/rekap-tahfiz'
     | '/scan-presensi'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/absensi-diri'
     | '/anggota'
+    | '/catat-pelanggaran'
     | '/dashboard'
+    | '/input-mutabaah'
+    | '/input-nilai'
+    | '/input-nilai-tahfiz'
     | '/kalender'
-    | '/kesiswaan'
     | '/manajemen-asrama'
     | '/manajemen-halaqoh'
     | '/manajemen-kelas'
     | '/mutabaah-saya'
+    | '/nilai-pelajaran'
+    | '/nilai-tahfiz-saya'
     | '/pelanggaran-saya'
     | '/pengaturan-sesi'
+    | '/perizinan'
     | '/presensi-insidental'
     | '/profil'
+    | '/rekap-mutabaah'
+    | '/rekap-nilai'
+    | '/rekap-pelanggaran'
     | '/rekap-presensi'
+    | '/rekap-tahfiz'
     | '/scan-presensi'
   id:
     | '__root__'
@@ -221,18 +339,28 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/_authenticated/absensi-diri'
     | '/_authenticated/anggota'
+    | '/_authenticated/catat-pelanggaran'
     | '/_authenticated/dashboard'
+    | '/_authenticated/input-mutabaah'
+    | '/_authenticated/input-nilai'
+    | '/_authenticated/input-nilai-tahfiz'
     | '/_authenticated/kalender'
-    | '/_authenticated/kesiswaan'
     | '/_authenticated/manajemen-asrama'
     | '/_authenticated/manajemen-halaqoh'
     | '/_authenticated/manajemen-kelas'
     | '/_authenticated/mutabaah-saya'
+    | '/_authenticated/nilai-pelajaran'
+    | '/_authenticated/nilai-tahfiz-saya'
     | '/_authenticated/pelanggaran-saya'
     | '/_authenticated/pengaturan-sesi'
+    | '/_authenticated/perizinan'
     | '/_authenticated/presensi-insidental'
     | '/_authenticated/profil'
+    | '/_authenticated/rekap-mutabaah'
+    | '/_authenticated/rekap-nilai'
+    | '/_authenticated/rekap-pelanggaran'
     | '/_authenticated/rekap-presensi'
+    | '/_authenticated/rekap-tahfiz'
     | '/_authenticated/scan-presensi'
   fileRoutesById: FileRoutesById
 }
@@ -271,6 +399,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAnggotaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/catat-pelanggaran': {
+      id: '/_authenticated/catat-pelanggaran'
+      path: '/catat-pelanggaran'
+      fullPath: '/catat-pelanggaran'
+      preLoaderRoute: typeof AuthenticatedCatatPelanggaranRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -278,18 +413,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/input-mutabaah': {
+      id: '/_authenticated/input-mutabaah'
+      path: '/input-mutabaah'
+      fullPath: '/input-mutabaah'
+      preLoaderRoute: typeof AuthenticatedInputMutabaahRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/input-nilai': {
+      id: '/_authenticated/input-nilai'
+      path: '/input-nilai'
+      fullPath: '/input-nilai'
+      preLoaderRoute: typeof AuthenticatedInputNilaiRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/input-nilai-tahfiz': {
+      id: '/_authenticated/input-nilai-tahfiz'
+      path: '/input-nilai-tahfiz'
+      fullPath: '/input-nilai-tahfiz'
+      preLoaderRoute: typeof AuthenticatedInputNilaiTahfizRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/kalender': {
       id: '/_authenticated/kalender'
       path: '/kalender'
       fullPath: '/kalender'
       preLoaderRoute: typeof AuthenticatedKalenderRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/kesiswaan': {
-      id: '/_authenticated/kesiswaan'
-      path: '/kesiswaan'
-      fullPath: '/kesiswaan'
-      preLoaderRoute: typeof AuthenticatedKesiswaanRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/manajemen-asrama': {
@@ -320,6 +469,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMutabaahSayaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/nilai-pelajaran': {
+      id: '/_authenticated/nilai-pelajaran'
+      path: '/nilai-pelajaran'
+      fullPath: '/nilai-pelajaran'
+      preLoaderRoute: typeof AuthenticatedNilaiPelajaranRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/nilai-tahfiz-saya': {
+      id: '/_authenticated/nilai-tahfiz-saya'
+      path: '/nilai-tahfiz-saya'
+      fullPath: '/nilai-tahfiz-saya'
+      preLoaderRoute: typeof AuthenticatedNilaiTahfizSayaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/pelanggaran-saya': {
       id: '/_authenticated/pelanggaran-saya'
       path: '/pelanggaran-saya'
@@ -332,6 +495,13 @@ declare module '@tanstack/react-router' {
       path: '/pengaturan-sesi'
       fullPath: '/pengaturan-sesi'
       preLoaderRoute: typeof AuthenticatedPengaturanSesiRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/perizinan': {
+      id: '/_authenticated/perizinan'
+      path: '/perizinan'
+      fullPath: '/perizinan'
+      preLoaderRoute: typeof AuthenticatedPerizinanRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/presensi-insidental': {
@@ -348,11 +518,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProfilRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/rekap-mutabaah': {
+      id: '/_authenticated/rekap-mutabaah'
+      path: '/rekap-mutabaah'
+      fullPath: '/rekap-mutabaah'
+      preLoaderRoute: typeof AuthenticatedRekapMutabaahRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/rekap-nilai': {
+      id: '/_authenticated/rekap-nilai'
+      path: '/rekap-nilai'
+      fullPath: '/rekap-nilai'
+      preLoaderRoute: typeof AuthenticatedRekapNilaiRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/rekap-pelanggaran': {
+      id: '/_authenticated/rekap-pelanggaran'
+      path: '/rekap-pelanggaran'
+      fullPath: '/rekap-pelanggaran'
+      preLoaderRoute: typeof AuthenticatedRekapPelanggaranRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/rekap-presensi': {
       id: '/_authenticated/rekap-presensi'
       path: '/rekap-presensi'
       fullPath: '/rekap-presensi'
       preLoaderRoute: typeof AuthenticatedRekapPresensiRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/rekap-tahfiz': {
+      id: '/_authenticated/rekap-tahfiz'
+      path: '/rekap-tahfiz'
+      fullPath: '/rekap-tahfiz'
+      preLoaderRoute: typeof AuthenticatedRekapTahfizRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/scan-presensi': {
@@ -368,36 +566,56 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAbsensiDiriRoute: typeof AuthenticatedAbsensiDiriRoute
   AuthenticatedAnggotaRoute: typeof AuthenticatedAnggotaRoute
+  AuthenticatedCatatPelanggaranRoute: typeof AuthenticatedCatatPelanggaranRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedInputMutabaahRoute: typeof AuthenticatedInputMutabaahRoute
+  AuthenticatedInputNilaiRoute: typeof AuthenticatedInputNilaiRoute
+  AuthenticatedInputNilaiTahfizRoute: typeof AuthenticatedInputNilaiTahfizRoute
   AuthenticatedKalenderRoute: typeof AuthenticatedKalenderRoute
-  AuthenticatedKesiswaanRoute: typeof AuthenticatedKesiswaanRoute
   AuthenticatedManajemenAsramaRoute: typeof AuthenticatedManajemenAsramaRoute
   AuthenticatedManajemenHalaqohRoute: typeof AuthenticatedManajemenHalaqohRoute
   AuthenticatedManajemenKelasRoute: typeof AuthenticatedManajemenKelasRoute
   AuthenticatedMutabaahSayaRoute: typeof AuthenticatedMutabaahSayaRoute
+  AuthenticatedNilaiPelajaranRoute: typeof AuthenticatedNilaiPelajaranRoute
+  AuthenticatedNilaiTahfizSayaRoute: typeof AuthenticatedNilaiTahfizSayaRoute
   AuthenticatedPelanggaranSayaRoute: typeof AuthenticatedPelanggaranSayaRoute
   AuthenticatedPengaturanSesiRoute: typeof AuthenticatedPengaturanSesiRoute
+  AuthenticatedPerizinanRoute: typeof AuthenticatedPerizinanRoute
   AuthenticatedPresensiInsidentalRoute: typeof AuthenticatedPresensiInsidentalRoute
   AuthenticatedProfilRoute: typeof AuthenticatedProfilRoute
+  AuthenticatedRekapMutabaahRoute: typeof AuthenticatedRekapMutabaahRoute
+  AuthenticatedRekapNilaiRoute: typeof AuthenticatedRekapNilaiRoute
+  AuthenticatedRekapPelanggaranRoute: typeof AuthenticatedRekapPelanggaranRoute
   AuthenticatedRekapPresensiRoute: typeof AuthenticatedRekapPresensiRoute
+  AuthenticatedRekapTahfizRoute: typeof AuthenticatedRekapTahfizRoute
   AuthenticatedScanPresensiRoute: typeof AuthenticatedScanPresensiRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAbsensiDiriRoute: AuthenticatedAbsensiDiriRoute,
   AuthenticatedAnggotaRoute: AuthenticatedAnggotaRoute,
+  AuthenticatedCatatPelanggaranRoute: AuthenticatedCatatPelanggaranRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedInputMutabaahRoute: AuthenticatedInputMutabaahRoute,
+  AuthenticatedInputNilaiRoute: AuthenticatedInputNilaiRoute,
+  AuthenticatedInputNilaiTahfizRoute: AuthenticatedInputNilaiTahfizRoute,
   AuthenticatedKalenderRoute: AuthenticatedKalenderRoute,
-  AuthenticatedKesiswaanRoute: AuthenticatedKesiswaanRoute,
   AuthenticatedManajemenAsramaRoute: AuthenticatedManajemenAsramaRoute,
   AuthenticatedManajemenHalaqohRoute: AuthenticatedManajemenHalaqohRoute,
   AuthenticatedManajemenKelasRoute: AuthenticatedManajemenKelasRoute,
   AuthenticatedMutabaahSayaRoute: AuthenticatedMutabaahSayaRoute,
+  AuthenticatedNilaiPelajaranRoute: AuthenticatedNilaiPelajaranRoute,
+  AuthenticatedNilaiTahfizSayaRoute: AuthenticatedNilaiTahfizSayaRoute,
   AuthenticatedPelanggaranSayaRoute: AuthenticatedPelanggaranSayaRoute,
   AuthenticatedPengaturanSesiRoute: AuthenticatedPengaturanSesiRoute,
+  AuthenticatedPerizinanRoute: AuthenticatedPerizinanRoute,
   AuthenticatedPresensiInsidentalRoute: AuthenticatedPresensiInsidentalRoute,
   AuthenticatedProfilRoute: AuthenticatedProfilRoute,
+  AuthenticatedRekapMutabaahRoute: AuthenticatedRekapMutabaahRoute,
+  AuthenticatedRekapNilaiRoute: AuthenticatedRekapNilaiRoute,
+  AuthenticatedRekapPelanggaranRoute: AuthenticatedRekapPelanggaranRoute,
   AuthenticatedRekapPresensiRoute: AuthenticatedRekapPresensiRoute,
+  AuthenticatedRekapTahfizRoute: AuthenticatedRekapTahfizRoute,
   AuthenticatedScanPresensiRoute: AuthenticatedScanPresensiRoute,
 }
 

@@ -6,7 +6,7 @@ import { ArrowRight, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
 import { getDashboardStats } from "@/lib/dashboard.functions";
-import { navItemsFor } from "@/lib/nav";
+import { navGroupsFor } from "@/lib/nav";
 import { ACCOUNT_TYPE_LABELS, type AccountType } from "@/lib/roles";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -34,14 +34,10 @@ function Dashboard() {
   const roleLabel = profile?.account_type
     ? ACCOUNT_TYPE_LABELS[profile.account_type as AccountType]
     : null;
-  const features = navItemsFor(profile?.account_type).filter((item) => item.key !== "dashboard");
-  const featureTones = [
-    "bg-feature-blue text-primary",
-    "bg-feature-orange text-accent-foreground",
-    "bg-feature-emerald text-chart-2",
-    "bg-feature-rose text-destructive",
-    "bg-feature-sky text-chart-3",
-  ];
+  const groups = navGroupsFor(profile?.account_type)
+    .map((group) => ({ ...group, items: group.items.filter((item) => item.key !== "dashboard") }))
+    .filter((group) => group.items.length > 0);
+  const featureCount = groups.reduce((total, group) => total + group.items.length, 0);
 
   return (
     <AppShell accountType={profile?.account_type ?? null}>
