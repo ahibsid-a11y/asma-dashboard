@@ -67,7 +67,7 @@ export const getSubjectAssignmentContext = createServerFn({ method: "POST" })
     const teachers = teachersData || [];
 
     // 4. Ambil Penugasan Tersimpan
-    const assignments = getAssignments(data.academicYear, data.className);
+    const assignments = await getAssignments(data.academicYear, data.className);
 
     return {
       academicYear: data.academicYear,
@@ -100,7 +100,7 @@ export const saveClassSubjectAssignment = createServerFn({ method: "POST" })
   )
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
-    const saved = saveAssignment({
+    const saved = await saveAssignment({
       id: data.id,
       academic_year: data.academic_year,
       class_name: data.class_name,
@@ -128,7 +128,7 @@ export const deleteClassSubjectAssignment = createServerFn({ method: "POST" })
   )
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
-    const deleted = deleteAssignment(data.id);
+    const deleted = await deleteAssignment(data.id);
     return { success: deleted };
   });
 
@@ -166,8 +166,8 @@ export const getTimetableContext = createServerFn({ method: "POST" })
       .order("name");
     const teachers = teachersData || [];
 
-    const assignments = getAssignments(data.academicYear, data.className);
-    const slots = getTimetableSlots(
+    const assignments = await getAssignments(data.academicYear, data.className);
+    const slots = await getTimetableSlots(
       data.academicYear,
       data.semester,
       data.className,
@@ -213,7 +213,7 @@ export const saveTimetableSlot = createServerFn({ method: "POST" })
   )
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
-    const result = saveSlot({
+    const result = await saveSlot({
       id: data.id,
       academic_year: data.academic_year,
       semester: data.semester,
@@ -254,7 +254,7 @@ export const deleteTimetableSlot = createServerFn({ method: "POST" })
   )
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
-    const deleted = deleteSlot(data.id);
+    const deleted = await deleteSlot(data.id);
     return { success: deleted };
   });
 
