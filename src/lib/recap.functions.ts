@@ -138,7 +138,7 @@ export const getRecapFilterOptions = createServerFn({ method: "GET" })
   });
 
 export const getAttendanceRecap = createServerFn({ method: "GET" })
-  .inputValidator((data: unknown) => filterSchema.parse(data))
+  .validator((data: unknown) => filterSchema.parse(data))
   .middleware([requireSupabaseAuth])
   .handler(async ({ context, data }) => {
     const ctx = context as Ctx;
@@ -239,7 +239,7 @@ export const getAttendanceRecap = createServerFn({ method: "GET" })
   });
 
 export const getMemberRecapDetail = createServerFn({ method: "GET" })
-  .inputValidator((data: unknown) =>
+  .validator((data: unknown) =>
     z.object({ user_id: z.string().uuid(), from: dateStr, to: dateStr }).parse(data),
   )
   .middleware([requireSupabaseAuth])

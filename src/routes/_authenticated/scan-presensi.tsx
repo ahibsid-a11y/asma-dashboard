@@ -101,6 +101,43 @@ const STATUS_STYLE: Record<string, string> = {
   Alfa: "bg-destructive/15 text-destructive",
 };
 
+/** Efek suara audio untuk pembacaan RFID */
+function playChime(type: "success" | "warning" | "error") {
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+    if (type === "success") {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.exponentialRampToValueAtTime(1320, now + 0.12);
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.25);
+    } else {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.setValueAtTime(180, now + 0.1);
+      gain.gain.setValueAtTime(0.25, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.28);
+    }
+  } catch {
+    // Abaikan bila audio dicegah browser
+  }
+}
+
 function ScanPresensiPage() {
   const profileQuery = useCurrentProfile();
   const accountType = profileQuery.data?.account_type ?? null;
@@ -160,22 +197,87 @@ function ScanPresensiPage() {
       setCard("");
       inputRef.current?.focus();
       if (!result.ok) {
+        playChime("warning");
         toast.error(result.message);
         setUnknownCard(result.reason === "unknown_card" ? result.code : null);
         setAssignTo("");
         return;
       }
+      playChime("success");
       setUnknownCard(null);
       setResults((prev) => [result, ...prev].slice(0, 20));
       toast.success(`${result.member.name ?? "Anggota"} — ${result.status}`);
       await queryClient.invalidateQueries({ queryKey: ["attendance-today", sessionId] });
     },
     onError: (error: Error) => {
+      playChime("error");
       toast.error(error.message);
       setCard("");
       inputRef.current?.focus();
     },
   });
+
+  // Global listener khusus USB RFID Reader (HID Keyboard emulation)
+  useEffect(() => {
+    let rfidBuffer = "";
+    let lastKeyTime = Date.now();
+
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement as HTMLElement | null;
+      const isOtherInput =
+        activeEl &&
+        activeEl.id !== "rfid" &&
+        (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.isContentEditable);
+
+      if (isOtherInput) return;
+
+      const now = Date.now();
+      const interval = now - lastKeyTime;
+      lastKeyTime = now;
+
+      if (e.key === "Enter") {
+        const scanned = rfidBuffer.trim();
+        if (scanned.length >= 3) {
+          e.preventDefault();
+          if (!sessionId) {
+            toast.error("Pilih sesi presensi terlebih dahulu");
+            playChime("warning");
+            rfidBuffer = "";
+            return;
+          }
+          setCard(scanned);
+          scanMutation.mutate(scanned);
+        }
+        rfidBuffer = "";
+        return;
+      }
+
+      if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        if (interval > 180 && activeEl?.id !== "rfid") {
+          rfidBuffer = e.key;
+        } else {
+          rfidBuffer += e.key;
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, [sessionId, scanMutation]);
+
+  // Kembalikan fokus otomatis ke input scan saat layar diklik di area kosong
+  useEffect(() => {
+    const handleDocumentClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      const isInteractive = target.closest("button, a, input, select, textarea, [role='button'], [role='combobox'], [role='option'], [role='dialog']");
+      if (!isInteractive && inputRef.current) {
+        inputRef.current.focus();
+      }
+    };
+    document.addEventListener("click", handleDocumentClick);
+    return () => document.removeEventListener("click", handleDocumentClick);
+  }, []);
 
   const assignMutation = useMutation({
     mutationFn: async (vars: { user_id: string; rfid_card: string }) => {

@@ -53,7 +53,7 @@ const sessionSchema = z.object({
 });
 
 export const saveAttendanceSession = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => sessionSchema.parse(data))
+  .validator((data: unknown) => sessionSchema.parse(data))
   .middleware([requireSupabaseAuth])
   .handler(async ({ context, data }) => {
     await assertSessionAdmin(context as Ctx);
@@ -74,7 +74,7 @@ export const saveAttendanceSession = createServerFn({ method: "POST" })
   });
 
 export const deleteAttendanceSession = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
+  .validator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
   .middleware([requireSupabaseAuth])
   .handler(async ({ context, data }) => {
     await assertSessionAdmin(context as Ctx);

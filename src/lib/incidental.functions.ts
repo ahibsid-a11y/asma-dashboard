@@ -76,7 +76,7 @@ export const listIncidentalEvents = createServerFn({ method: "GET" })
   });
 
 export const saveIncidentalEvent = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => eventSchema.parse(data))
+  .validator((data: unknown) => eventSchema.parse(data))
   .middleware([requireSupabaseAuth])
   .handler(async ({ data, context }) => {
     const ctx = context as Ctx;
@@ -127,7 +127,7 @@ export const saveIncidentalEvent = createServerFn({ method: "POST" })
   });
 
 export const deleteIncidentalEvent = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
+  .validator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
   .middleware([requireSupabaseAuth])
   .handler(async ({ data, context }) => {
     const ctx = context as Ctx;
@@ -166,7 +166,7 @@ export const listIncidentalCandidates = createServerFn({ method: "GET" })
 
 /** Daftar anggota target sebuah kegiatan beserta status kehadirannya. */
 export const listIncidentalRoster = createServerFn({ method: "GET" })
-  .inputValidator((data: unknown) => z.object({ event_id: z.string().uuid() }).parse(data))
+  .validator((data: unknown) => z.object({ event_id: z.string().uuid() }).parse(data))
   .middleware([requireSupabaseAuth])
   .handler(async ({ data, context }) => {
     const ctx = context as Ctx;
@@ -212,7 +212,7 @@ export const listIncidentalRoster = createServerFn({ method: "GET" })
   });
 
 export const saveIncidentalAttendance = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) =>
+  .validator((data: unknown) =>
     z
       .object({
         event_id: z.string().uuid(),

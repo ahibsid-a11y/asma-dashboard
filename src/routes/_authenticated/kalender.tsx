@@ -188,8 +188,14 @@ function CalendarPage() {
         throw new Error("Pilih minimal satu jabatan peserta");
       if (f.target_type === "USERS" && f.target_user_ids.length === 0)
         throw new Error("Pilih minimal satu anggota peserta");
-      if (!f.all_day && f.end_time <= f.start_time)
-        throw new Error("Jam selesai harus setelah jam mulai");
+      if (!f.all_day) {
+        if (!f.start_time || !f.end_time) {
+          throw new Error("Jam mulai dan jam selesai wajib diisi bila bukan agenda seharian");
+        }
+        if (f.end_time <= f.start_time) {
+          throw new Error("Jam selesai harus setelah jam mulai");
+        }
+      }
 
       const payload = {
         title: f.title.trim(),
@@ -197,8 +203,8 @@ function CalendarPage() {
         location: f.location.trim() || null,
         event_date: f.event_date,
         all_day: f.all_day,
-        start_time: f.all_day ? null : f.start_time,
-        end_time: f.all_day ? null : f.end_time,
+        start_time: f.all_day ? null : f.start_time || null,
+        end_time: f.all_day ? null : f.end_time || null,
         color: f.color,
         target_type: f.target_type,
         target_roles: f.target_type === "ROLE" ? f.target_roles : [],

@@ -95,6 +95,18 @@ async function findMemberByCode(ctx: Ctx, code: string) {
   if (byCard.error) throw new Error(byCard.error.message);
   if (byCard.data) return byCard.data as any;
 
+  // Fallback RFID bila scanner USB memotong / menambahkan leading zeroes
+  const stripped = clean.replace(/^0+/, "");
+  if (stripped && stripped !== clean) {
+    const byStripped = await ctx.supabase
+      .from("profiles")
+      .select(MEMBER_SELECT)
+      .ilike("rfid_card", stripped)
+      .limit(1)
+      .maybeSingle();
+    if (byStripped.data) return byStripped.data as any;
+  }
+
   const byNis = await ctx.supabase
     .from("profiles")
     .select(MEMBER_SELECT)
@@ -102,11 +114,23 @@ async function findMemberByCode(ctx: Ctx, code: string) {
     .limit(1)
     .maybeSingle();
   if (byNis.error) throw new Error(byNis.error.message);
-  return (byNis.data ?? null) as any;
+  if (byNis.data) return byNis.data as any;
+
+  if (stripped && stripped !== clean) {
+    const byNisStripped = await ctx.supabase
+      .from("profiles")
+      .select(MEMBER_SELECT)
+      .ilike("nis_nip", stripped)
+      .limit(1)
+      .maybeSingle();
+    if (byNisStripped.data) return byNisStripped.data as any;
+  }
+
+  return null;
 }
 
 export const searchMembersForCard = createServerFn({ method: "GET" })
-  .inputValidator((data: unknown) =>
+  .validator((data: unknown) =>
     z.object({ session_id: z.string().uuid(), q: z.string().trim().max(80).optional() }).parse(data),
   )
   .middleware([requireSupabaseAuth])
@@ -136,7 +160,7 @@ export const searchMembersForCard = createServerFn({ method: "GET" })
 
 /** Kaitkan nomor kartu RFID ke satu anggota (hanya admin anggota). */
 export const assignRfidCard = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) =>
+  .validator((data: unknown) =>
     z
       .object({
         user_id: z.string().uuid(),
@@ -164,7 +188,7 @@ export const assignRfidCard = createServerFn({ method: "POST" })
   });
 
 export const scanAttendance = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) =>
+  .validator((data: unknown) =>
     z
       .object({
         session_id: z.string().uuid(),
@@ -299,7 +323,7 @@ export const scanAttendance = createServerFn({ method: "POST" })
 
 
 export const listTodayAttendance = createServerFn({ method: "GET" })
-  .inputValidator((data: unknown) => z.object({ session_id: z.string().uuid() }).parse(data))
+  .validator((data: unknown) => z.object({ session_id: z.string().uuid() }).parse(data))
   .middleware([requireSupabaseAuth])
   .handler(async ({ context, data }) => {
     const ctx = context as Ctx;
@@ -315,7 +339,7 @@ export const listTodayAttendance = createServerFn({ method: "GET" })
   });
 
 export const processAbsentToday = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) =>
+  .validator((data: unknown) =>
     z.object({ session_id: z.string().uuid().optional() }).parse(data),
   )
   .middleware([requireSupabaseAuth])

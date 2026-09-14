@@ -49,7 +49,7 @@ export const listOrgData = createServerFn({ method: "GET" })
   });
 
 export const saveGroup = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) =>
+  .validator((data: unknown) =>
     z
       .object({
         kind: groupKind,
@@ -105,7 +105,7 @@ export const saveGroup = createServerFn({ method: "POST" })
   });
 
 export const deleteGroup = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) =>
+  .validator((data: unknown) =>
     z.object({ kind: groupKind, id: z.string().uuid() }).parse(data),
   )
   .middleware([requireSupabaseAuth])
@@ -130,7 +130,7 @@ export const deleteGroup = createServerFn({ method: "POST" })
   });
 
 export const setGroupMembers = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) =>
+  .validator((data: unknown) =>
     z
       .object({
         kind: groupKind,

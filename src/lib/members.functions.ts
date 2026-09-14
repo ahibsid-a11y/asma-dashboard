@@ -116,7 +116,7 @@ export const listMembers = createServerFn({ method: "GET" })
   });
 
 export const saveMember = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => memberSchema.parse(data))
+  .validator((data: unknown) => memberSchema.parse(data))
   .middleware([requireSupabaseAuth])
   .handler(async ({ context, data }) => {
     await assertAdmin(context as Ctx);
@@ -124,17 +124,15 @@ export const saveMember = createServerFn({ method: "POST" })
 
     const { category, positions, primary } = resolveRole(data);
     const isSantri = category === "siswa";
-    // Alamat login internal hanya dipakai sistem bila email tidak diisi; TIDAK disimpan di data anggota.
-    const email =
-      data.email ??
-      `${
-        (data.nis_nip ?? data.name).toLowerCase().replace(/[^a-z0-9]/g, "") || "anggota"
-      }${Math.floor(100000 + Math.random() * 900000)}@ahibs.local`;
+    // Alamat login internal dipakai bila email tidak diisi, disimpan di profil agar bisa dicari saat login
+    const cleanId =
+      (data.nis_nip ?? data.name).toLowerCase().replace(/[^a-z0-9]/g, "") || "anggota";
+    const email = data.email ?? `${cleanId}@ahibs.local`;
 
     const profileFields = {
       name: data.name,
       display_name: data.name,
-      email: data.email ?? null,
+      email,
       phone: empty(data.phone),
       gender: (data.gender ?? null) as "L" | "P" | null,
       status: data.status,
@@ -212,7 +210,7 @@ export const saveMember = createServerFn({ method: "POST" })
 
 
 export const setMemberStatus = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) =>
+  .validator((data: unknown) =>
     z.object({ id: z.string().uuid(), status: z.enum(["Aktif", "Nonaktif"]) }).parse(data),
   )
   .middleware([requireSupabaseAuth])
@@ -246,13 +244,14 @@ const importRowSchema = z.object({
 });
 
 export const importMembers = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) =>
+  .validator((data: unknown) =>
     z.object({ rows: z.array(importRowSchema).min(1).max(1000) }).parse(data),
   )
   .middleware([requireSupabaseAuth])
   .handler(async ({ context, data }) => {
     await assertAdmin(context as Ctx);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { createAuthUser } = await import("./password.server");
 
     let created = 0;
     const failures: { nis_nip: string; message: string }[] = [];
@@ -261,23 +260,21 @@ export const importMembers = createServerFn({ method: "POST" })
       const email = `${row.nis_nip.toLowerCase().replace(/[^a-z0-9]/g, "")}@ahibs.local`;
       const isSantri = row.account_type === "santri";
       try {
-        const { data: user, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        const user = await createAuthUser(supabaseAdmin, {
           email,
           password: "Ahibs1234",
-          email_confirm: true,
           user_metadata: {
             name: row.name,
             display_name: row.name,
             account_type: row.account_type,
           },
         });
-        if (authError || !user?.user) throw new Error(authError?.message ?? "Gagal membuat akun");
 
         const { error } = await supabaseAdmin.from("profiles").upsert({
-          id: user.user.id,
+          id: user.id,
           name: row.name,
           display_name: row.name,
-          email: null,
+          email,
           phone: empty(row.phone),
           gender: (row.gender ?? null) as "L" | "P" | null,
           status: "Aktif" as const,
@@ -299,7 +296,7 @@ export const importMembers = createServerFn({ method: "POST" })
   });
 
 export const deleteMember = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
+  .validator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
   .middleware([requireSupabaseAuth])
   .handler(async ({ context, data }) => {
     const ctx = context as Ctx;
