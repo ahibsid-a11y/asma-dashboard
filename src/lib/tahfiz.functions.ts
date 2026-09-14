@@ -11,7 +11,7 @@ import {
 import {
   deleteTahfizRecord,
   getAllTahfizStore,
-  getStudentLevel,
+  defaultLevelForGrade,
   getStudentTahfizHistory,
   saveIqroRecord,
   saveTahfizHafalanRecord,

@@ -285,8 +285,8 @@ export const getMyTimetable = createServerFn({ method: "POST" })
     const studentClass = myProfile?.class || "VII A";
 
     const slots = isStudent
-      ? getTimetableSlots(data.academicYear, data.semester, studentClass)
-      : getTimetableSlots(data.academicYear, data.semester, undefined, ctx.userId);
+      ? await getTimetableSlots(data.academicYear, data.semester, studentClass)
+      : await getTimetableSlots(data.academicYear, data.semester, undefined, ctx.userId);
 
     return {
       isStudent,
