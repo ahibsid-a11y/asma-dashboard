@@ -114,18 +114,27 @@ export function AppShell({
                   <Brand inverted />
                 </SheetHeader>
                 <p className="mt-8 px-3 text-xs font-bold uppercase text-primary-foreground/55">Semua fitur</p>
-                <nav aria-label="Semua fitur" className="mt-3 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
-                  {items.map(({ to, label, icon: Icon }) => (
-                    <SheetClose asChild key={to}>
-                      <Link
-                        to={to}
-                        activeProps={{ className: "bg-primary-foreground/12" }}
-                        className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-bold text-primary-foreground hover:bg-primary-foreground/10"
-                      >
-                        <Icon className="size-5 shrink-0 text-accent" />
-                        <span>{label}</span>
-                      </Link>
-                    </SheetClose>
+                <nav aria-label="Semua fitur" className="mt-3 flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto">
+                  {groups.map((group) => (
+                    <div key={group.category}>
+                      <p className="mb-2 px-3 text-[10px] font-extrabold uppercase tracking-wide text-primary-foreground/50">
+                        {group.label}
+                      </p>
+                      <div className="flex flex-col gap-1">
+                        {group.items.map(({ to, label, icon: Icon }) => (
+                          <SheetClose asChild key={to}>
+                            <Link
+                              to={to}
+                              activeProps={{ className: "bg-primary-foreground/12" }}
+                              className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-bold text-primary-foreground hover:bg-primary-foreground/10"
+                            >
+                              <Icon className="size-5 shrink-0 text-accent" />
+                              <span>{label}</span>
+                            </Link>
+                          </SheetClose>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </nav>
                 <Button
