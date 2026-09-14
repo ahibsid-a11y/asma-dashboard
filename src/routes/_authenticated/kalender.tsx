@@ -72,6 +72,7 @@ type CalEvent = {
   description: string | null;
   location: string | null;
   event_date: string;
+  end_date: string | null;
   all_day: boolean;
   start_time: string | null;
   end_time: string | null;
@@ -119,6 +120,7 @@ const emptyForm = (date: string) => ({
   description: "",
   location: "",
   event_date: date,
+  end_date: "",
   all_day: false,
   start_time: "08:00",
   end_time: "09:00",
@@ -158,9 +160,9 @@ function CalendarPage() {
     queryFn: async (): Promise<CalEvent[]> => {
       const { data, error } = await (supabase.from("calendar_events" as any) as any)
         .select(
-          "id,title,description,location,event_date,all_day,start_time,end_time,color,target_type,target_roles,target_user_ids,created_by",
+          "id,title,description,location,event_date,end_date,all_day,start_time,end_time,color,target_type,target_roles,target_user_ids,created_by",
         )
-        .gte("event_date", range.from)
+        .or(`event_date.gte.${range.from},end_date.gte.${range.from}`)
         .lte("event_date", range.to)
         .order("event_date", { ascending: true });
       if (error) throw new Error(error.message);
@@ -184,6 +186,9 @@ function CalendarPage() {
   const saveMutation = useMutation({
     mutationFn: async (f: ReturnType<typeof emptyForm>) => {
       if (f.title.trim().length < 3) throw new Error("Judul kegiatan minimal 3 karakter");
+      if (f.end_date && f.end_date < f.event_date) {
+        throw new Error("Sampai tanggal tidak boleh lebih awal dari tanggal mulai");
+      }
       if (f.target_type === "ROLE" && f.target_roles.length === 0)
         throw new Error("Pilih minimal satu jabatan peserta");
       if (f.target_type === "USERS" && f.target_user_ids.length === 0)
@@ -202,6 +207,7 @@ function CalendarPage() {
         description: f.description.trim() || null,
         location: f.location.trim() || null,
         event_date: f.event_date,
+        end_date: f.end_date && f.end_date > f.event_date ? f.end_date : null,
         all_day: f.all_day,
         start_time: f.all_day ? null : f.start_time || null,
         end_time: f.all_day ? null : f.end_time || null,
@@ -242,7 +248,13 @@ function CalendarPage() {
   const events = eventsQuery.data ?? [];
   const byDate = useMemo(() => {
     const map = new Map<string, CalEvent[]>();
-    for (const e of events) map.set(e.event_date, [...(map.get(e.event_date) ?? []), e]);
+    for (const e of events) {
+      const start = e.event_date;
+      const end = e.end_date && e.end_date >= start ? e.end_date : start;
+      for (let curr = start; curr <= end; curr = addDays(curr, 1)) {
+        map.set(curr, [...(map.get(curr) ?? []), e]);
+      }
+    }
     return map;
   }, [events]);
 
@@ -273,6 +285,7 @@ function CalendarPage() {
       description: e.description ?? "",
       location: e.location ?? "",
       event_date: e.event_date,
+      end_date: e.end_date ?? "",
       all_day: e.all_day,
       start_time: hhmm(e.start_time) ?? "08:00",
       end_time: hhmm(e.end_time) ?? "09:00",
@@ -515,11 +528,16 @@ function CalendarPage() {
           {detail && (
             <div className="space-y-3 text-sm">
               <p className="flex items-center gap-2 text-muted-foreground">
-                <Clock className="size-4" />
-                {parseISO(detail.event_date).toLocaleDateString("id-ID", { dateStyle: "full" })}
-                {detail.all_day
-                  ? " · Seharian"
-                  : ` · ${hhmm(detail.start_time)}–${hhmm(detail.end_time)}`}
+                <Clock className="size-4 shrink-0" />
+                <span>
+                  {parseISO(detail.event_date).toLocaleDateString("id-ID", { dateStyle: "full" })}
+                  {detail.end_date && detail.end_date > detail.event_date
+                    ? ` s.d. ${parseISO(detail.end_date).toLocaleDateString("id-ID", { dateStyle: "full" })}`
+                    : ""}
+                  {detail.all_day
+                    ? " · Seharian"
+                    : ` · ${hhmm(detail.start_time)}–${hhmm(detail.end_time)}`}
+                </span>
               </p>
               {detail.location && (
                 <p className="flex items-center gap-2 text-muted-foreground">
@@ -574,17 +592,37 @@ function CalendarPage() {
                   placeholder="Contoh: Rapat Guru Pekanan"
                 />
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-1.5">
-                  <Label>Tanggal</Label>
+                  <Label>Tanggal Mulai</Label>
                   <Input
                     type="date"
                     value={form.event_date}
-                    onChange={(e) => setForm({ ...form, event_date: e.target.value })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setForm((prev) => {
+                        if (!prev) return prev;
+                        const nextEnd =
+                          prev.end_date && prev.end_date < val ? val : prev.end_date;
+                        return { ...prev, event_date: val, end_date: nextEnd };
+                      });
+                    }}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Warna</Label>
+                  <Label>
+                    Sampai Tanggal <span className="text-xs font-normal text-muted-foreground">(opsional)</span>
+                  </Label>
+                  <Input
+                    type="date"
+                    min={form.event_date}
+                    value={form.end_date}
+                    onChange={(e) => setForm({ ...form, end_date: e.target.value })}
+                    placeholder="Sama dengan tanggal mulai"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Warna Label</Label>
                   <Select value={form.color} onValueChange={(v) => setForm({ ...form, color: v })}>
                     <SelectTrigger>
                       <SelectValue />
