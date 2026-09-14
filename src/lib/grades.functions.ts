@@ -87,7 +87,7 @@ export function calculateLetterGrade(score: number): { grade: "A" | "B" | "C" | 
   return { grade: "D", label: "Perlu Bimbingan (Belum Tuntas)" };
 }
 
-async function ensureSubjects(supabaseAdmin: any): Promise<AcademicSubject[]> {
+export async function ensureSubjects(supabaseAdmin: any): Promise<AcademicSubject[]> {
   try {
     const { data, error } = await (supabaseAdmin as any)
       .from("academic_subjects")

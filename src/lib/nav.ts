@@ -50,6 +50,8 @@ export type NavKey =
   | "input-nilai-tahfiz"
   | "nilai-tahfiz-saya"
   | "kalender"
+  | "perangkat-ajar"
+  | "rekap-perangkat-ajar"
   | "input-nilai"
   | "nilai-pelajaran"
   | "profil";
@@ -251,6 +253,20 @@ export const NAV_ITEMS: Record<NavKey, NavItem> = {
     icon: CalendarDays,
     category: "pendidikan",
   },
+  "perangkat-ajar": {
+    key: "perangkat-ajar",
+    to: "/perangkat-ajar",
+    label: "Perangkat Ajar (CP/TP)",
+    icon: BookOpen,
+    category: "pendidikan",
+  },
+  "rekap-perangkat-ajar": {
+    key: "rekap-perangkat-ajar",
+    to: "/rekap-perangkat-ajar",
+    label: "Rekap Perangkat Ajar",
+    icon: FileSpreadsheet,
+    category: "rekap",
+  },
   "input-nilai": {
     key: "input-nilai",
     to: "/input-nilai",
@@ -283,6 +299,7 @@ const CATEGORY_ORDER: NavCategory[] = [
 const REKAP_ALL: NavKey[] = [
   "presensi",
   "rekap-nilai",
+  "rekap-perangkat-ajar",
   "rekap-pelanggaran",
   "rekap-mutabaah",
   "rekap-tahfiz",
@@ -304,6 +321,7 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "perizinan",
     "input-nilai-tahfiz",
     "kalender",
+    "perangkat-ajar",
     "input-nilai",
     "profil",
   ],
@@ -323,6 +341,7 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "perizinan",
     "input-nilai-tahfiz",
     "kalender",
+    "perangkat-ajar",
     "input-nilai",
     "profil",
   ],
@@ -342,6 +361,7 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "perizinan",
     "input-nilai-tahfiz",
     "kalender",
+    "perangkat-ajar",
     "input-nilai",
     "profil",
   ],
@@ -369,6 +389,7 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "catat-pelanggaran",
     "perizinan",
     "kalender",
+    "perangkat-ajar",
     "input-nilai",
     "profil",
   ],
@@ -419,6 +440,7 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "catat-pelanggaran",
     "perizinan",
     "kalender",
+    "perangkat-ajar",
     "input-nilai",
     "profil",
   ],
@@ -429,6 +451,7 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "absensi-diri",
     "catat-pelanggaran",
     "kalender",
+    "perangkat-ajar",
     "input-nilai",
     "profil",
   ],

@@ -27,12 +27,14 @@ import { Route as AuthenticatedNilaiPelajaranRouteImport } from './routes/_authe
 import { Route as AuthenticatedNilaiTahfizSayaRouteImport } from './routes/_authenticated/nilai-tahfiz-saya'
 import { Route as AuthenticatedPelanggaranSayaRouteImport } from './routes/_authenticated/pelanggaran-saya'
 import { Route as AuthenticatedPengaturanSesiRouteImport } from './routes/_authenticated/pengaturan-sesi'
+import { Route as AuthenticatedPerangkatAjarRouteImport } from './routes/_authenticated/perangkat-ajar'
 import { Route as AuthenticatedPerizinanRouteImport } from './routes/_authenticated/perizinan'
 import { Route as AuthenticatedPresensiInsidentalRouteImport } from './routes/_authenticated/presensi-insidental'
 import { Route as AuthenticatedProfilRouteImport } from './routes/_authenticated/profil'
 import { Route as AuthenticatedRekapMutabaahRouteImport } from './routes/_authenticated/rekap-mutabaah'
 import { Route as AuthenticatedRekapNilaiRouteImport } from './routes/_authenticated/rekap-nilai'
 import { Route as AuthenticatedRekapPelanggaranRouteImport } from './routes/_authenticated/rekap-pelanggaran'
+import { Route as AuthenticatedRekapPerangkatAjarRouteImport } from './routes/_authenticated/rekap-perangkat-ajar'
 import { Route as AuthenticatedRekapPresensiRouteImport } from './routes/_authenticated/rekap-presensi'
 import { Route as AuthenticatedRekapTahfizRouteImport } from './routes/_authenticated/rekap-tahfiz'
 import { Route as AuthenticatedScanPresensiRouteImport } from './routes/_authenticated/scan-presensi'
@@ -138,6 +140,12 @@ const AuthenticatedPengaturanSesiRoute =
     path: '/pengaturan-sesi',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedPerangkatAjarRoute =
+  AuthenticatedPerangkatAjarRouteImport.update({
+    id: '/perangkat-ajar',
+    path: '/perangkat-ajar',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedPerizinanRoute = AuthenticatedPerizinanRouteImport.update({
   id: '/perizinan',
   path: '/perizinan',
@@ -169,6 +177,12 @@ const AuthenticatedRekapPelanggaranRoute =
   AuthenticatedRekapPelanggaranRouteImport.update({
     id: '/rekap-pelanggaran',
     path: '/rekap-pelanggaran',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedRekapPerangkatAjarRoute =
+  AuthenticatedRekapPerangkatAjarRouteImport.update({
+    id: '/rekap-perangkat-ajar',
+    path: '/rekap-perangkat-ajar',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedRekapPresensiRoute =
@@ -208,12 +222,14 @@ export interface FileRoutesByFullPath {
   '/nilai-tahfiz-saya': typeof AuthenticatedNilaiTahfizSayaRoute
   '/pelanggaran-saya': typeof AuthenticatedPelanggaranSayaRoute
   '/pengaturan-sesi': typeof AuthenticatedPengaturanSesiRoute
+  '/perangkat-ajar': typeof AuthenticatedPerangkatAjarRoute
   '/perizinan': typeof AuthenticatedPerizinanRoute
   '/presensi-insidental': typeof AuthenticatedPresensiInsidentalRoute
   '/profil': typeof AuthenticatedProfilRoute
   '/rekap-mutabaah': typeof AuthenticatedRekapMutabaahRoute
   '/rekap-nilai': typeof AuthenticatedRekapNilaiRoute
   '/rekap-pelanggaran': typeof AuthenticatedRekapPelanggaranRoute
+  '/rekap-perangkat-ajar': typeof AuthenticatedRekapPerangkatAjarRoute
   '/rekap-presensi': typeof AuthenticatedRekapPresensiRoute
   '/rekap-tahfiz': typeof AuthenticatedRekapTahfizRoute
   '/scan-presensi': typeof AuthenticatedScanPresensiRoute
@@ -236,12 +252,14 @@ export interface FileRoutesByTo {
   '/nilai-tahfiz-saya': typeof AuthenticatedNilaiTahfizSayaRoute
   '/pelanggaran-saya': typeof AuthenticatedPelanggaranSayaRoute
   '/pengaturan-sesi': typeof AuthenticatedPengaturanSesiRoute
+  '/perangkat-ajar': typeof AuthenticatedPerangkatAjarRoute
   '/perizinan': typeof AuthenticatedPerizinanRoute
   '/presensi-insidental': typeof AuthenticatedPresensiInsidentalRoute
   '/profil': typeof AuthenticatedProfilRoute
   '/rekap-mutabaah': typeof AuthenticatedRekapMutabaahRoute
   '/rekap-nilai': typeof AuthenticatedRekapNilaiRoute
   '/rekap-pelanggaran': typeof AuthenticatedRekapPelanggaranRoute
+  '/rekap-perangkat-ajar': typeof AuthenticatedRekapPerangkatAjarRoute
   '/rekap-presensi': typeof AuthenticatedRekapPresensiRoute
   '/rekap-tahfiz': typeof AuthenticatedRekapTahfizRoute
   '/scan-presensi': typeof AuthenticatedScanPresensiRoute
@@ -266,12 +284,14 @@ export interface FileRoutesById {
   '/_authenticated/nilai-tahfiz-saya': typeof AuthenticatedNilaiTahfizSayaRoute
   '/_authenticated/pelanggaran-saya': typeof AuthenticatedPelanggaranSayaRoute
   '/_authenticated/pengaturan-sesi': typeof AuthenticatedPengaturanSesiRoute
+  '/_authenticated/perangkat-ajar': typeof AuthenticatedPerangkatAjarRoute
   '/_authenticated/perizinan': typeof AuthenticatedPerizinanRoute
   '/_authenticated/presensi-insidental': typeof AuthenticatedPresensiInsidentalRoute
   '/_authenticated/profil': typeof AuthenticatedProfilRoute
   '/_authenticated/rekap-mutabaah': typeof AuthenticatedRekapMutabaahRoute
   '/_authenticated/rekap-nilai': typeof AuthenticatedRekapNilaiRoute
   '/_authenticated/rekap-pelanggaran': typeof AuthenticatedRekapPelanggaranRoute
+  '/_authenticated/rekap-perangkat-ajar': typeof AuthenticatedRekapPerangkatAjarRoute
   '/_authenticated/rekap-presensi': typeof AuthenticatedRekapPresensiRoute
   '/_authenticated/rekap-tahfiz': typeof AuthenticatedRekapTahfizRoute
   '/_authenticated/scan-presensi': typeof AuthenticatedScanPresensiRoute
@@ -296,12 +316,14 @@ export interface FileRouteTypes {
     | '/nilai-tahfiz-saya'
     | '/pelanggaran-saya'
     | '/pengaturan-sesi'
+    | '/perangkat-ajar'
     | '/perizinan'
     | '/presensi-insidental'
     | '/profil'
     | '/rekap-mutabaah'
     | '/rekap-nilai'
     | '/rekap-pelanggaran'
+    | '/rekap-perangkat-ajar'
     | '/rekap-presensi'
     | '/rekap-tahfiz'
     | '/scan-presensi'
@@ -324,12 +346,14 @@ export interface FileRouteTypes {
     | '/nilai-tahfiz-saya'
     | '/pelanggaran-saya'
     | '/pengaturan-sesi'
+    | '/perangkat-ajar'
     | '/perizinan'
     | '/presensi-insidental'
     | '/profil'
     | '/rekap-mutabaah'
     | '/rekap-nilai'
     | '/rekap-pelanggaran'
+    | '/rekap-perangkat-ajar'
     | '/rekap-presensi'
     | '/rekap-tahfiz'
     | '/scan-presensi'
@@ -353,12 +377,14 @@ export interface FileRouteTypes {
     | '/_authenticated/nilai-tahfiz-saya'
     | '/_authenticated/pelanggaran-saya'
     | '/_authenticated/pengaturan-sesi'
+    | '/_authenticated/perangkat-ajar'
     | '/_authenticated/perizinan'
     | '/_authenticated/presensi-insidental'
     | '/_authenticated/profil'
     | '/_authenticated/rekap-mutabaah'
     | '/_authenticated/rekap-nilai'
     | '/_authenticated/rekap-pelanggaran'
+    | '/_authenticated/rekap-perangkat-ajar'
     | '/_authenticated/rekap-presensi'
     | '/_authenticated/rekap-tahfiz'
     | '/_authenticated/scan-presensi'
@@ -497,6 +523,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPengaturanSesiRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/perangkat-ajar': {
+      id: '/_authenticated/perangkat-ajar'
+      path: '/perangkat-ajar'
+      fullPath: '/perangkat-ajar'
+      preLoaderRoute: typeof AuthenticatedPerangkatAjarRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/perizinan': {
       id: '/_authenticated/perizinan'
       path: '/perizinan'
@@ -537,6 +570,13 @@ declare module '@tanstack/react-router' {
       path: '/rekap-pelanggaran'
       fullPath: '/rekap-pelanggaran'
       preLoaderRoute: typeof AuthenticatedRekapPelanggaranRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/rekap-perangkat-ajar': {
+      id: '/_authenticated/rekap-perangkat-ajar'
+      path: '/rekap-perangkat-ajar'
+      fullPath: '/rekap-perangkat-ajar'
+      preLoaderRoute: typeof AuthenticatedRekapPerangkatAjarRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/rekap-presensi': {
@@ -580,12 +620,14 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedNilaiTahfizSayaRoute: typeof AuthenticatedNilaiTahfizSayaRoute
   AuthenticatedPelanggaranSayaRoute: typeof AuthenticatedPelanggaranSayaRoute
   AuthenticatedPengaturanSesiRoute: typeof AuthenticatedPengaturanSesiRoute
+  AuthenticatedPerangkatAjarRoute: typeof AuthenticatedPerangkatAjarRoute
   AuthenticatedPerizinanRoute: typeof AuthenticatedPerizinanRoute
   AuthenticatedPresensiInsidentalRoute: typeof AuthenticatedPresensiInsidentalRoute
   AuthenticatedProfilRoute: typeof AuthenticatedProfilRoute
   AuthenticatedRekapMutabaahRoute: typeof AuthenticatedRekapMutabaahRoute
   AuthenticatedRekapNilaiRoute: typeof AuthenticatedRekapNilaiRoute
   AuthenticatedRekapPelanggaranRoute: typeof AuthenticatedRekapPelanggaranRoute
+  AuthenticatedRekapPerangkatAjarRoute: typeof AuthenticatedRekapPerangkatAjarRoute
   AuthenticatedRekapPresensiRoute: typeof AuthenticatedRekapPresensiRoute
   AuthenticatedRekapTahfizRoute: typeof AuthenticatedRekapTahfizRoute
   AuthenticatedScanPresensiRoute: typeof AuthenticatedScanPresensiRoute
@@ -608,12 +650,14 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedNilaiTahfizSayaRoute: AuthenticatedNilaiTahfizSayaRoute,
   AuthenticatedPelanggaranSayaRoute: AuthenticatedPelanggaranSayaRoute,
   AuthenticatedPengaturanSesiRoute: AuthenticatedPengaturanSesiRoute,
+  AuthenticatedPerangkatAjarRoute: AuthenticatedPerangkatAjarRoute,
   AuthenticatedPerizinanRoute: AuthenticatedPerizinanRoute,
   AuthenticatedPresensiInsidentalRoute: AuthenticatedPresensiInsidentalRoute,
   AuthenticatedProfilRoute: AuthenticatedProfilRoute,
   AuthenticatedRekapMutabaahRoute: AuthenticatedRekapMutabaahRoute,
   AuthenticatedRekapNilaiRoute: AuthenticatedRekapNilaiRoute,
   AuthenticatedRekapPelanggaranRoute: AuthenticatedRekapPelanggaranRoute,
+  AuthenticatedRekapPerangkatAjarRoute: AuthenticatedRekapPerangkatAjarRoute,
   AuthenticatedRekapPresensiRoute: AuthenticatedRekapPresensiRoute,
   AuthenticatedRekapTahfizRoute: AuthenticatedRekapTahfizRoute,
   AuthenticatedScanPresensiRoute: AuthenticatedScanPresensiRoute,
