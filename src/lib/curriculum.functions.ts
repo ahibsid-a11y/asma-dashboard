@@ -207,8 +207,11 @@ export const getCurriculumPlan = createServerFn({ method: "POST" })
     } catch {}
 
     if (promesEntries.length === 0) {
-      promesEntries = storage.getPromesEntries(plan.id);
+      try {
+        promesEntries = storage.getPromesEntries(plan.id);
+      } catch {}
     }
+
 
     // 7. Guru Info
     let teacher: any = null;
