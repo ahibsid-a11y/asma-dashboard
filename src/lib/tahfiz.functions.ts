@@ -11,7 +11,7 @@ import {
 import {
   deleteTahfizRecord,
   getAllTahfizStore,
-  getStudentLevel,
+  defaultLevelForGrade,
   getStudentTahfizHistory,
   saveIqroRecord,
   saveTahfizHafalanRecord,
@@ -81,12 +81,12 @@ export const getMusyrifHalaqohContext = createServerFn({ method: "POST" })
     const { data: santriList } = await query;
     const allStudents = santriList || [];
 
-    const store = getAllTahfizStore();
+    const store = await getAllTahfizStore();
     const fallbackTarget = TAHFIZ_TARGET_STANDARDS["VII"]!;
 
     // Mapping santri dengan level dan setoran terakhir
     const formattedStudents = allStudents.map((s: any) => {
-      const level = getStudentLevel(s.id, s.class);
+      const level = store.studentLevels[s.id]?.level ?? defaultLevelForGrade(s.class);
       const gradeCode = getGradeCodeFromClassName(s.class);
       const target = TAHFIZ_TARGET_STANDARDS[gradeCode] ?? fallbackTarget;
 
@@ -146,7 +146,7 @@ export const getStudentTahfizDetail = createServerFn({ method: "POST" })
       .eq("id", data.studentId)
       .maybeSingle();
 
-    const history = getStudentTahfizHistory(data.studentId);
+    const history = await getStudentTahfizHistory(data.studentId);
     const gradeCode = getGradeCodeFromClassName(student?.class);
     const fallbackTarget = TAHFIZ_TARGET_STANDARDS["VII"]!;
     const target = TAHFIZ_TARGET_STANDARDS[gradeCode] ?? fallbackTarget;
@@ -176,7 +176,7 @@ export const getMyTahfizData = createServerFn({ method: "GET" })
       .eq("id", ctx.userId)
       .maybeSingle();
 
-    const history = getStudentTahfizHistory(ctx.userId);
+    const history = await getStudentTahfizHistory(ctx.userId);
     const gradeCode = getGradeCodeFromClassName(student?.class);
     const fallbackTarget = TAHFIZ_TARGET_STANDARDS["VII"]!;
     const target = TAHFIZ_TARGET_STANDARDS[gradeCode] ?? fallbackTarget;
@@ -212,7 +212,7 @@ export const saveIqroEntry = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context, data }) => {
     const ctx = context as Ctx;
-    const record = saveIqroRecord({
+    const record = await saveIqroRecord({
       student_id: data.student_id,
       date: data.date,
       halaman: data.halaman,
@@ -251,7 +251,7 @@ export const saveTilawahEntry = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context, data }) => {
     const ctx = context as Ctx;
-    const record = saveTilawahRecord({
+    const record = await saveTilawahRecord({
       student_id: data.student_id,
       date: data.date,
       juz: data.juz,
@@ -293,7 +293,7 @@ export const saveTahfizHafalanEntry = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context, data }) => {
     const ctx = context as Ctx;
-    const record = saveTahfizHafalanRecord({
+    const record = await saveTahfizHafalanRecord({
       student_id: data.student_id,
       date: data.date,
       type: data.type,
@@ -324,7 +324,7 @@ export const deleteTahfizEntry = createServerFn({ method: "POST" })
   )
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
-    const deleted = deleteTahfizRecord(data.category, data.id);
+    const deleted = await deleteTahfizRecord(data.category, data.id);
     return { success: deleted };
   });
 
@@ -343,7 +343,7 @@ export const updateStudentLevelFn = createServerFn({ method: "POST" })
   )
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
-    const updated = setStudentLevel(data.student_id, data.level, data.positionDesc);
+    const updated = await setStudentLevel(data.student_id, data.level, data.positionDesc);
     return { success: true, updated };
   });
 
@@ -382,11 +382,11 @@ export const getTahfizRecap = createServerFn({ method: "POST" })
     const { data: santriList } = await query;
     const students = santriList || [];
 
-    const store = getAllTahfizStore();
+    const store = await getAllTahfizStore();
 
     // Rekap per santri
     const recapRows = students.map((s: any) => {
-      const level = getStudentLevel(s.id, s.class);
+      const level = store.studentLevels[s.id]?.level ?? defaultLevelForGrade(s.class);
       const gradeCode = getGradeCodeFromClassName(s.class);
       const fallbackStandard = TAHFIZ_TARGET_STANDARDS["VII"]!;
       const targetStandard = TAHFIZ_TARGET_STANDARDS[gradeCode] ?? fallbackStandard;

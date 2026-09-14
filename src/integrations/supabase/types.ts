@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      academic_subjects: {
+        Row: {
+          code: string
+          created_at: string
+          group: string
+          id: string
+          is_active: boolean
+          kkm: number
+          name: string
+          order_index: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          group?: string
+          id?: string
+          is_active?: boolean
+          kkm?: number
+          name: string
+          order_index?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          group?: string
+          id?: string
+          is_active?: boolean
+          kkm?: number
+          name?: string
+          order_index?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       attendance_records: {
         Row: {
           attendance_date: string
@@ -185,6 +221,59 @@ export type Database = {
           {
             foreignKeyName: "calendar_events_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      class_subject_assignments: {
+        Row: {
+          academic_year: string
+          class_name: string
+          created_at: string
+          id: string
+          jp_per_week: number
+          subject_code: string
+          subject_group: string
+          subject_id: string
+          subject_name: string
+          teacher_id: string | null
+          teacher_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          academic_year?: string
+          class_name: string
+          created_at?: string
+          id?: string
+          jp_per_week?: number
+          subject_code?: string
+          subject_group?: string
+          subject_id: string
+          subject_name?: string
+          teacher_id?: string | null
+          teacher_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          academic_year?: string
+          class_name?: string
+          created_at?: string
+          id?: string
+          jp_per_week?: number
+          subject_code?: string
+          subject_group?: string
+          subject_id?: string
+          subject_name?: string
+          teacher_id?: string | null
+          teacher_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_subject_assignments_teacher_id_fkey"
+            columns: ["teacher_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -455,6 +544,39 @@ export type Database = {
           },
         ]
       }
+      grading_settings: {
+        Row: {
+          academic_year: string
+          created_at: string
+          id: string
+          semester: string
+          updated_at: string
+          weight_sas: number
+          weight_sts: number
+          weight_tp: number
+        }
+        Insert: {
+          academic_year: string
+          created_at?: string
+          id?: string
+          semester: string
+          updated_at?: string
+          weight_sas?: number
+          weight_sts?: number
+          weight_tp?: number
+        }
+        Update: {
+          academic_year?: string
+          created_at?: string
+          id?: string
+          semester?: string
+          updated_at?: string
+          weight_sas?: number
+          weight_sts?: number
+          weight_tp?: number
+        }
+        Relationships: []
+      }
       halaqohs: {
         Row: {
           created_at: string
@@ -675,6 +797,127 @@ export type Database = {
           },
         ]
       }
+      mutabaah_activities: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          is_active: boolean
+          order_index: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          order_index?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          order_index?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      mutabaah_records: {
+        Row: {
+          activity_id: string
+          created_at: string
+          date: string
+          id: string
+          notes: string | null
+          recorded_by: string | null
+          status: boolean
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          activity_id: string
+          created_at?: string
+          date: string
+          id?: string
+          notes?: string | null
+          recorded_by?: string | null
+          status?: boolean
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          activity_id?: string
+          created_at?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          recorded_by?: string | null
+          status?: boolean
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mutabaah_records_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "mutabaah_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mutabaah_records_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mutabaah_records_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      permit_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          max_days: number
+          name: string
+          requires_uks: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          max_days?: number
+          name: string
+          requires_uks?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          max_days?: number
+          name?: string
+          requires_uks?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profile_positions: {
         Row: {
           created_at: string
@@ -770,6 +1013,615 @@ export type Database = {
         }
         Relationships: []
       }
+      student_permits: {
+        Row: {
+          actual_checkin_at: string | null
+          actual_checkout_at: string | null
+          approved_kepsek: boolean
+          approved_kepsek_at: string | null
+          approved_kepsek_by: string | null
+          approved_kesantrian: boolean
+          approved_kesantrian_at: string | null
+          approved_kesantrian_by: string | null
+          approved_kurikulum: boolean
+          approved_kurikulum_at: string | null
+          approved_kurikulum_by: string | null
+          approved_uks: boolean
+          approved_uks_at: string | null
+          approved_uks_by: string | null
+          attachment_url: string | null
+          category_id: string | null
+          category_name: string
+          checkin_officer_id: string | null
+          checkout_officer_id: string | null
+          created_at: string
+          destination: string | null
+          end_date: string
+          end_time: string
+          id: string
+          is_overdue: boolean
+          notes_kepsek: string | null
+          notes_kesantrian: string | null
+          notes_kurikulum: string | null
+          notes_uks: string | null
+          pickup_by: string | null
+          pickup_phone: string | null
+          reason: string
+          rejected_by: string | null
+          rejection_reason: string | null
+          requires_uks: boolean
+          start_date: string
+          start_time: string
+          status: string
+          student_id: string
+          submitted_by: string
+          updated_at: string
+        }
+        Insert: {
+          actual_checkin_at?: string | null
+          actual_checkout_at?: string | null
+          approved_kepsek?: boolean
+          approved_kepsek_at?: string | null
+          approved_kepsek_by?: string | null
+          approved_kesantrian?: boolean
+          approved_kesantrian_at?: string | null
+          approved_kesantrian_by?: string | null
+          approved_kurikulum?: boolean
+          approved_kurikulum_at?: string | null
+          approved_kurikulum_by?: string | null
+          approved_uks?: boolean
+          approved_uks_at?: string | null
+          approved_uks_by?: string | null
+          attachment_url?: string | null
+          category_id?: string | null
+          category_name: string
+          checkin_officer_id?: string | null
+          checkout_officer_id?: string | null
+          created_at?: string
+          destination?: string | null
+          end_date: string
+          end_time?: string
+          id?: string
+          is_overdue?: boolean
+          notes_kepsek?: string | null
+          notes_kesantrian?: string | null
+          notes_kurikulum?: string | null
+          notes_uks?: string | null
+          pickup_by?: string | null
+          pickup_phone?: string | null
+          reason: string
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          requires_uks?: boolean
+          start_date: string
+          start_time?: string
+          status?: string
+          student_id: string
+          submitted_by: string
+          updated_at?: string
+        }
+        Update: {
+          actual_checkin_at?: string | null
+          actual_checkout_at?: string | null
+          approved_kepsek?: boolean
+          approved_kepsek_at?: string | null
+          approved_kepsek_by?: string | null
+          approved_kesantrian?: boolean
+          approved_kesantrian_at?: string | null
+          approved_kesantrian_by?: string | null
+          approved_kurikulum?: boolean
+          approved_kurikulum_at?: string | null
+          approved_kurikulum_by?: string | null
+          approved_uks?: boolean
+          approved_uks_at?: string | null
+          approved_uks_by?: string | null
+          attachment_url?: string | null
+          category_id?: string | null
+          category_name?: string
+          checkin_officer_id?: string | null
+          checkout_officer_id?: string | null
+          created_at?: string
+          destination?: string | null
+          end_date?: string
+          end_time?: string
+          id?: string
+          is_overdue?: boolean
+          notes_kepsek?: string | null
+          notes_kesantrian?: string | null
+          notes_kurikulum?: string | null
+          notes_uks?: string | null
+          pickup_by?: string | null
+          pickup_phone?: string | null
+          reason?: string
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          requires_uks?: boolean
+          start_date?: string
+          start_time?: string
+          status?: string
+          student_id?: string
+          submitted_by?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_permits_approved_kepsek_by_fkey"
+            columns: ["approved_kepsek_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_permits_approved_kesantrian_by_fkey"
+            columns: ["approved_kesantrian_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_permits_approved_kurikulum_by_fkey"
+            columns: ["approved_kurikulum_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_permits_approved_uks_by_fkey"
+            columns: ["approved_uks_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_permits_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "permit_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_permits_checkin_officer_id_fkey"
+            columns: ["checkin_officer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_permits_checkout_officer_id_fkey"
+            columns: ["checkout_officer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_permits_rejected_by_fkey"
+            columns: ["rejected_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_permits_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_permits_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_subject_summaries: {
+        Row: {
+          academic_year: string
+          avg_tp_score: number
+          class_name: string
+          created_at: string
+          final_score: number
+          highest_tp_desc: string | null
+          id: string
+          letter_grade: string
+          lowest_tp_desc: string | null
+          sas_score: number
+          semester: string
+          sts_score: number
+          student_id: string
+          subject_id: string
+          teacher_notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          academic_year?: string
+          avg_tp_score?: number
+          class_name?: string
+          created_at?: string
+          final_score?: number
+          highest_tp_desc?: string | null
+          id?: string
+          letter_grade?: string
+          lowest_tp_desc?: string | null
+          sas_score?: number
+          semester?: string
+          sts_score?: number
+          student_id: string
+          subject_id: string
+          teacher_notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          academic_year?: string
+          avg_tp_score?: number
+          class_name?: string
+          created_at?: string
+          final_score?: number
+          highest_tp_desc?: string | null
+          id?: string
+          letter_grade?: string
+          lowest_tp_desc?: string | null
+          sas_score?: number
+          semester?: string
+          sts_score?: number
+          student_id?: string
+          subject_id?: string
+          teacher_notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_subject_summaries_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_tp_grades: {
+        Row: {
+          created_at: string
+          graded_by: string | null
+          id: string
+          score: number
+          student_id: string
+          tp_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          graded_by?: string | null
+          id?: string
+          score?: number
+          student_id: string
+          tp_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          graded_by?: string | null
+          id?: string
+          score?: number
+          student_id?: string
+          tp_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_tp_grades_graded_by_fkey"
+            columns: ["graded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_tp_grades_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_tp_grades_tp_id_fkey"
+            columns: ["tp_id"]
+            isOneToOne: false
+            referencedRelation: "learning_objectives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tahfiz_hafalan_records: {
+        Row: {
+          ayat_end: number
+          ayat_start: number
+          catatan: string
+          created_at: string
+          date: string
+          id: string
+          juz: number
+          musyrif_id: string | null
+          nilai: string
+          predikat: string | null
+          student_id: string
+          surah_name: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          ayat_end?: number
+          ayat_start?: number
+          catatan?: string
+          created_at?: string
+          date: string
+          id?: string
+          juz?: number
+          musyrif_id?: string | null
+          nilai?: string
+          predikat?: string | null
+          student_id: string
+          surah_name?: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          ayat_end?: number
+          ayat_start?: number
+          catatan?: string
+          created_at?: string
+          date?: string
+          id?: string
+          juz?: number
+          musyrif_id?: string | null
+          nilai?: string
+          predikat?: string | null
+          student_id?: string
+          surah_name?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tahfiz_hafalan_records_musyrif_id_fkey"
+            columns: ["musyrif_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tahfiz_hafalan_records_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tahfiz_iqro_records: {
+        Row: {
+          catatan: string
+          created_at: string
+          date: string
+          halaman: number
+          id: string
+          murojaah_harian: string | null
+          musyrif_id: string | null
+          nilai: string
+          student_id: string
+          tahap: string
+          updated_at: string
+        }
+        Insert: {
+          catatan?: string
+          created_at?: string
+          date: string
+          halaman?: number
+          id?: string
+          murojaah_harian?: string | null
+          musyrif_id?: string | null
+          nilai?: string
+          student_id: string
+          tahap?: string
+          updated_at?: string
+        }
+        Update: {
+          catatan?: string
+          created_at?: string
+          date?: string
+          halaman?: number
+          id?: string
+          murojaah_harian?: string | null
+          musyrif_id?: string | null
+          nilai?: string
+          student_id?: string
+          tahap?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tahfiz_iqro_records_musyrif_id_fkey"
+            columns: ["musyrif_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tahfiz_iqro_records_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tahfiz_student_levels: {
+        Row: {
+          created_at: string
+          current_position_desc: string | null
+          level: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_position_desc?: string | null
+          level?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_position_desc?: string | null
+          level?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tahfiz_student_levels_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tahfiz_tilawah_records: {
+        Row: {
+          ayat_end: number
+          ayat_start: number
+          catatan: string
+          created_at: string
+          date: string
+          halaman: number | null
+          id: string
+          juz: number
+          murojaah_harian: string | null
+          musyrif_id: string | null
+          nilai_kelancaran: string
+          nilai_tajwid: string | null
+          student_id: string
+          surah_name: string
+          updated_at: string
+        }
+        Insert: {
+          ayat_end?: number
+          ayat_start?: number
+          catatan?: string
+          created_at?: string
+          date: string
+          halaman?: number | null
+          id?: string
+          juz?: number
+          murojaah_harian?: string | null
+          musyrif_id?: string | null
+          nilai_kelancaran?: string
+          nilai_tajwid?: string | null
+          student_id: string
+          surah_name?: string
+          updated_at?: string
+        }
+        Update: {
+          ayat_end?: number
+          ayat_start?: number
+          catatan?: string
+          created_at?: string
+          date?: string
+          halaman?: number | null
+          id?: string
+          juz?: number
+          murojaah_harian?: string | null
+          musyrif_id?: string | null
+          nilai_kelancaran?: string
+          nilai_tajwid?: string | null
+          student_id?: string
+          surah_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tahfiz_tilawah_records_musyrif_id_fkey"
+            columns: ["musyrif_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tahfiz_tilawah_records_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      timetable_slots: {
+        Row: {
+          academic_year: string
+          class_name: string
+          created_at: string
+          day: string
+          id: string
+          period: number
+          room: string | null
+          semester: string
+          subject_code: string
+          subject_id: string
+          subject_name: string
+          teacher_id: string | null
+          teacher_name: string | null
+          time_end: string
+          time_start: string
+          updated_at: string
+        }
+        Insert: {
+          academic_year?: string
+          class_name: string
+          created_at?: string
+          day: string
+          id?: string
+          period: number
+          room?: string | null
+          semester?: string
+          subject_code?: string
+          subject_id?: string
+          subject_name?: string
+          teacher_id?: string | null
+          teacher_name?: string | null
+          time_end?: string
+          time_start?: string
+          updated_at?: string
+        }
+        Update: {
+          academic_year?: string
+          class_name?: string
+          created_at?: string
+          day?: string
+          id?: string
+          period?: number
+          room?: string | null
+          semester?: string
+          subject_code?: string
+          subject_id?: string
+          subject_name?: string
+          teacher_id?: string | null
+          teacher_name?: string | null
+          time_end?: string
+          time_start?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timetable_slots_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -847,6 +1699,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      violation_types: {
+        Row: {
+          category: string
+          created_at: string
+          default_penalty: string | null
+          id: string
+          is_active: boolean
+          points: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          default_penalty?: string | null
+          id?: string
+          is_active?: boolean
+          points?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          default_penalty?: string | null
+          id?: string
+          is_active?: boolean
+          points?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
     }
     Views: {
