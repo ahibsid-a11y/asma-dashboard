@@ -98,13 +98,22 @@ export const getCurriculumPlan = createServerFn({ method: "POST" })
     }
 
     if (!plan) {
-      plan = storage.getOrCreatePlan(
-        data.subject_id,
-        data.class_name,
-        data.academic_year,
-        ctx.userId
-      );
+      try {
+        plan = storage.getOrCreatePlan(
+          data.subject_id,
+          data.class_name,
+          data.academic_year,
+          ctx.userId
+        );
+      } catch {
+        // penyimpanan file tidak tersedia di server produksi
+      }
     }
+
+    if (!plan) {
+      throw new Error("Gagal memuat perangkat ajar. Coba muat ulang halaman.");
+    }
+
 
     // 3. Ambil Elemen & Capaian Pembelajaran (CP)
     let elements: CurriculumElement[] = [];
@@ -120,8 +129,11 @@ export const getCurriculumPlan = createServerFn({ method: "POST" })
     } catch {}
 
     if (elements.length === 0) {
-      elements = storage.getElementsByPlanId(plan.id);
+      try {
+        elements = storage.getElementsByPlanId(plan.id);
+      } catch {}
     }
+
 
     // 4. Ambil TP & ATP (Tujuan Pembelajaran)
     let tps: CurriculumTp[] = [];
@@ -139,8 +151,11 @@ export const getCurriculumPlan = createServerFn({ method: "POST" })
     } catch {}
 
     if (tps.length === 0) {
-      tps = storage.getTps(data.subject_id, data.class_name, data.academic_year);
+      try {
+        tps = storage.getTps(data.subject_id, data.class_name, data.academic_year);
+      } catch {}
     }
+
 
     // 5. Ambil Analisis Alokasi Waktu
     let timeAllocations: CurriculumTimeAllocation[] = [];
@@ -156,8 +171,28 @@ export const getCurriculumPlan = createServerFn({ method: "POST" })
     } catch {}
 
     if (timeAllocations.length === 0) {
-      timeAllocations = storage.getTimeAllocations(plan.id, plan.jp_per_week || 2);
+      try {
+        timeAllocations = storage.getTimeAllocations(plan.id, plan.jp_per_week || 2);
+      } catch {
+        const jp = plan.jp_per_week || 2;
+        timeAllocations = [
+          ...DEFAULT_MONTHS_GANJIL.map((m) => ({ ...m, semester: "1" as const })),
+          ...DEFAULT_MONTHS_GENAP.map((m) => ({ ...m, semester: "2" as const })),
+        ].map((m) => ({
+          id: `${plan!.id}_${m.semester}_${m.name}`,
+          plan_id: plan!.id,
+          semester: m.semester,
+          month_name: m.name,
+          month_order: m.order,
+          calendar_weeks: m.calendar,
+          non_effective_weeks: m.nonEffective,
+          effective_weeks: m.effective,
+          effective_jp: m.effective * jp,
+          notes: null,
+        }));
+      }
     }
+
 
     // 6. Ambil Grid Matriks PROMES
     let promesEntries: CurriculumPromesEntry[] = [];
@@ -172,8 +207,11 @@ export const getCurriculumPlan = createServerFn({ method: "POST" })
     } catch {}
 
     if (promesEntries.length === 0) {
-      promesEntries = storage.getPromesEntries(plan.id);
+      try {
+        promesEntries = storage.getPromesEntries(plan.id);
+      } catch {}
     }
+
 
     // 7. Guru Info
     let teacher: any = null;
@@ -236,25 +274,26 @@ export const updateCurriculumPlanMeta = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const storage = await import("./curriculum.storage.server");
 
-    const updated = storage.updatePlanMeta(data);
+    const updates: Record<string, any> = {
+      phase: data.phase,
+      jp_per_week: data.jp_per_week,
+      updated_at: new Date().toISOString(),
+    };
+    if (data.teacher_id !== undefined) updates["teacher_id"] = data.teacher_id;
+
+    const { error } = await (supabaseAdmin as any)
+      .from("curriculum_plans")
+      .update(updates)
+      .eq("id", data.plan_id);
+    if (error) throw new Error(error.message);
 
     try {
-      const updates: Record<string, any> = {
-        phase: data.phase,
-        jp_per_week: data.jp_per_week,
-        updated_at: new Date().toISOString(),
-      };
-      if (data.teacher_id !== undefined) updates["teacher_id"] = data.teacher_id;
-
-      await (supabaseAdmin as any)
-        .from("curriculum_plans")
-        .update(updates)
-        .eq("id", data.plan_id);
+      const storage = await import("./curriculum.storage.server");
+      storage.updatePlanMeta(data);
     } catch {}
 
-    return { success: true, updated };
+    return { success: true };
   });
 
 /** 3. Simpan Elemen & Capaian Pembelajaran (CP) */
@@ -274,39 +313,46 @@ export const saveCurriculumElement = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const storage = await import("./curriculum.storage.server");
+    const table = () => (supabaseAdmin as any).from("curriculum_elements");
 
-    // Simpan ke storage lokal persisten
-    const storageRes = storage.saveElement(data);
+    let created: CurriculumElement | null = null;
 
-    // Coba simpan ke Supabase jika tabel ada
-    try {
-      const table = (supabaseAdmin as any).from("curriculum_elements");
-      if (data.action === "create") {
-        if (!data.name) throw new Error("Nama elemen wajib diisi");
-        await table.insert({
-          id: storageRes.created?.id,
+    if (data.action === "create") {
+      if (!data.name) throw new Error("Nama elemen wajib diisi");
+      const { data: row, error } = await table()
+        .insert({
           plan_id: data.plan_id,
           name: data.name,
           cp_description: data.cp_description || "",
           order_index: data.order_index || 1,
-        });
-      } else if (data.action === "update" && data.id) {
-        await table
-          .update({
-            name: data.name,
-            cp_description: data.cp_description,
-            order_index: data.order_index,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", data.id);
-      } else if (data.action === "delete" && data.id) {
-        await table.delete().eq("id", data.id);
-      }
+        })
+        .select()
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      created = (row as CurriculumElement) || null;
+    } else if (data.action === "update" && data.id) {
+      const { error } = await table()
+        .update({
+          name: data.name,
+          cp_description: data.cp_description,
+          order_index: data.order_index,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", data.id);
+      if (error) throw new Error(error.message);
+    } else if (data.action === "delete" && data.id) {
+      const { error } = await table().delete().eq("id", data.id);
+      if (error) throw new Error(error.message);
+    }
+
+    try {
+      const storage = await import("./curriculum.storage.server");
+      storage.saveElement(data);
     } catch {}
 
-    return storageRes;
+    return { success: true, created };
   });
+
 
 /** 4. Simpan / Perbarui Batch TP & ATP */
 export const saveCurriculumTpBatch = createServerFn({ method: "POST" })
@@ -343,49 +389,60 @@ export const saveCurriculumTpBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const storage = await import("./curriculum.storage.server");
 
-    // Simpan ke storage lokal
-    const storageRes = storage.saveTpBatch(
-      data.plan_id,
-      data.subject_id,
-      data.class_name,
-      data.academic_year,
-      data.tps as any
-    );
+    const upsertRows = data.tps.map((tp, idx) => ({
+      plan_id: data.plan_id,
+      subject_id: data.subject_id,
+      class_name: data.class_name,
+      academic_year: data.academic_year,
+      semester: tp.semester || "1",
+      code: tp.code,
+      description: tp.description,
+      element_name: tp.element_name || null,
+      cognitive_level: tp.cognitive_level || "C2 - Memahami",
+      dimension: tp.dimension || "Pengetahuan",
+      atp_order: tp.atp_order || idx + 1,
+      atp_flow: tp.atp_flow || null,
+      alokasi_jp: tp.alokasi_jp || 2,
+      assessment_method: tp.assessment_method || "Tes Tertulis",
+      status_tp: tp.status_tp ?? true,
+      status_atp: tp.status_atp ?? true,
+      status_asesmen: tp.status_asesmen ?? true,
+      status_realisasi: tp.status_realisasi || "Belum Terlaksana",
+      order_index: tp.order_index || idx + 1,
+      updated_at: new Date().toISOString(),
+    }));
 
-    // Coba sinkronkan ke Supabase jika tabel learning_objectives ada
+    let saved: CurriculumTp[] = [];
+    if (upsertRows.length > 0) {
+      const { data: rows, error } = await (supabaseAdmin as any)
+        .from("learning_objectives")
+        .upsert(upsertRows, { onConflict: "subject_id,class_name,academic_year,code" })
+        .select();
+      if (error) throw new Error(error.message);
+      saved = (rows as CurriculumTp[]) || [];
+
+      // Perbarui ringkasan jumlah TP pada perangkat ajar
+      try {
+        await (supabaseAdmin as any)
+          .from("curriculum_plans")
+          .update({ total_tp_count: upsertRows.length, updated_at: new Date().toISOString() })
+          .eq("id", data.plan_id);
+      } catch {}
+    }
+
     try {
-      const table = (supabaseAdmin as any).from("learning_objectives");
-      const upsertRows = data.tps.map((tp, idx) => ({
-        plan_id: data.plan_id,
-        subject_id: data.subject_id,
-        class_name: data.class_name,
-        academic_year: data.academic_year,
-        semester: tp.semester || "1",
-        code: tp.code,
-        description: tp.description,
-        element_name: tp.element_name || null,
-        cognitive_level: tp.cognitive_level || "C2 - Memahami",
-        dimension: tp.dimension || "Pengetahuan",
-        atp_order: tp.atp_order || idx + 1,
-        atp_flow: tp.atp_flow || null,
-        alokasi_jp: tp.alokasi_jp || 2,
-        assessment_method: tp.assessment_method || "Tes Tertulis",
-        status_tp: tp.status_tp ?? true,
-        status_atp: tp.status_atp ?? true,
-        status_asesmen: tp.status_asesmen ?? true,
-        status_realisasi: tp.status_realisasi || "Belum Terlaksana",
-        order_index: tp.order_index || idx + 1,
-        updated_at: new Date().toISOString(),
-      }));
-
-      if (upsertRows.length > 0) {
-        await table.upsert(upsertRows);
-      }
+      const storage = await import("./curriculum.storage.server");
+      storage.saveTpBatch(
+        data.plan_id,
+        data.subject_id,
+        data.class_name,
+        data.academic_year,
+        data.tps as any
+      );
     } catch {}
 
-    return storageRes;
+    return { success: true, saved };
   });
 
 /** 5. Hapus 1 TP */
@@ -400,14 +457,21 @@ export const deleteCurriculumTp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const storage = await import("./curriculum.storage.server");
 
-    const res = storage.deleteTp(data.id);
+    const { error } = await (supabaseAdmin as any)
+      .from("learning_objectives")
+      .delete()
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+
     try {
-      await (supabaseAdmin as any).from("learning_objectives").delete().eq("id", data.id);
+      const storage = await import("./curriculum.storage.server");
+      storage.deleteTp(data.id);
     } catch {}
-    return res;
+
+    return { success: true };
   });
+
 
 /** 6. Simpan Analisis Alokasi Waktu (Pekan Kalender & Efektif) */
 export const saveCurriculumTimeAllocations = createServerFn({ method: "POST" })
@@ -434,29 +498,35 @@ export const saveCurriculumTimeAllocations = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const storage = await import("./curriculum.storage.server");
 
-    const storageRes = storage.saveTimeAllocations(data.plan_id, data.allocations as any);
+    const rows = data.allocations.map((a) => ({
+      plan_id: data.plan_id,
+      semester: a.semester,
+      month_name: a.month_name,
+      month_order: a.month_order,
+      calendar_weeks: a.calendar_weeks,
+      non_effective_weeks: a.non_effective_weeks,
+      effective_weeks: a.effective_weeks,
+      effective_jp: a.effective_jp,
+      notes: a.notes || null,
+      updated_at: new Date().toISOString(),
+    }));
+
+    if (rows.length > 0) {
+      const { error } = await (supabaseAdmin as any)
+        .from("curriculum_time_allocations")
+        .upsert(rows, { onConflict: "plan_id,semester,month_name" });
+      if (error) throw new Error(error.message);
+    }
 
     try {
-      const table = (supabaseAdmin as any).from("curriculum_time_allocations");
-      const rows = data.allocations.map((a) => ({
-        plan_id: data.plan_id,
-        semester: a.semester,
-        month_name: a.month_name,
-        month_order: a.month_order,
-        calendar_weeks: a.calendar_weeks,
-        non_effective_weeks: a.non_effective_weeks,
-        effective_weeks: a.effective_weeks,
-        effective_jp: a.effective_jp,
-        notes: a.notes || null,
-        updated_at: new Date().toISOString(),
-      }));
-      await table.upsert(rows, { onConflict: "plan_id,semester,month_name" });
+      const storage = await import("./curriculum.storage.server");
+      storage.saveTimeAllocations(data.plan_id, data.allocations as any);
     } catch {}
 
-    return storageRes;
+    return { success: true };
   });
+
 
 /** 7. Simpan Grid Matriks Program Semester (PROMES) */
 export const saveCurriculumPromesGrid = createServerFn({ method: "POST" })
@@ -482,36 +552,46 @@ export const saveCurriculumPromesGrid = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const storage = await import("./curriculum.storage.server");
 
-    const storageRes = storage.savePromesGrid(
-      data.plan_id,
-      data.semester,
-      data.entries as any,
-      data.tpStatuses
-    );
+    const rows = data.entries.map((e) => ({
+      plan_id: data.plan_id,
+      tp_id: e.tp_id,
+      semester: data.semester,
+      month_name: e.month_name,
+      week_number: e.week_number,
+      allocated_jp: e.allocated_jp,
+      activity_type: e.activity_type,
+      notes: e.notes || null,
+      updated_at: new Date().toISOString(),
+    }));
+
+    if (rows.length > 0) {
+      const { error } = await (supabaseAdmin as any)
+        .from("curriculum_promes_entries")
+        .upsert(rows, { onConflict: "plan_id,tp_id,semester,month_name,week_number" });
+      if (error) throw new Error(error.message);
+    }
+
+    // Perbarui status realisasi TP bila ada perubahan
+    if (data.tpStatuses) {
+      for (const [tpId, status] of Object.entries(data.tpStatuses)) {
+        try {
+          await (supabaseAdmin as any)
+            .from("learning_objectives")
+            .update({ status_realisasi: status, updated_at: new Date().toISOString() })
+            .eq("id", tpId);
+        } catch {}
+      }
+    }
 
     try {
-      const rows = data.entries.map((e) => ({
-        plan_id: data.plan_id,
-        tp_id: e.tp_id,
-        semester: data.semester,
-        month_name: e.month_name,
-        week_number: e.week_number,
-        allocated_jp: e.allocated_jp,
-        activity_type: e.activity_type,
-        notes: e.notes || null,
-        updated_at: new Date().toISOString(),
-      }));
-      if (rows.length > 0) {
-        await (supabaseAdmin as any)
-          .from("curriculum_promes_entries")
-          .upsert(rows, { onConflict: "plan_id,tp_id,semester,month_name,week_number" });
-      }
+      const storage = await import("./curriculum.storage.server");
+      storage.savePromesGrid(data.plan_id, data.semester, data.entries as any, data.tpStatuses);
     } catch {}
 
-    return storageRes;
+    return { success: true };
   });
+
 
 /** 8. Rekapitulasi & Supervisi Perangkat Ajar Seluruh Guru (Waka Kurikulum & Kepala Sekolah) */
 export const getCurriculumSupervisionRecap = createServerFn({ method: "POST" })
