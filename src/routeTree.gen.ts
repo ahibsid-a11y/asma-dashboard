@@ -18,10 +18,12 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedInputMutabaahRouteImport } from './routes/_authenticated/input-mutabaah'
 import { Route as AuthenticatedInputNilaiRouteImport } from './routes/_authenticated/input-nilai'
 import { Route as AuthenticatedInputNilaiTahfizRouteImport } from './routes/_authenticated/input-nilai-tahfiz'
+import { Route as AuthenticatedJadwalPelajaranRouteImport } from './routes/_authenticated/jadwal-pelajaran'
 import { Route as AuthenticatedKalenderRouteImport } from './routes/_authenticated/kalender'
 import { Route as AuthenticatedManajemenAsramaRouteImport } from './routes/_authenticated/manajemen-asrama'
 import { Route as AuthenticatedManajemenHalaqohRouteImport } from './routes/_authenticated/manajemen-halaqoh'
 import { Route as AuthenticatedManajemenKelasRouteImport } from './routes/_authenticated/manajemen-kelas'
+import { Route as AuthenticatedManajemenMapelRouteImport } from './routes/_authenticated/manajemen-mapel'
 import { Route as AuthenticatedMutabaahSayaRouteImport } from './routes/_authenticated/mutabaah-saya'
 import { Route as AuthenticatedNilaiPelajaranRouteImport } from './routes/_authenticated/nilai-pelajaran'
 import { Route as AuthenticatedNilaiTahfizSayaRouteImport } from './routes/_authenticated/nilai-tahfiz-saya'
@@ -87,6 +89,12 @@ const AuthenticatedInputNilaiTahfizRoute =
     path: '/input-nilai-tahfiz',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedJadwalPelajaranRoute =
+  AuthenticatedJadwalPelajaranRouteImport.update({
+    id: '/jadwal-pelajaran',
+    path: '/jadwal-pelajaran',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedKalenderRoute = AuthenticatedKalenderRouteImport.update({
   id: '/kalender',
   path: '/kalender',
@@ -108,6 +116,12 @@ const AuthenticatedManajemenKelasRoute =
   AuthenticatedManajemenKelasRouteImport.update({
     id: '/manajemen-kelas',
     path: '/manajemen-kelas',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedManajemenMapelRoute =
+  AuthenticatedManajemenMapelRouteImport.update({
+    id: '/manajemen-mapel',
+    path: '/manajemen-mapel',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedMutabaahSayaRoute =
@@ -213,10 +227,12 @@ export interface FileRoutesByFullPath {
   '/input-mutabaah': typeof AuthenticatedInputMutabaahRoute
   '/input-nilai': typeof AuthenticatedInputNilaiRoute
   '/input-nilai-tahfiz': typeof AuthenticatedInputNilaiTahfizRoute
+  '/jadwal-pelajaran': typeof AuthenticatedJadwalPelajaranRoute
   '/kalender': typeof AuthenticatedKalenderRoute
   '/manajemen-asrama': typeof AuthenticatedManajemenAsramaRoute
   '/manajemen-halaqoh': typeof AuthenticatedManajemenHalaqohRoute
   '/manajemen-kelas': typeof AuthenticatedManajemenKelasRoute
+  '/manajemen-mapel': typeof AuthenticatedManajemenMapelRoute
   '/mutabaah-saya': typeof AuthenticatedMutabaahSayaRoute
   '/nilai-pelajaran': typeof AuthenticatedNilaiPelajaranRoute
   '/nilai-tahfiz-saya': typeof AuthenticatedNilaiTahfizSayaRoute
@@ -243,10 +259,12 @@ export interface FileRoutesByTo {
   '/input-mutabaah': typeof AuthenticatedInputMutabaahRoute
   '/input-nilai': typeof AuthenticatedInputNilaiRoute
   '/input-nilai-tahfiz': typeof AuthenticatedInputNilaiTahfizRoute
+  '/jadwal-pelajaran': typeof AuthenticatedJadwalPelajaranRoute
   '/kalender': typeof AuthenticatedKalenderRoute
   '/manajemen-asrama': typeof AuthenticatedManajemenAsramaRoute
   '/manajemen-halaqoh': typeof AuthenticatedManajemenHalaqohRoute
   '/manajemen-kelas': typeof AuthenticatedManajemenKelasRoute
+  '/manajemen-mapel': typeof AuthenticatedManajemenMapelRoute
   '/mutabaah-saya': typeof AuthenticatedMutabaahSayaRoute
   '/nilai-pelajaran': typeof AuthenticatedNilaiPelajaranRoute
   '/nilai-tahfiz-saya': typeof AuthenticatedNilaiTahfizSayaRoute
@@ -275,10 +293,12 @@ export interface FileRoutesById {
   '/_authenticated/input-mutabaah': typeof AuthenticatedInputMutabaahRoute
   '/_authenticated/input-nilai': typeof AuthenticatedInputNilaiRoute
   '/_authenticated/input-nilai-tahfiz': typeof AuthenticatedInputNilaiTahfizRoute
+  '/_authenticated/jadwal-pelajaran': typeof AuthenticatedJadwalPelajaranRoute
   '/_authenticated/kalender': typeof AuthenticatedKalenderRoute
   '/_authenticated/manajemen-asrama': typeof AuthenticatedManajemenAsramaRoute
   '/_authenticated/manajemen-halaqoh': typeof AuthenticatedManajemenHalaqohRoute
   '/_authenticated/manajemen-kelas': typeof AuthenticatedManajemenKelasRoute
+  '/_authenticated/manajemen-mapel': typeof AuthenticatedManajemenMapelRoute
   '/_authenticated/mutabaah-saya': typeof AuthenticatedMutabaahSayaRoute
   '/_authenticated/nilai-pelajaran': typeof AuthenticatedNilaiPelajaranRoute
   '/_authenticated/nilai-tahfiz-saya': typeof AuthenticatedNilaiTahfizSayaRoute
@@ -307,10 +327,12 @@ export interface FileRouteTypes {
     | '/input-mutabaah'
     | '/input-nilai'
     | '/input-nilai-tahfiz'
+    | '/jadwal-pelajaran'
     | '/kalender'
     | '/manajemen-asrama'
     | '/manajemen-halaqoh'
     | '/manajemen-kelas'
+    | '/manajemen-mapel'
     | '/mutabaah-saya'
     | '/nilai-pelajaran'
     | '/nilai-tahfiz-saya'
@@ -337,10 +359,12 @@ export interface FileRouteTypes {
     | '/input-mutabaah'
     | '/input-nilai'
     | '/input-nilai-tahfiz'
+    | '/jadwal-pelajaran'
     | '/kalender'
     | '/manajemen-asrama'
     | '/manajemen-halaqoh'
     | '/manajemen-kelas'
+    | '/manajemen-mapel'
     | '/mutabaah-saya'
     | '/nilai-pelajaran'
     | '/nilai-tahfiz-saya'
@@ -368,10 +392,12 @@ export interface FileRouteTypes {
     | '/_authenticated/input-mutabaah'
     | '/_authenticated/input-nilai'
     | '/_authenticated/input-nilai-tahfiz'
+    | '/_authenticated/jadwal-pelajaran'
     | '/_authenticated/kalender'
     | '/_authenticated/manajemen-asrama'
     | '/_authenticated/manajemen-halaqoh'
     | '/_authenticated/manajemen-kelas'
+    | '/_authenticated/manajemen-mapel'
     | '/_authenticated/mutabaah-saya'
     | '/_authenticated/nilai-pelajaran'
     | '/_authenticated/nilai-tahfiz-saya'
@@ -460,6 +486,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInputNilaiTahfizRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/jadwal-pelajaran': {
+      id: '/_authenticated/jadwal-pelajaran'
+      path: '/jadwal-pelajaran'
+      fullPath: '/jadwal-pelajaran'
+      preLoaderRoute: typeof AuthenticatedJadwalPelajaranRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/kalender': {
       id: '/_authenticated/kalender'
       path: '/kalender'
@@ -486,6 +519,13 @@ declare module '@tanstack/react-router' {
       path: '/manajemen-kelas'
       fullPath: '/manajemen-kelas'
       preLoaderRoute: typeof AuthenticatedManajemenKelasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/manajemen-mapel': {
+      id: '/_authenticated/manajemen-mapel'
+      path: '/manajemen-mapel'
+      fullPath: '/manajemen-mapel'
+      preLoaderRoute: typeof AuthenticatedManajemenMapelRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/mutabaah-saya': {
@@ -611,10 +651,12 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedInputMutabaahRoute: typeof AuthenticatedInputMutabaahRoute
   AuthenticatedInputNilaiRoute: typeof AuthenticatedInputNilaiRoute
   AuthenticatedInputNilaiTahfizRoute: typeof AuthenticatedInputNilaiTahfizRoute
+  AuthenticatedJadwalPelajaranRoute: typeof AuthenticatedJadwalPelajaranRoute
   AuthenticatedKalenderRoute: typeof AuthenticatedKalenderRoute
   AuthenticatedManajemenAsramaRoute: typeof AuthenticatedManajemenAsramaRoute
   AuthenticatedManajemenHalaqohRoute: typeof AuthenticatedManajemenHalaqohRoute
   AuthenticatedManajemenKelasRoute: typeof AuthenticatedManajemenKelasRoute
+  AuthenticatedManajemenMapelRoute: typeof AuthenticatedManajemenMapelRoute
   AuthenticatedMutabaahSayaRoute: typeof AuthenticatedMutabaahSayaRoute
   AuthenticatedNilaiPelajaranRoute: typeof AuthenticatedNilaiPelajaranRoute
   AuthenticatedNilaiTahfizSayaRoute: typeof AuthenticatedNilaiTahfizSayaRoute
@@ -641,10 +683,12 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedInputMutabaahRoute: AuthenticatedInputMutabaahRoute,
   AuthenticatedInputNilaiRoute: AuthenticatedInputNilaiRoute,
   AuthenticatedInputNilaiTahfizRoute: AuthenticatedInputNilaiTahfizRoute,
+  AuthenticatedJadwalPelajaranRoute: AuthenticatedJadwalPelajaranRoute,
   AuthenticatedKalenderRoute: AuthenticatedKalenderRoute,
   AuthenticatedManajemenAsramaRoute: AuthenticatedManajemenAsramaRoute,
   AuthenticatedManajemenHalaqohRoute: AuthenticatedManajemenHalaqohRoute,
   AuthenticatedManajemenKelasRoute: AuthenticatedManajemenKelasRoute,
+  AuthenticatedManajemenMapelRoute: AuthenticatedManajemenMapelRoute,
   AuthenticatedMutabaahSayaRoute: AuthenticatedMutabaahSayaRoute,
   AuthenticatedNilaiPelajaranRoute: AuthenticatedNilaiPelajaranRoute,
   AuthenticatedNilaiTahfizSayaRoute: AuthenticatedNilaiTahfizSayaRoute,

@@ -54,6 +54,8 @@ export type NavKey =
   | "rekap-perangkat-ajar"
   | "input-nilai"
   | "nilai-pelajaran"
+  | "manajemen-mapel"
+  | "jadwal-pelajaran"
   | "profil";
 
 export type NavCategory =
@@ -281,6 +283,20 @@ export const NAV_ITEMS: Record<NavKey, NavItem> = {
     icon: GraduationCap,
     category: "pendidikan",
   },
+  "manajemen-mapel": {
+    key: "manajemen-mapel",
+    to: "/manajemen-mapel",
+    label: "Manajemen Mapel",
+    icon: BookMarked,
+    category: "manajemen",
+  },
+  "jadwal-pelajaran": {
+    key: "jadwal-pelajaran",
+    to: "/jadwal-pelajaran",
+    label: "Jadwal Pelajaran",
+    icon: CalendarDays,
+    category: "pendidikan",
+  },
 
   profil: { key: "profil", to: "/profil", label: "Profil Saya", icon: UserCog, category: "akun" },
 };
@@ -312,6 +328,7 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "manajemen-kelas",
     "manajemen-asrama",
     "manajemen-halaqoh",
+    "manajemen-mapel",
     ...REKAP_ALL,
     "scan-presensi",
     "presensi-insidental",
@@ -321,6 +338,7 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "perizinan",
     "input-nilai-tahfiz",
     "kalender",
+    "jadwal-pelajaran",
     "perangkat-ajar",
     "input-nilai",
     "profil",
@@ -331,6 +349,7 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "manajemen-kelas",
     "manajemen-asrama",
     "manajemen-halaqoh",
+    "manajemen-mapel",
     ...REKAP_ALL,
     "scan-presensi",
     "presensi-insidental",
@@ -341,6 +360,7 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "perizinan",
     "input-nilai-tahfiz",
     "kalender",
+    "jadwal-pelajaran",
     "perangkat-ajar",
     "input-nilai",
     "profil",
@@ -351,6 +371,7 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "manajemen-kelas",
     "manajemen-asrama",
     "manajemen-halaqoh",
+    "manajemen-mapel",
     ...REKAP_ALL,
     "scan-presensi",
     "presensi-insidental",
@@ -361,6 +382,7 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "perizinan",
     "input-nilai-tahfiz",
     "kalender",
+    "jadwal-pelajaran",
     "perangkat-ajar",
     "input-nilai",
     "profil",
@@ -371,17 +393,20 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "manajemen-kelas",
     "manajemen-asrama",
     "manajemen-halaqoh",
+    "manajemen-mapel",
     "scan-presensi",
     "presensi-insidental",
     "absensi-diri",
     "catat-pelanggaran",
     "perizinan",
     "kalender",
+    "jadwal-pelajaran",
     "profil",
   ],
 
   waka_kurikulum: [
     "dashboard",
+    "manajemen-mapel",
     ...REKAP_ALL,
     "scan-presensi",
     "presensi-insidental",
@@ -389,6 +414,7 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "catat-pelanggaran",
     "perizinan",
     "kalender",
+    "jadwal-pelajaran",
     "perangkat-ajar",
     "input-nilai",
     "profil",
@@ -440,6 +466,7 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "catat-pelanggaran",
     "perizinan",
     "kalender",
+    "jadwal-pelajaran",
     "perangkat-ajar",
     "input-nilai",
     "profil",
@@ -451,6 +478,7 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "absensi-diri",
     "catat-pelanggaran",
     "kalender",
+    "jadwal-pelajaran",
     "perangkat-ajar",
     "input-nilai",
     "profil",
@@ -465,6 +493,7 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "perizinan",
     "nilai-tahfiz-saya",
     "kalender",
+    "jadwal-pelajaran",
     "nilai-pelajaran",
     "profil",
   ],
