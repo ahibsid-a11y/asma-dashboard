@@ -17,6 +17,16 @@ import {
   type EkskulGrade,
 } from "./ekskul.storage.server";
 
+
+/** Samakan bentuk data santri agar tampilan selalu mendapat nama & kelas. */
+function normalizeStudent(s: any) {
+  return {
+    ...s,
+    full_name: s.name || s.display_name || "Santri",
+    class_name: s.class || "-",
+  };
+}
+
 // ──────────────────────────────────────────────────────────────
 // 1. MASTER EKSKUL
 // ──────────────────────────────────────────────────────────────
@@ -24,7 +34,7 @@ import {
 export const getMasterEkskulListFn = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async () => {
-    const store = loadEkskulStore();
+    const store = await loadEkskulStore();
     return store.ekskuls;
   });
 
@@ -57,12 +67,12 @@ export const manageEkskulItemFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     if (data.action === "delete" && data.deleteId) {
-      deleteEkskulItem(data.deleteId);
+      await deleteEkskulItem(data.deleteId);
       return { success: true, message: "Ekskul berhasil dihapus" };
     }
 
     if (data.action === "save" && data.item) {
-      const saved = saveOrUpdateEkskul(data.item as any);
+      const saved = await saveOrUpdateEkskul(data.item as any);
       return { success: true, item: saved, message: "Ekskul berhasil disimpan" };
     }
 
@@ -86,7 +96,7 @@ export const getEkskulEnrollmentDataFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const store = loadEkskulStore();
+    const store = await loadEkskulStore();
 
     // 1. Ambil ekskul
     const ekskul = store.ekskuls.find((e) => e.id === data.ekskulId);
@@ -108,11 +118,11 @@ export const getEkskulEnrollmentDataFn = createServerFn({ method: "POST" })
     if (studentIds.length > 0) {
       const { data: students } = await (supabaseAdmin as any)
         .from("profiles")
-        .select("id, full_name, name, display_name, nis_nip, class_name, dorm, avatar")
+        .select("id, name, display_name, nis_nip, class, dorm, avatar")
         .in("id", studentIds);
 
       for (const s of students || []) {
-        studentsMap.set(s.id, s);
+        studentsMap.set(s.id, normalizeStudent(s));
       }
     }
 
@@ -150,7 +160,7 @@ export const enrollStudentFn = createServerFn({ method: "POST" })
   )
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
-    const enrollment = enrollStudentToEkskul({
+    const enrollment = await enrollStudentToEkskul({
       ekskul_id: data.ekskulId,
       student_id: data.studentId,
       semester: data.semester,
@@ -170,7 +180,7 @@ export const unenrollStudentFn = createServerFn({ method: "POST" })
   )
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
-    const success = unenrollStudentFromEkskul(data.enrollmentId);
+    const success = await unenrollStudentFromEkskul(data.enrollmentId);
     return { success };
   });
 
@@ -186,7 +196,7 @@ export const autoEnrollWajibFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const store = loadEkskulStore();
+    const store = await loadEkskulStore();
 
     // 1. Ambil ekskul wajib
     const wajibEkskuls = store.ekskuls.filter((e) => e.category === "wajib" && e.is_active);
@@ -201,7 +211,7 @@ export const autoEnrollWajibFn = createServerFn({ method: "POST" })
     let count = 0;
     for (const std of students || []) {
       for (const w of wajibEkskuls) {
-        enrollStudentToEkskul({
+        await enrollStudentToEkskul({
           ekskul_id: w.id,
           student_id: std.id,
           semester: data.semester,
@@ -239,7 +249,7 @@ export const recordEkskulAttendanceSessionFn = createServerFn({ method: "POST" }
   )
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
-    const session = createSessionAndAttendance({
+    const session = await createSessionAndAttendance({
       ekskul_id: data.ekskulId,
       date: data.date,
       topic: data.topic,
@@ -264,7 +274,7 @@ export const getEkskulSessionsAndGradesFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const store = loadEkskulStore();
+    const store = await loadEkskulStore();
 
     // 1. Ambil ekskul
     const ekskul = store.ekskuls.find((e) => e.id === data.ekskulId);
@@ -293,11 +303,11 @@ export const getEkskulSessionsAndGradesFn = createServerFn({ method: "POST" })
     if (studentIds.length > 0) {
       const { data: students } = await (supabaseAdmin as any)
         .from("profiles")
-        .select("id, full_name, name, display_name, nis_nip, class_name")
+        .select("id, name, display_name, nis_nip, class")
         .in("id", studentIds);
 
       for (const s of students || []) {
-        studentsMap.set(s.id, s);
+        studentsMap.set(s.id, normalizeStudent(s));
       }
     }
 
@@ -373,7 +383,7 @@ export const saveEkskulStudentGradeFn = createServerFn({ method: "POST" })
   )
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
-    const saved = saveStudentEkskulGrade({
+    const saved = await saveStudentEkskulGrade({
       ekskul_id: data.ekskulId,
       student_id: data.studentId,
       semester: data.semester,
@@ -402,7 +412,7 @@ export const getEkskulPaymentsFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const store = loadEkskulStore();
+    const store = await loadEkskulStore();
 
     let payments = store.payments;
     if (data.ekskulId && data.ekskulId !== "all") {
@@ -415,11 +425,11 @@ export const getEkskulPaymentsFn = createServerFn({ method: "POST" })
     if (studentIds.length > 0) {
       const { data: students } = await (supabaseAdmin as any)
         .from("profiles")
-        .select("id, full_name, name, display_name, nis_nip, class_name")
+        .select("id, name, display_name, nis_nip, class")
         .in("id", studentIds);
 
       for (const s of students || []) {
-        studentsMap.set(s.id, s);
+        studentsMap.set(s.id, normalizeStudent(s));
       }
     }
 
@@ -471,7 +481,7 @@ export const updateEkskulPaymentStatusFn = createServerFn({ method: "POST" })
   )
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
-    const updated = recordPaymentUpdate(data);
+    const updated = await recordPaymentUpdate(data);
     if (!updated) throw new Error("Tagihan pembayaran tidak ditemukan");
     return { success: true, payment: updated };
   });
@@ -490,7 +500,7 @@ export const createStudentBillingFn = createServerFn({ method: "POST" })
   )
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
-    const payment = createBillingForStudent({
+    const payment = await createBillingForStudent({
       enrollment_id: data.enrollmentId,
       student_id: data.studentId,
       ekskul_id: data.ekskulId,
@@ -516,7 +526,7 @@ export const getStudentEkskulPortalDataFn = createServerFn({ method: "POST" })
   )
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
-    const store = loadEkskulStore();
+    const store = await loadEkskulStore();
 
     // 1. Ambil pendaftaran santri
     const enrollments = store.enrollments.filter(
@@ -623,16 +633,16 @@ export const getEkskulRecapDataFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const store = loadEkskulStore();
+    const store = await loadEkskulStore();
 
     // 1. Profil santri
     const { data: students } = await (supabaseAdmin as any)
       .from("profiles")
-      .select("id, full_name, name, display_name, nis_nip, class_name")
+      .select("id, name, display_name, nis_nip, class")
       .eq("account_type", "santri")
-      .order("full_name");
+      .order("name");
 
-    const studentsMap = new Map((students || []).map((s: any) => [s.id, s]));
+    const studentsMap = new Map((students || []).map((s: any) => [s.id, normalizeStudent(s)]));
 
     // 2. Rekap per Ekskul
     const ekskulStats = store.ekskuls.map((ekskul) => {
@@ -696,7 +706,7 @@ export const getCoachOptionsFn = createServerFn({ method: "GET" })
     // Ambil guru, pembina ekskul, wali kelas, atau tendik
     const { data: coaches, error } = await (supabaseAdmin as any)
       .from("profiles")
-      .select("id, name, display_name, full_name, account_type, nis_nip")
+      .select("id, name, display_name, account_type, nis_nip")
       .neq("account_type", "santri")
       .order("name");
 
@@ -707,7 +717,7 @@ export const getCoachOptionsFn = createServerFn({ method: "GET" })
 
     return (coaches || []).map((c: any) => ({
       id: c.id,
-      name: c.name || c.display_name || c.full_name,
+      name: c.name || c.display_name,
       account_type: c.account_type,
       nis_nip: c.nis_nip,
     }));

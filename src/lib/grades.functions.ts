@@ -1467,7 +1467,7 @@ export const getReportCardDinas = createServerFn({ method: "POST" })
       kokurRecord?.narrative || generateKokurNarrative(studentName, kokurRecord?.grades || {});
 
     // 9. Ekstrakurikuler (Seksi C Rapor Dinas)
-    const ekstrakurikuler = getStudentReportEkskulGrades(data.student_id, data.semester, data.academic_year);
+    const ekstrakurikuler = await getStudentReportEkskulGrades(data.student_id, data.semester, data.academic_year);
 
     // 10. Kehadiran
     const attendance = await resolveAttendance(supabaseAdmin, data.student_id, data.semester, data.academic_year);

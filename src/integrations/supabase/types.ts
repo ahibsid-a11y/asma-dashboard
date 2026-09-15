@@ -544,6 +544,343 @@ export type Database = {
           },
         ]
       }
+      ekskul_attendances: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string
+          session_id: string
+          status: string
+          student_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string
+          session_id: string
+          status?: string
+          student_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string
+          session_id?: string
+          status?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ekskul_attendances_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "ekskul_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ekskul_attendances_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ekskul_enrollments: {
+        Row: {
+          academic_year: string
+          created_at: string
+          ekskul_id: string
+          enrolled_at: string
+          id: string
+          semester: string
+          status: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          academic_year?: string
+          created_at?: string
+          ekskul_id: string
+          enrolled_at?: string
+          id?: string
+          semester?: string
+          status?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          academic_year?: string
+          created_at?: string
+          ekskul_id?: string
+          enrolled_at?: string
+          id?: string
+          semester?: string
+          status?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ekskul_enrollments_ekskul_id_fkey"
+            columns: ["ekskul_id"]
+            isOneToOne: false
+            referencedRelation: "ekskuls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ekskul_enrollments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ekskul_grades: {
+        Row: {
+          academic_year: string
+          created_at: string
+          description: string
+          ekskul_id: string
+          grade: string
+          id: string
+          predicate: string
+          semester: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          academic_year?: string
+          created_at?: string
+          description?: string
+          ekskul_id: string
+          grade?: string
+          id?: string
+          predicate?: string
+          semester?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          academic_year?: string
+          created_at?: string
+          description?: string
+          ekskul_id?: string
+          grade?: string
+          id?: string
+          predicate?: string
+          semester?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ekskul_grades_ekskul_id_fkey"
+            columns: ["ekskul_id"]
+            isOneToOne: false
+            referencedRelation: "ekskuls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ekskul_grades_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ekskul_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          ekskul_id: string
+          enrollment_id: string | null
+          id: string
+          notes: string | null
+          payment_date: string | null
+          payment_method: string | null
+          period_label: string
+          receipt_no: string | null
+          status: string
+          student_id: string
+          updated_at: string
+          verified_by: string | null
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          ekskul_id: string
+          enrollment_id?: string | null
+          id?: string
+          notes?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          period_label?: string
+          receipt_no?: string | null
+          status?: string
+          student_id: string
+          updated_at?: string
+          verified_by?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          ekskul_id?: string
+          enrollment_id?: string | null
+          id?: string
+          notes?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          period_label?: string
+          receipt_no?: string | null
+          status?: string
+          student_id?: string
+          updated_at?: string
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ekskul_payments_ekskul_id_fkey"
+            columns: ["ekskul_id"]
+            isOneToOne: false
+            referencedRelation: "ekskuls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ekskul_payments_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "ekskul_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ekskul_payments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ekskul_payments_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ekskul_sessions: {
+        Row: {
+          academic_year: string
+          created_at: string
+          created_by: string | null
+          date: string
+          ekskul_id: string
+          id: string
+          semester: string
+          topic: string
+        }
+        Insert: {
+          academic_year?: string
+          created_at?: string
+          created_by?: string | null
+          date: string
+          ekskul_id: string
+          id?: string
+          semester?: string
+          topic?: string
+        }
+        Update: {
+          academic_year?: string
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          ekskul_id?: string
+          id?: string
+          semester?: string
+          topic?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ekskul_sessions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ekskul_sessions_ekskul_id_fkey"
+            columns: ["ekskul_id"]
+            isOneToOne: false
+            referencedRelation: "ekskuls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ekskuls: {
+        Row: {
+          category: string
+          coach_id: string | null
+          coach_name: string
+          created_at: string
+          description: string
+          fee: number
+          fee_period: string
+          id: string
+          is_active: boolean
+          location: string
+          name: string
+          quota: number | null
+          schedule_day: string
+          schedule_time: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          coach_id?: string | null
+          coach_name?: string
+          created_at?: string
+          description?: string
+          fee?: number
+          fee_period?: string
+          id: string
+          is_active?: boolean
+          location?: string
+          name: string
+          quota?: number | null
+          schedule_day?: string
+          schedule_time?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          coach_id?: string | null
+          coach_name?: string
+          created_at?: string
+          description?: string
+          fee?: number
+          fee_period?: string
+          id?: string
+          is_active?: boolean
+          location?: string
+          name?: string
+          quota?: number | null
+          schedule_day?: string
+          schedule_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ekskuls_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       grading_settings: {
         Row: {
           academic_year: string
@@ -1777,11 +2114,11 @@ export type Database = {
         | "musyrif_halaqoh"
         | "wali_kelas"
         | "guru_mapel"
-        | "pembina_ekskul"
         | "kepala_tu"
         | "kepala_rt_sarpras"
         | "tendik"
         | "santri"
+        | "pembina_ekskul"
       attendance_status: "Hadir" | "Telat" | "Alfa"
       calendar_target_type: "ALL" | "ROLE" | "USERS"
       gender_type: "L" | "P"
@@ -1932,11 +2269,11 @@ export const Constants = {
         "musyrif_halaqoh",
         "wali_kelas",
         "guru_mapel",
-        "pembina_ekskul",
         "kepala_tu",
         "kepala_rt_sarpras",
         "tendik",
         "santri",
+        "pembina_ekskul",
       ],
       attendance_status: ["Hadir", "Telat", "Alfa"],
       calendar_target_type: ["ALL", "ROLE", "USERS"],
