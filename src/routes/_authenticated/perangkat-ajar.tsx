@@ -188,13 +188,13 @@ function PerangkatAjarPage() {
   const [localTps, setLocalTps] = useState<CurriculumTp[]>([]);
   const [hasUnsavedTp, setHasUnsavedTp] = useState(false);
 
-  // Sync serverTps to localTps when loaded
-  useMemo(() => {
-    if (serverTps) {
-      setLocalTps(serverTps);
-      setHasUnsavedTp(false);
-    }
-  }, [serverTps]);
+  // Sinkronkan TP dari server, tapi jangan menimpa isian yang belum disimpan
+  useEffect(() => {
+    setLocalTps(serverTps);
+    setHasUnsavedTp(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentSubjectId, selectedClass, selectedYear, serverTps.length]);
+
 
   const activePlan: CurriculumPlan = useMemo(() => {
     if (plan) return plan;
@@ -252,7 +252,7 @@ function PerangkatAjarPage() {
 
   // Local state for time allocations
   const [localTimeAlloc, setLocalTimeAlloc] = useState<CurriculumTimeAllocation[]>([]);
-  useMemo(() => {
+  useEffect(() => {
     if (timeAllocations && timeAllocations.length > 0) {
       setLocalTimeAlloc(timeAllocations);
     } else {
@@ -263,21 +263,20 @@ function PerangkatAjarPage() {
   // Local state for promes cell entries: key = `${tp_id}_${month_name}_${week_number}` -> value: number
   const [localPromesGrid, setLocalPromesGrid] = useState<Record<string, number>>({});
   const [localTpStatuses, setLocalTpStatuses] = useState<Record<string, string>>({});
-  useMemo(() => {
-    if (promesEntries) {
-      const map: Record<string, number> = {};
-      for (const e of promesEntries) {
-        map[`${e.tp_id}_${e.month_name}_${e.week_number}`] = e.allocated_jp;
-      }
-      setLocalPromesGrid(map);
-
-      const statusMap: Record<string, string> = {};
-      for (const t of serverTps) {
-        statusMap[t.id] = t.status_realisasi || "Belum Terlaksana";
-      }
-      setLocalTpStatuses(statusMap);
+  useEffect(() => {
+    const map: Record<string, number> = {};
+    for (const e of promesEntries) {
+      map[`${e.tp_id}_${e.month_name}_${e.week_number}`] = e.allocated_jp;
     }
+    setLocalPromesGrid(map);
+
+    const statusMap: Record<string, string> = {};
+    for (const t of serverTps) {
+      statusMap[t.id] = t.status_realisasi || "Belum Terlaksana";
+    }
+    setLocalTpStatuses(statusMap);
   }, [promesEntries, serverTps]);
+
 
   // Handle Meta Change (JP per minggu)
   const handleJpPerWeekChange = async (valStr: string) => {
