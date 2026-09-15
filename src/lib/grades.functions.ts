@@ -271,19 +271,35 @@ export const manageLearningObjective = createServerFn({ method: "POST" })
       .parse(data),
   )
   .middleware([requireSupabaseAuth])
-  .handler(async ({ data }) => {
+  .handler(async ({ context, data }) => {
+    const ctx = context as Ctx;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const storage = await import("./curriculum.storage.server");
+    const { resolvePlanUuid } = await import("./curriculum-plan.server");
 
     if (data.action === "create") {
       if (!data.subject_id || !data.class_name || !data.code || !data.description) {
         throw new Error("Data TP belum lengkap");
       }
 
-      const planKey = storage.buildPlanKey(data.subject_id, data.class_name, data.academic_year);
-      const newTp = {
-        id: `tp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-        plan_id: planKey,
+      const planId = await resolvePlanUuid(supabaseAdmin, {
+        subject_id: data.subject_id,
+        class_name: data.class_name,
+        academic_year: data.academic_year,
+        teacher_id: ctx.userId,
+      });
+
+      const { count } = await (supabaseAdmin as any)
+        .from("learning_objectives")
+        .select("id", { count: "exact", head: true })
+        .eq("subject_id", data.subject_id)
+        .eq("class_name", data.class_name)
+        .eq("academic_year", data.academic_year)
+        .eq("semester", data.semester);
+
+      const nextOrder = data.order_index || (count ?? 0) + 1;
+
+      const row = {
+        plan_id: planId,
         subject_id: data.subject_id,
         class_name: data.class_name,
         semester: data.semester,
@@ -294,55 +310,89 @@ export const manageLearningObjective = createServerFn({ method: "POST" })
         element_name: null,
         cognitive_level: "C2 - Memahami",
         dimension: "Pengetahuan",
-        atp_order: data.order_index || 1,
-        atp_flow: null,
+        atp_order: nextOrder,
         alokasi_jp: 2,
         assessment_method: "Tes Tertulis",
         status_tp: true,
         status_atp: true,
         status_asesmen: true,
         status_realisasi: "Belum Terlaksana",
-        order_index: data.order_index || 1,
+        order_index: nextOrder,
+        updated_at: new Date().toISOString(),
       };
 
-      const existingTps = storage.getTps(data.subject_id, data.class_name, data.academic_year);
-      storage.saveTpBatch(planKey, data.subject_id, data.class_name, data.academic_year, [...existingTps, newTp]);
+      const { data: created, error } = await (supabaseAdmin as any)
+        .from("learning_objectives")
+        .upsert(row, { onConflict: "subject_id,class_name,academic_year,code" })
+        .select()
+        .single();
 
-      try {
-        const table = (supabaseAdmin as any).from("learning_objectives");
-        await table.insert(newTp);
-      } catch {}
+      if (error) {
+        if ((error.message || "").includes("duplicate")) {
+          throw new Error(`Kode TP "${data.code}" sudah dipakai pada kelas & mapel ini`);
+        }
+        throw new Error(error.message);
+      }
 
-      return { success: true, created: newTp };
+      if (planId) {
+        const { count: total } = await (supabaseAdmin as any)
+          .from("learning_objectives")
+          .select("id", { count: "exact", head: true })
+          .eq("plan_id", planId);
+        await (supabaseAdmin as any)
+          .from("curriculum_plans")
+          .update({ total_tp_count: total ?? 0, updated_at: new Date().toISOString() })
+          .eq("id", planId);
+      }
+
+      return { success: true, created };
     }
 
     if (!data.id) throw new Error("ID TP wajib diisi");
 
     if (data.action === "update") {
-      try {
-        const table = (supabaseAdmin as any).from("learning_objectives");
-        const updates: Record<string, any> = { updated_at: new Date().toISOString() };
-        if ("code" in data && data.code !== undefined) updates["code"] = data.code;
-        if ("description" in data && data.description !== undefined) updates["description"] = data.description;
-        if ("cp_code" in data && data.cp_code !== undefined) updates["cp_code"] = data.cp_code;
-        if ("order_index" in data && data.order_index !== undefined) updates["order_index"] = data.order_index;
-        await table.update(updates).eq("id", data.id);
-      } catch {}
+      const updates: Record<string, any> = { updated_at: new Date().toISOString() };
+      if (data.code !== undefined) updates["code"] = data.code;
+      if (data.description !== undefined) updates["description"] = data.description;
+      if (data.cp_code !== undefined) updates["cp_code"] = data.cp_code;
+      if (data.order_index !== undefined) updates["order_index"] = data.order_index;
 
-      return { success: true, updated: { id: data.id, ...data } };
+      const { data: updated, error } = await (supabaseAdmin as any)
+        .from("learning_objectives")
+        .update(updates)
+        .eq("id", data.id)
+        .select()
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return { success: true, updated };
     }
 
     if (data.action === "delete") {
-      storage.deleteTp(data.id);
-      try {
-        const table = (supabaseAdmin as any).from("learning_objectives");
-        await table.delete().eq("id", data.id);
-      } catch {}
-
+      const { error } = await (supabaseAdmin as any)
+        .from("learning_objectives")
+        .delete()
+        .eq("id", data.id);
+      if (error) throw new Error(error.message);
       return { success: true, deletedId: data.id };
     }
 
     return { success: false };
+  });
+
+/** Daftar kelas resmi untuk dropdown Input Nilai & Perangkat Ajar */
+export const listClassOptions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await (supabaseAdmin as any)
+      .from("classes")
+      .select("name,grade")
+      .order("grade", { ascending: true })
+      .order("name", { ascending: true });
+
+    const names = (data ?? []).map((c: any) => c.name as string).filter(Boolean);
+    if (names.length > 0) return names;
+    return ["Kelas 7A", "Kelas 7B", "Kelas 8A", "Kelas 8B", "Kelas 9A", "Kelas 9B"];
   });
 
 /** 5. Ambil spreadsheet input nilai untuk satu kelas */
