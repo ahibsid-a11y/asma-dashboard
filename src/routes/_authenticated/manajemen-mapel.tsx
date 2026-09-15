@@ -297,7 +297,7 @@ function ManajemenMapelPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -307,11 +307,21 @@ function ManajemenMapelPage() {
               <Copy className="h-4 w-4" />
               Salin ke Kelas Lain
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setNewSubjectOpen(true)}
+              className="flex items-center gap-1.5"
+            >
+              <Sparkles className="h-4 w-4" />
+              Buat Mapel Baru
+            </Button>
             <Button size="sm" onClick={handleOpenAdd} className="flex items-center gap-1.5">
               <Plus className="h-4 w-4" />
               Tambah Mapel Kelas
             </Button>
           </div>
+
         </div>
 
         {/* Filter Bar */}
