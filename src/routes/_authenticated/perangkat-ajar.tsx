@@ -343,7 +343,7 @@ function PerangkatAjarPage() {
   const handleAddTpRow = (semester: "1" | "2" = "1") => {
     const nextOrder = localTps.length + 1;
     const defaultElem = elements.length > 0 && elements[0] ? elements[0].name : "Materi Pokok";
-    const classPrefix = selectedClass && selectedClass.length > 0 ? selectedClass.charAt(0) : "7";
+    const classPrefix = (selectedClass.match(/\d+/)?.[0] ?? "7").charAt(0);
     const newTp: CurriculumTp = {
       id: `temp_${Date.now()}_${Math.random()}`,
       plan_id: plan?.id || null,
