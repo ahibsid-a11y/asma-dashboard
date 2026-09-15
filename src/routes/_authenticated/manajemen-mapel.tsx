@@ -636,6 +636,87 @@ function ManajemenMapelPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Dialog Buat Mapel Baru (Manual) */}
+        <Dialog open={newSubjectOpen} onOpenChange={setNewSubjectOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Buat Mata Pelajaran Baru</DialogTitle>
+              <DialogDescription>
+                Untuk mapel yang belum ada di daftar. Mapel baru langsung ditambahkan ke{" "}
+                <span className="font-semibold text-foreground">{selectedClass}</span> dan tersedia
+                di Perangkat Ajar (CP, TP, ATP, Prota, Promes), Input Nilai, serta Rekap Nilai.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3 py-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Nama Mata Pelajaran:</Label>
+                <Input
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="Contoh: Tahsin Al-Qur'an"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Kode (opsional):</Label>
+                  <Input
+                    value={newCode}
+                    onChange={(e) => setNewCode(e.target.value)}
+                    placeholder="THS"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Kelompok:</Label>
+                  <Select value={newGroup} onValueChange={(v) => setNewGroup(v as any)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Umum">Umum</SelectItem>
+                      <SelectItem value="Diniyyah">Diniyyah</SelectItem>
+                      <SelectItem value="Bahasa Arab">Bahasa Arab</SelectItem>
+                      <SelectItem value="Muatan Lokal">Muatan Lokal</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">KKM:</Label>
+                  <Input
+                    type="number"
+                    value={newKkm}
+                    onChange={(e) => setNewKkm(Number(e.target.value))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Alokasi JP / Minggu:</Label>
+                  <Input
+                    type="number"
+                    value={newJp}
+                    onChange={(e) => setNewJp(Number(e.target.value))}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setNewSubjectOpen(false)}>
+                Batal
+              </Button>
+              <Button
+                onClick={() => createSubjectMutation.mutate()}
+                disabled={createSubjectMutation.isPending}
+              >
+                {createSubjectMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Simpan Mapel Baru
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
       </div>
     </AppShell>
   );
