@@ -201,6 +201,7 @@ export async function saveSlot(
     period: fields.period,
     time_start: fields.time_start ?? "",
     time_end: fields.time_end ?? "",
+    slot_type: fields.slot_type ?? "kbm",
     subject_id: fields.subject_id ?? "",
     subject_code: fields.subject_code ?? "",
     subject_name: fields.subject_name ?? "",
