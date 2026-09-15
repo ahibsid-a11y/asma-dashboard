@@ -91,7 +91,7 @@ function InputNilaiPage() {
   const manageSubjectFn = useServerFn(manageSubject);
 
   // Filter selection states
-  const [selectedClass, setSelectedClass] = useState<string>("7A");
+  const [selectedClass, setSelectedClass] = useState<string>("");
   const [selectedSemester, setSelectedSemester] = useState<string>("1");
   const [selectedYear, setSelectedYear] = useState<string>("2026/2027");
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
