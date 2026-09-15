@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   BookOpen,
   CheckCircle2,
@@ -41,11 +41,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
+import { manageSubject } from "@/lib/grades.functions";
 import {
   deleteClassSubjectAssignment,
   getSubjectAssignmentContext,
   saveClassSubjectAssignment,
 } from "@/lib/schedule.functions";
+
 
 export const Route = createFileRoute("/_authenticated/manajemen-mapel")({
   head: () => ({
@@ -75,7 +77,7 @@ function ManajemenMapelPage() {
   const saveAssignment = useServerFn(saveClassSubjectAssignment);
   const deleteAssignment = useServerFn(deleteClassSubjectAssignment);
 
-  const [selectedClass, setSelectedClass] = useState<string>("VII A");
+  const [selectedClass, setSelectedClass] = useState<string>("");
   const [academicYear, setAcademicYear] = useState<string>("2026/2027");
 
   // Dialog State
@@ -89,6 +91,61 @@ function ManajemenMapelPage() {
   const [copyDialogOpen, setCopyDialogOpen] = useState(false);
   const [targetClass, setTargetClass] = useState<string>("VII B");
 
+  // Dialog buat mapel baru (manual, belum ada di katalog)
+  const [newSubjectOpen, setNewSubjectOpen] = useState(false);
+  const [newCode, setNewCode] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newGroup, setNewGroup] = useState<"Umum" | "Diniyyah" | "Bahasa Arab" | "Muatan Lokal">("Umum");
+  const [newKkm, setNewKkm] = useState<number>(75);
+  const [newJp, setNewJp] = useState<number>(2);
+  const createSubjectFn = useServerFn(manageSubject);
+
+  const createSubjectMutation = useMutation({
+    mutationFn: async () => {
+      if (!newName.trim() || newName.trim().length < 3) {
+        throw new Error("Nama mata pelajaran minimal 3 huruf");
+      }
+      const res: any = await createSubjectFn({
+        data: {
+          action: "create",
+          code: (newCode.trim() || newName.trim().slice(0, 4)).toUpperCase(),
+          name: newName.trim(),
+          group: newGroup,
+          kkm: Number(newKkm) || 75,
+        },
+      });
+      const created = res?.created;
+      if (created?.id && selectedClass) {
+        await saveAssignment({
+          data: {
+            academic_year: academicYear,
+            class_name: selectedClass,
+            subject_id: created.id,
+            subject_code: created.code,
+            subject_name: created.name,
+            subject_group: created.group,
+            teacher_id: null,
+            teacher_name: null,
+            jp_per_week: Number(newJp) || 2,
+          },
+        });
+      }
+      return created;
+    },
+    onSuccess: () => {
+      toast.success("Mata pelajaran baru dibuat dan langsung ditambahkan ke kelas ini");
+      setNewSubjectOpen(false);
+      setNewCode("");
+      setNewName("");
+      setNewKkm(75);
+      setNewJp(2);
+      queryClient.invalidateQueries({ queryKey: ["schedule-assignment-context"] });
+      queryClient.invalidateQueries({ queryKey: ["class-subjects"] });
+    },
+    onError: (err: any) => toast.error(err.message || "Gagal membuat mata pelajaran"),
+  });
+
+
   const contextQuery = useQuery({
     queryKey: ["schedule-assignment-context", academicYear, selectedClass],
     queryFn: () => fetchContext({ data: { academicYear, className: selectedClass } }),
@@ -96,6 +153,12 @@ function ManajemenMapelPage() {
 
   const subjects = contextQuery.data?.subjects || [];
   const classes = contextQuery.data?.classes || [];
+
+  useEffect(() => {
+    if (!selectedClass && classes.length > 0 && classes[0]?.name) {
+      setSelectedClass(classes[0].name as string);
+    }
+  }, [classes, selectedClass]);
   const teachers = contextQuery.data?.teachers || [];
   const assignments = contextQuery.data?.assignments || [];
 
@@ -234,7 +297,7 @@ function ManajemenMapelPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -244,11 +307,21 @@ function ManajemenMapelPage() {
               <Copy className="h-4 w-4" />
               Salin ke Kelas Lain
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setNewSubjectOpen(true)}
+              className="flex items-center gap-1.5"
+            >
+              <Sparkles className="h-4 w-4" />
+              Buat Mapel Baru
+            </Button>
             <Button size="sm" onClick={handleOpenAdd} className="flex items-center gap-1.5">
               <Plus className="h-4 w-4" />
               Tambah Mapel Kelas
             </Button>
           </div>
+
         </div>
 
         {/* Filter Bar */}
@@ -264,7 +337,7 @@ function ManajemenMapelPage() {
                   <SelectContent>
                     {classes.map((c: any) => (
                       <SelectItem key={c.id} value={c.name}>
-                        Kelas {c.name}
+                        {c.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -295,7 +368,7 @@ function ManajemenMapelPage() {
                 <BookOpen className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Total Mapel Kelas {selectedClass}</p>
+                <p className="text-xs text-muted-foreground">Total Mapel {selectedClass}</p>
                 <p className="text-xl font-bold">{assignments.length} Mapel</p>
               </div>
             </CardContent>
@@ -334,7 +407,7 @@ function ManajemenMapelPage() {
           <CardHeader className="p-4 pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-semibold">
-                Daftar Mata Pelajaran: Kelas {selectedClass}
+                Daftar Mata Pelajaran: {selectedClass}
               </CardTitle>
               <Badge variant="outline" className="text-xs font-normal">
                 {assignments.length} Mata Pelajaran
@@ -351,7 +424,7 @@ function ManajemenMapelPage() {
             ) : assignments.length === 0 ? (
               <div className="py-16 text-center space-y-3">
                 <BookOpen className="mx-auto h-8 w-8 text-muted-foreground" />
-                <p className="text-sm font-semibold">Belum Ada Mapel di Kelas {selectedClass}</p>
+                <p className="text-sm font-semibold">Belum Ada Mapel di {selectedClass}</p>
                 <p className="text-xs text-muted-foreground max-w-sm mx-auto">
                   Klik tombol "Tambah Mapel Kelas" di atas untuk menambahkan mapel pertama, atau
                   salin dari kelas lain.
@@ -452,7 +525,7 @@ function ManajemenMapelPage() {
             <form onSubmit={handleSave}>
               <DialogHeader>
                 <DialogTitle>
-                  {editId ? "Edit Penugasan Mapel" : "Tambah Mapel di Kelas " + selectedClass}
+                  {editId ? "Edit Penugasan Mapel" : "Tambah Mapel di " + selectedClass}
                 </DialogTitle>
                 <DialogDescription>
                   Tentukan mata pelajaran, guru pengampu, serta alokasi JP per minggu.
@@ -529,7 +602,7 @@ function ManajemenMapelPage() {
         <Dialog open={copyDialogOpen} onOpenChange={setCopyDialogOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Salin Mapel Kelas {selectedClass}</DialogTitle>
+              <DialogTitle>Salin Mapel {selectedClass}</DialogTitle>
               <DialogDescription>
                 Salin seluruh ({assignments.length}) mata pelajaran dari kelas{" "}
                 <span className="font-semibold text-foreground">{selectedClass}</span> ke kelas
@@ -548,7 +621,7 @@ function ManajemenMapelPage() {
                     .filter((c: any) => c.name !== selectedClass)
                     .map((c: any) => (
                       <SelectItem key={c.id} value={c.name}>
-                        Kelas {c.name}
+                        {c.name}
                       </SelectItem>
                     ))}
                 </SelectContent>
@@ -563,6 +636,87 @@ function ManajemenMapelPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Dialog Buat Mapel Baru (Manual) */}
+        <Dialog open={newSubjectOpen} onOpenChange={setNewSubjectOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Buat Mata Pelajaran Baru</DialogTitle>
+              <DialogDescription>
+                Untuk mapel yang belum ada di daftar. Mapel baru langsung ditambahkan ke{" "}
+                <span className="font-semibold text-foreground">{selectedClass}</span> dan tersedia
+                di Perangkat Ajar (CP, TP, ATP, Prota, Promes), Input Nilai, serta Rekap Nilai.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3 py-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Nama Mata Pelajaran:</Label>
+                <Input
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="Contoh: Tahsin Al-Qur'an"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Kode (opsional):</Label>
+                  <Input
+                    value={newCode}
+                    onChange={(e) => setNewCode(e.target.value)}
+                    placeholder="THS"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Kelompok:</Label>
+                  <Select value={newGroup} onValueChange={(v) => setNewGroup(v as any)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Umum">Umum</SelectItem>
+                      <SelectItem value="Diniyyah">Diniyyah</SelectItem>
+                      <SelectItem value="Bahasa Arab">Bahasa Arab</SelectItem>
+                      <SelectItem value="Muatan Lokal">Muatan Lokal</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">KKM:</Label>
+                  <Input
+                    type="number"
+                    value={newKkm}
+                    onChange={(e) => setNewKkm(Number(e.target.value))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Alokasi JP / Minggu:</Label>
+                  <Input
+                    type="number"
+                    value={newJp}
+                    onChange={(e) => setNewJp(Number(e.target.value))}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setNewSubjectOpen(false)}>
+                Batal
+              </Button>
+              <Button
+                onClick={() => createSubjectMutation.mutate()}
+                disabled={createSubjectMutation.isPending}
+              >
+                {createSubjectMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Simpan Mapel Baru
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
       </div>
     </AppShell>
   );

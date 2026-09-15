@@ -389,9 +389,17 @@ export const saveCurriculumTpBatch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { resolvePlanUuid } = await import("./curriculum-plan.server");
+
+    const planUuid = await resolvePlanUuid(supabaseAdmin, {
+      subject_id: data.subject_id,
+      class_name: data.class_name,
+      academic_year: data.academic_year,
+      plan_id: data.plan_id,
+    });
 
     const upsertRows = data.tps.map((tp, idx) => ({
-      plan_id: data.plan_id,
+      plan_id: planUuid,
       subject_id: data.subject_id,
       class_name: data.class_name,
       academic_year: data.academic_year,
@@ -427,7 +435,7 @@ export const saveCurriculumTpBatch = createServerFn({ method: "POST" })
         await (supabaseAdmin as any)
           .from("curriculum_plans")
           .update({ total_tp_count: upsertRows.length, updated_at: new Date().toISOString() })
-          .eq("id", data.plan_id);
+          .eq("id", planUuid);
       } catch {}
     }
 

@@ -1,7 +1,4 @@
-import fs from "node:fs";
-import path from "node:path";
-import crypto from "node:crypto";
-import { IQRO_STAGES, type IqroStage, SURAH_LIST } from "./quran-data";
+import { type IqroStage } from "./quran-data";
 
 export type TahfizLevel = "iqro" | "tilawah" | "tahfiz";
 
@@ -20,9 +17,9 @@ export type TahfizIqroRecord = {
   date: string; // YYYY-MM-DD
   halaman: number;
   tahap: IqroStage | string;
-  nilai: number | string; // e.g. 90 or "Mumtaz"
+  nilai: number | string;
   catatan: string;
-  murojaah_harian?: string | undefined; // e.g. "Lancar", "Perlu Diulang", "Belum Murojaah"
+  murojaah_harian?: string | undefined;
   musyrif_id: string;
   created_at: string;
 };
@@ -30,13 +27,13 @@ export type TahfizIqroRecord = {
 export type TahfizTilawahRecord = {
   id: string;
   student_id: string;
-  date: string; // YYYY-MM-DD
+  date: string;
   juz: number;
   surah_name: string;
   ayat_start: number;
   ayat_end: number;
   halaman?: number | undefined;
-  nilai_kelancaran: string; // Mumtaz / Jayyid Jiddan / Jayyid / Maqbul
+  nilai_kelancaran: string;
   nilai_tajwid?: string | undefined;
   catatan: string;
   murojaah_harian?: string | undefined;
@@ -47,13 +44,13 @@ export type TahfizTilawahRecord = {
 export type TahfizHafalanRecord = {
   id: string;
   student_id: string;
-  date: string; // YYYY-MM-DD
-  type: TahfizHafalanType; // sabq (ziyadah) | sabqy (murojaah surat/juz berjalan) | manzil (murojaah mutqin keseluruhan)
+  date: string;
+  type: TahfizHafalanType;
   juz: number;
   surah_name: string;
   ayat_start: number;
   ayat_end: number;
-  nilai: number | string; // e.g. 95 / Mumtaz
+  nilai: number | string;
   predikat?: string | undefined;
   catatan: string;
   musyrif_id: string;
@@ -67,246 +64,245 @@ interface TahfizStoreData {
   hafalanRecords: TahfizHafalanRecord[];
 }
 
-const STORE_PATH = path.resolve(process.cwd(), "data", "tahfiz_store.json");
-
-function ensureStoreDir() {
-  const dir = path.dirname(STORE_PATH);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
+async function admin() {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  return supabaseAdmin as any;
 }
 
-function readStore(): TahfizStoreData {
-  try {
-    ensureStoreDir();
-    if (!fs.existsSync(STORE_PATH)) {
-      const initial: TahfizStoreData = {
-        studentLevels: {},
-        iqroRecords: [],
-        tilawahRecords: [],
-        hafalanRecords: [],
-      };
-      writeStore(initial);
-      return initial;
-    }
-    const raw = fs.readFileSync(STORE_PATH, "utf-8");
-    const parsed = JSON.parse(raw);
-    return {
-      studentLevels: parsed.studentLevels || {},
-      iqroRecords: Array.isArray(parsed.iqroRecords) ? parsed.iqroRecords : [],
-      tilawahRecords: Array.isArray(parsed.tilawahRecords) ? parsed.tilawahRecords : [],
-      hafalanRecords: Array.isArray(parsed.hafalanRecords) ? parsed.hafalanRecords : [],
-    };
-  } catch (err) {
-    console.error("Error reading tahfiz store:", err);
-    return {
-      studentLevels: {},
-      iqroRecords: [],
-      tilawahRecords: [],
-      hafalanRecords: [],
+function sortByDateDesc<T extends { date: string; created_at: string }>(rows: T[]): T[] {
+  return [...rows].sort((a, b) => {
+    if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+    return a.created_at < b.created_at ? 1 : -1;
+  });
+}
+
+/** Ambil seluruh data tahfiz dari database */
+export async function getAllTahfizStore(): Promise<TahfizStoreData> {
+  const db = await admin();
+
+  const [levels, iqro, tilawah, hafalan] = await Promise.all([
+    db.from("tahfiz_student_levels").select("*"),
+    db.from("tahfiz_iqro_records").select("*").order("date", { ascending: false }),
+    db.from("tahfiz_tilawah_records").select("*").order("date", { ascending: false }),
+    db.from("tahfiz_hafalan_records").select("*").order("date", { ascending: false }),
+  ]);
+
+  const studentLevels: Record<string, TahfizStudentLevel> = {};
+  for (const row of levels.data ?? []) {
+    studentLevels[row.student_id] = {
+      student_id: row.student_id,
+      level: row.level as TahfizLevel,
+      current_position_desc: row.current_position_desc ?? undefined,
+      updated_at: row.updated_at,
     };
   }
+
+  return {
+    studentLevels,
+    iqroRecords: sortByDateDesc((iqro.data ?? []) as TahfizIqroRecord[]),
+    tilawahRecords: sortByDateDesc((tilawah.data ?? []) as TahfizTilawahRecord[]),
+    hafalanRecords: sortByDateDesc((hafalan.data ?? []) as TahfizHafalanRecord[]),
+  };
 }
 
-function writeStore(data: TahfizStoreData) {
-  try {
-    ensureStoreDir();
-    fs.writeFileSync(STORE_PATH, JSON.stringify(data, null, 2), "utf-8");
-  } catch (err) {
-    console.error("Error writing tahfiz store:", err);
-  }
-}
-
-export function getStudentLevel(studentId: string, defaultGrade?: string): TahfizLevel {
-  const store = readStore();
-  if (store.studentLevels[studentId]?.level) {
-    return store.studentLevels[studentId].level;
-  }
-  // If not set yet: Grade VII starts with Iqro by default, others start with Tahfiz
+export function defaultLevelForGrade(defaultGrade?: string): TahfizLevel {
   if (defaultGrade?.toUpperCase().includes("VII") || defaultGrade?.startsWith("7")) {
     return "iqro";
   }
   return "tahfiz";
 }
 
-export function setStudentLevel(
+export async function getStudentLevel(
+  studentId: string,
+  defaultGrade?: string,
+): Promise<TahfizLevel> {
+  const db = await admin();
+  const { data } = await db
+    .from("tahfiz_student_levels")
+    .select("level")
+    .eq("student_id", studentId)
+    .maybeSingle();
+  if (data?.level) return data.level as TahfizLevel;
+  return defaultLevelForGrade(defaultGrade);
+}
+
+export async function setStudentLevel(
   studentId: string,
   level: TahfizLevel,
   positionDesc?: string,
-): TahfizStudentLevel {
-  const store = readStore();
-  const current = store.studentLevels[studentId] || {
+): Promise<TahfizStudentLevel> {
+  const db = await admin();
+  const payload: Record<string, unknown> = {
     student_id: studentId,
     level,
     updated_at: new Date().toISOString(),
   };
+  if (positionDesc !== undefined) payload["current_position_desc"] = positionDesc;
 
-  const updated: TahfizStudentLevel = {
-    ...current,
-    level,
-    current_position_desc: positionDesc ?? current.current_position_desc,
-    updated_at: new Date().toISOString(),
+  const { data, error } = await db
+    .from("tahfiz_student_levels")
+    .upsert(payload, { onConflict: "student_id" })
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+
+  return {
+    student_id: data.student_id,
+    level: data.level as TahfizLevel,
+    current_position_desc: data.current_position_desc ?? undefined,
+    updated_at: data.updated_at,
   };
-
-  store.studentLevels[studentId] = updated;
-  writeStore(store);
-  return updated;
 }
 
-export function saveIqroRecord(
-  data: Omit<TahfizIqroRecord, "id" | "created_at"> & { id?: string | undefined },
-): TahfizIqroRecord {
-  const store = readStore();
-  const now = new Date().toISOString();
-  const { id, ...fields } = data;
-  const recordId = id && id.trim().length > 0 ? id : crypto.randomUUID();
-
-  const idx = store.iqroRecords.findIndex((r) => r.id === recordId);
-  const existing = idx >= 0 ? store.iqroRecords[idx] : null;
-
-  const record: TahfizIqroRecord = {
-    ...fields,
-    id: recordId,
-    created_at: existing?.created_at ?? now,
-  };
-
-  if (existing && idx >= 0) {
-    store.iqroRecords[idx] = record;
-  } else {
-    store.iqroRecords.unshift(record);
+async function upsertRecord(table: string, id: string | undefined, fields: Record<string, unknown>) {
+  const db = await admin();
+  if (id && id.trim().length > 0) {
+    const { data, error } = await db
+      .from(table)
+      .update(fields)
+      .eq("id", id)
+      .select("*")
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (data) return data;
   }
+  const { data, error } = await db.from(table).insert(fields).select("*").single();
+  if (error) throw new Error(error.message);
+  return data;
+}
 
-  // Update current position for student
-  setStudentLevel(
+export async function saveIqroRecord(
+  data: Omit<TahfizIqroRecord, "id" | "created_at"> & { id?: string | undefined },
+): Promise<TahfizIqroRecord> {
+  const { id, ...fields } = data;
+  const record = await upsertRecord("tahfiz_iqro_records", id, {
+    student_id: fields.student_id,
+    date: fields.date,
+    halaman: fields.halaman,
+    tahap: String(fields.tahap ?? ""),
+    nilai: String(fields.nilai ?? ""),
+    catatan: fields.catatan ?? "",
+    murojaah_harian: fields.murojaah_harian ?? null,
+    musyrif_id: fields.musyrif_id,
+  });
+
+  await setStudentLevel(
     data.student_id,
     "iqro",
     `Hal ${data.halaman} (${data.tahap}) - Nilai: ${data.nilai}`,
   );
 
-  writeStore(store);
-  return record;
+  return record as TahfizIqroRecord;
 }
 
-export function saveTilawahRecord(
+export async function saveTilawahRecord(
   data: Omit<TahfizTilawahRecord, "id" | "created_at"> & { id?: string | undefined },
-): TahfizTilawahRecord {
-  const store = readStore();
-  const now = new Date().toISOString();
+): Promise<TahfizTilawahRecord> {
   const { id, ...fields } = data;
-  const recordId = id && id.trim().length > 0 ? id : crypto.randomUUID();
+  const record = await upsertRecord("tahfiz_tilawah_records", id, {
+    student_id: fields.student_id,
+    date: fields.date,
+    juz: fields.juz,
+    surah_name: fields.surah_name,
+    ayat_start: fields.ayat_start,
+    ayat_end: fields.ayat_end,
+    halaman: fields.halaman ?? null,
+    nilai_kelancaran: fields.nilai_kelancaran ?? "",
+    nilai_tajwid: fields.nilai_tajwid ?? null,
+    catatan: fields.catatan ?? "",
+    murojaah_harian: fields.murojaah_harian ?? null,
+    musyrif_id: fields.musyrif_id,
+  });
 
-  const idx = store.tilawahRecords.findIndex((r) => r.id === recordId);
-  const existing = idx >= 0 ? store.tilawahRecords[idx] : null;
-
-  const record: TahfizTilawahRecord = {
-    ...fields,
-    id: recordId,
-    created_at: existing?.created_at ?? now,
-  };
-
-  if (existing && idx >= 0) {
-    store.tilawahRecords[idx] = record;
-  } else {
-    store.tilawahRecords.unshift(record);
-  }
-
-  // Update current position for student
-  setStudentLevel(
+  await setStudentLevel(
     data.student_id,
     "tilawah",
     `Juz ${data.juz} (${data.surah_name}: ${data.ayat_start}-${data.ayat_end})`,
   );
 
-  writeStore(store);
-  return record;
+  return record as TahfizTilawahRecord;
 }
 
-export function saveTahfizHafalanRecord(
+export async function saveTahfizHafalanRecord(
   data: Omit<TahfizHafalanRecord, "id" | "created_at"> & { id?: string | undefined },
-): TahfizHafalanRecord {
-  const store = readStore();
-  const now = new Date().toISOString();
+): Promise<TahfizHafalanRecord> {
   const { id, ...fields } = data;
-  const recordId = id && id.trim().length > 0 ? id : crypto.randomUUID();
+  const record = await upsertRecord("tahfiz_hafalan_records", id, {
+    student_id: fields.student_id,
+    date: fields.date,
+    type: fields.type,
+    juz: fields.juz,
+    surah_name: fields.surah_name,
+    ayat_start: fields.ayat_start,
+    ayat_end: fields.ayat_end,
+    nilai: String(fields.nilai ?? ""),
+    predikat: fields.predikat ?? null,
+    catatan: fields.catatan ?? "",
+    musyrif_id: fields.musyrif_id,
+  });
 
-  const idx = store.hafalanRecords.findIndex((r) => r.id === recordId);
-  const existing = idx >= 0 ? store.hafalanRecords[idx] : null;
-
-  const record: TahfizHafalanRecord = {
-    ...fields,
-    id: recordId,
-    created_at: existing?.created_at ?? now,
-  };
-
-  if (existing && idx >= 0) {
-    store.hafalanRecords[idx] = record;
-  } else {
-    store.hafalanRecords.unshift(record);
-  }
-
-  // Update current position if sabq (ziyadah)
   if (data.type === "sabq") {
-    setStudentLevel(
+    await setStudentLevel(
       data.student_id,
       "tahfiz",
       `Sabq: Juz ${data.juz} - ${data.surah_name}: ${data.ayat_start}-${data.ayat_end}`,
     );
   }
 
-  writeStore(store);
-  return record;
+  return record as TahfizHafalanRecord;
 }
 
-export function deleteTahfizRecord(
+export async function deleteTahfizRecord(
   category: "iqro" | "tilawah" | "hafalan",
   id: string,
-): boolean {
-  const store = readStore();
-  if (category === "iqro") {
-    const lenBefore = store.iqroRecords.length;
-    store.iqroRecords = store.iqroRecords.filter((r) => r.id !== id);
-    writeStore(store);
-    return store.iqroRecords.length < lenBefore;
-  }
-  if (category === "tilawah") {
-    const lenBefore = store.tilawahRecords.length;
-    store.tilawahRecords = store.tilawahRecords.filter((r) => r.id !== id);
-    writeStore(store);
-    return store.tilawahRecords.length < lenBefore;
-  }
-  if (category === "hafalan") {
-    const lenBefore = store.hafalanRecords.length;
-    store.hafalanRecords = store.hafalanRecords.filter((r) => r.id !== id);
-    writeStore(store);
-    return store.hafalanRecords.length < lenBefore;
-  }
-  return false;
+): Promise<boolean> {
+  const db = await admin();
+  const table =
+    category === "iqro"
+      ? "tahfiz_iqro_records"
+      : category === "tilawah"
+        ? "tahfiz_tilawah_records"
+        : "tahfiz_hafalan_records";
+  const { error } = await db.from(table).delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  return true;
 }
 
-export function getStudentTahfizHistory(studentId: string) {
-  const store = readStore();
-  const levelInfo = store.studentLevels[studentId] || null;
+export async function getStudentTahfizHistory(studentId: string) {
+  const db = await admin();
 
-  const iqro = store.iqroRecords
-    .filter((r) => r.student_id === studentId)
-    .sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0));
+  const [levelRes, iqro, tilawah, hafalan] = await Promise.all([
+    db.from("tahfiz_student_levels").select("*").eq("student_id", studentId).maybeSingle(),
+    db
+      .from("tahfiz_iqro_records")
+      .select("*")
+      .eq("student_id", studentId)
+      .order("date", { ascending: false }),
+    db
+      .from("tahfiz_tilawah_records")
+      .select("*")
+      .eq("student_id", studentId)
+      .order("date", { ascending: false }),
+    db
+      .from("tahfiz_hafalan_records")
+      .select("*")
+      .eq("student_id", studentId)
+      .order("date", { ascending: false }),
+  ]);
 
-  const tilawah = store.tilawahRecords
-    .filter((r) => r.student_id === studentId)
-    .sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0));
-
-  const hafalan = store.hafalanRecords
-    .filter((r) => r.student_id === studentId)
-    .sort((a, b) => (b.date > a.date ? 1 : b.date < a.date ? -1 : 0));
+  const levelRow = levelRes.data;
 
   return {
-    levelInfo,
-    iqro,
-    tilawah,
-    hafalan,
+    levelInfo: levelRow
+      ? ({
+          student_id: levelRow.student_id,
+          level: levelRow.level as TahfizLevel,
+          current_position_desc: levelRow.current_position_desc ?? undefined,
+          updated_at: levelRow.updated_at,
+        } satisfies TahfizStudentLevel)
+      : null,
+    iqro: (iqro.data ?? []) as TahfizIqroRecord[],
+    tilawah: (tilawah.data ?? []) as TahfizTilawahRecord[],
+    hafalan: (hafalan.data ?? []) as TahfizHafalanRecord[],
   };
-}
-
-export function getAllTahfizStore() {
-  return readStore();
 }

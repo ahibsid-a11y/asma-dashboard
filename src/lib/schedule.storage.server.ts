@@ -1,7 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
-import crypto from "node:crypto";
-
 export type ClassSubjectAssignment = {
   id: string;
   academic_year: string;
@@ -19,15 +15,18 @@ export type ClassSubjectAssignment = {
 
 export type TimetableDay = "Senin" | "Selasa" | "Rabu" | "Kamis" | "Jumat" | "Sabtu" | "Ahad";
 
+export type TimetableSlotType = "kbm" | "istirahat";
+
 export type TimetableSlot = {
   id: string;
   academic_year: string;
   semester: "1" | "2";
   class_name: string;
   day: TimetableDay;
-  period: number; // 1 to 8
-  time_start: string; // "07:30"
-  time_end: string; // "08:15"
+  period: number;
+  time_start: string;
+  time_end: string;
+  slot_type: TimetableSlotType;
   subject_id: string;
   subject_code: string;
   subject_name: string;
@@ -59,207 +58,172 @@ export const TIMETABLE_DAYS: TimetableDay[] = [
   "Ahad",
 ];
 
-interface ScheduleStoreData {
-  assignments: ClassSubjectAssignment[];
-  slots: TimetableSlot[];
+async function admin() {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  return supabaseAdmin as any;
 }
 
-const STORE_PATH = path.resolve(process.cwd(), "data", "schedule_store.json");
-
-function ensureStoreDir() {
-  const dir = path.dirname(STORE_PATH);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-}
-
-function readStore(): ScheduleStoreData {
-  try {
-    ensureStoreDir();
-    if (!fs.existsSync(STORE_PATH)) {
-      const initial: ScheduleStoreData = {
-        assignments: [],
-        slots: [],
-      };
-      writeStore(initial);
-      return initial;
-    }
-    const raw = fs.readFileSync(STORE_PATH, "utf-8");
-    const parsed = JSON.parse(raw);
-    return {
-      assignments: Array.isArray(parsed.assignments) ? parsed.assignments : [],
-      slots: Array.isArray(parsed.slots) ? parsed.slots : [],
-    };
-  } catch (err) {
-    console.error("Error reading schedule store:", err);
-    return {
-      assignments: [],
-      slots: [],
-    };
-  }
-}
-
-function writeStore(data: ScheduleStoreData) {
-  try {
-    ensureStoreDir();
-    fs.writeFileSync(STORE_PATH, JSON.stringify(data, null, 2), "utf-8");
-  } catch (err) {
-    console.error("Error writing schedule store:", err);
-  }
-}
-
-// 1. Assignments
-export function getAssignments(academicYear = "2026/2027", className?: string) {
-  const store = readStore();
-  let list = store.assignments.filter((a) => a.academic_year === academicYear);
+// 1. Penugasan mapel per kelas
+export async function getAssignments(
+  academicYear = "2026/2027",
+  className?: string,
+): Promise<ClassSubjectAssignment[]> {
+  const db = await admin();
+  let query = db
+    .from("class_subject_assignments")
+    .select("*")
+    .eq("academic_year", academicYear)
+    .order("subject_name", { ascending: true });
   if (className && className !== "all") {
-    list = list.filter((a) => a.class_name === className);
+    query = query.eq("class_name", className);
   }
-  return list;
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return (data ?? []) as ClassSubjectAssignment[];
 }
 
-export function saveAssignment(
+export async function saveAssignment(
   data: Omit<ClassSubjectAssignment, "id" | "created_at" | "updated_at"> & {
     id?: string | undefined;
   },
-): ClassSubjectAssignment {
-  const store = readStore();
-  const now = new Date().toISOString();
+): Promise<ClassSubjectAssignment> {
+  const db = await admin();
   const { id, ...fields } = data;
-  const recordId = id && id.trim().length > 0 ? id : crypto.randomUUID();
-
-  const idx = store.assignments.findIndex((a) => a.id === recordId);
-  const existing = idx >= 0 ? store.assignments[idx] : null;
-
-  const record: ClassSubjectAssignment = {
-    ...fields,
-    id: recordId,
-    created_at: existing?.created_at ?? now,
-    updated_at: now,
+  const payload = {
+    academic_year: fields.academic_year,
+    class_name: fields.class_name,
+    subject_id: fields.subject_id,
+    subject_code: fields.subject_code ?? "",
+    subject_name: fields.subject_name ?? "",
+    subject_group: fields.subject_group ?? "Umum",
+    teacher_id: fields.teacher_id ?? null,
+    teacher_name: fields.teacher_name ?? null,
+    jp_per_week: fields.jp_per_week ?? 2,
+    updated_at: new Date().toISOString(),
   };
 
-  if (existing && idx >= 0) {
-    store.assignments[idx] = record;
-  } else {
-    store.assignments.push(record);
+  if (id && id.trim().length > 0) {
+    const { data: updated, error } = await db
+      .from("class_subject_assignments")
+      .update(payload)
+      .eq("id", id)
+      .select("*")
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (updated) return updated as ClassSubjectAssignment;
   }
 
-  writeStore(store);
-  return record;
+  const { data: upserted, error: upsertError } = await db
+    .from("class_subject_assignments")
+    .upsert(payload, { onConflict: "academic_year,class_name,subject_id" })
+    .select("*")
+    .single();
+  if (upsertError) throw new Error(upsertError.message);
+  return upserted as ClassSubjectAssignment;
 }
 
-export function deleteAssignment(id: string): boolean {
-  const store = readStore();
-  const lenBefore = store.assignments.length;
-  store.assignments = store.assignments.filter((a) => a.id !== id);
-  writeStore(store);
-  return store.assignments.length < lenBefore;
+export async function deleteAssignment(id: string): Promise<boolean> {
+  const db = await admin();
+  const { error } = await db.from("class_subject_assignments").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  return true;
 }
 
-// 2. Timetable Slots
-export function getTimetableSlots(
+// 2. Slot jadwal pelajaran
+export async function getTimetableSlots(
   academicYear = "2026/2027",
   semester: "1" | "2" = "1",
   className?: string,
   teacherId?: string,
-) {
-  const store = readStore();
-  let list = store.slots.filter(
-    (s) => s.academic_year === academicYear && s.semester === semester,
-  );
-  if (className && className !== "all") {
-    list = list.filter((s) => s.class_name === className);
-  }
-  if (teacherId) {
-    list = list.filter((s) => s.teacher_id === teacherId);
-  }
-  return list;
+): Promise<TimetableSlot[]> {
+  const db = await admin();
+  let query = db
+    .from("timetable_slots")
+    .select("*")
+    .eq("academic_year", academicYear)
+    .eq("semester", semester)
+    .order("period", { ascending: true });
+  if (className && className !== "all") query = query.eq("class_name", className);
+  if (teacherId) query = query.eq("teacher_id", teacherId);
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return (data ?? []) as TimetableSlot[];
 }
 
-export function checkTeacherConflict(
+export async function checkTeacherConflict(
   academicYear: string,
   semester: "1" | "2",
   day: TimetableDay,
   period: number,
   teacherId: string,
   ignoreSlotId?: string,
-): TimetableSlot | null {
+): Promise<TimetableSlot | null> {
   if (!teacherId) return null;
-  const store = readStore();
-  const conflict = store.slots.find(
-    (s) =>
-      s.academic_year === academicYear &&
-      s.semester === semester &&
-      s.day === day &&
-      s.period === period &&
-      s.teacher_id === teacherId &&
-      s.id !== ignoreSlotId,
-  );
-  return conflict || null;
+  const db = await admin();
+  let query = db
+    .from("timetable_slots")
+    .select("*")
+    .eq("academic_year", academicYear)
+    .eq("semester", semester)
+    .eq("day", day)
+    .eq("period", period)
+    .eq("teacher_id", teacherId);
+  if (ignoreSlotId) query = query.neq("id", ignoreSlotId);
+  const { data } = await query.limit(1);
+  return ((data ?? [])[0] as TimetableSlot | undefined) ?? null;
 }
 
-export function saveSlot(
+export async function saveSlot(
   data: Omit<TimetableSlot, "id" | "created_at" | "updated_at"> & { id?: string | undefined },
-): { slot: TimetableSlot; conflict: TimetableSlot | null } {
-  const store = readStore();
-  const now = new Date().toISOString();
+): Promise<{ slot: TimetableSlot; conflict: TimetableSlot | null }> {
+  const db = await admin();
   const { id, ...fields } = data;
-  const recordId = id && id.trim().length > 0 ? id : crypto.randomUUID();
 
-  // Check teacher conflict
-  if (fields.teacher_id) {
-    const conflict = checkTeacherConflict(
+  if (fields.teacher_id && fields.slot_type !== "istirahat") {
+    const conflict = await checkTeacherConflict(
       fields.academic_year,
       fields.semester,
       fields.day,
       fields.period,
       fields.teacher_id,
-      recordId,
+      id,
     );
-    if (conflict) {
+    if (conflict && conflict.class_name !== fields.class_name) {
       return { slot: conflict, conflict };
     }
   }
 
-  const idx = store.slots.findIndex((s) => s.id === recordId);
-  const existing = idx >= 0 ? store.slots[idx] : null;
-
-  const record: TimetableSlot = {
-    ...fields,
-    id: recordId,
-    created_at: existing?.created_at ?? now,
-    updated_at: now,
+  const payload = {
+    academic_year: fields.academic_year,
+    semester: fields.semester,
+    class_name: fields.class_name,
+    day: fields.day,
+    period: fields.period,
+    time_start: fields.time_start ?? "",
+    time_end: fields.time_end ?? "",
+    slot_type: fields.slot_type ?? "kbm",
+    subject_id: fields.subject_id ?? "",
+    subject_code: fields.subject_code ?? "",
+    subject_name: fields.subject_name ?? "",
+    teacher_id: fields.teacher_id ?? null,
+    teacher_name: fields.teacher_name ?? null,
+    room: fields.room ?? null,
+    updated_at: new Date().toISOString(),
   };
 
-  // Replace any slot for the same class, day, period
-  const existingClassSlotIdx = store.slots.findIndex(
-    (s) =>
-      s.academic_year === fields.academic_year &&
-      s.semester === fields.semester &&
-      s.class_name === fields.class_name &&
-      s.day === fields.day &&
-      s.period === fields.period &&
-      s.id !== recordId,
-  );
-  if (existingClassSlotIdx >= 0) {
-    store.slots.splice(existingClassSlotIdx, 1);
-  }
+  const { data: upserted, error } = await db
+    .from("timetable_slots")
+    .upsert(payload, { onConflict: "academic_year,semester,class_name,day,period" })
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
 
-  const currentIdx = store.slots.findIndex((s) => s.id === recordId);
-  if (currentIdx >= 0) {
-    store.slots[currentIdx] = record;
-  } else {
-    store.slots.push(record);
-  }
-
-  writeStore(store);
-  return { slot: record, conflict: null };
+  return { slot: upserted as TimetableSlot, conflict: null };
 }
 
-export function deleteSlot(id: string): boolean {
-  const store = readStore();
-  const lenBefore = store.slots.length;
-  store.slots = store.slots.filter((s) => s.id !== id);
-  writeStore(store);
-  return store.slots.length < lenBefore;
+export async function deleteSlot(id: string): Promise<boolean> {
+  const db = await admin();
+  const { error } = await db.from("timetable_slots").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  return true;
 }

@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   AlertCircle,
   Calendar,
@@ -103,6 +103,8 @@ function JadwalPelajaranPage() {
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>("");
   const [slotRoom, setSlotRoom] = useState<string>("");
+  const [slotType, setSlotType] = useState<"kbm" | "istirahat">("kbm");
+  const [extraPeriods, setExtraPeriods] = useState<number[]>([]);
 
   const [printModalOpen, setPrintModalOpen] = useState(false);
 
@@ -134,7 +136,16 @@ function JadwalPelajaranPage() {
   });
 
   const days = contextQuery.data?.days || myScheduleQuery.data?.days || [];
-  const periods = contextQuery.data?.periods || myScheduleQuery.data?.periods || [];
+  const basePeriods = contextQuery.data?.periods || myScheduleQuery.data?.periods || [];
+  const periods = useMemo(() => {
+    const map = new Map<number, { period: number; start: string; end: string }>();
+    for (const p of basePeriods) map.set(p.period, p as any);
+    for (const n of extraPeriods) {
+      if (!map.has(n)) map.set(n, { period: n, start: "", end: "" });
+    }
+    return Array.from(map.values()).sort((a, b) => a.period - b.period);
+  }, [basePeriods, extraPeriods]);
+  const classMissing = (myScheduleQuery.data as any)?.classMissing === true;
   const classes = contextQuery.data?.classes || [];
   const subjects = contextQuery.data?.subjects || [];
   const teachers = contextQuery.data?.teachers || [];
@@ -175,20 +186,30 @@ function JadwalPelajaranPage() {
     },
   });
 
+  // Pastikan kelas terpilih benar-benar ada pada data master kelas
+  useEffect(() => {
+    if (!isAdmin || classes.length === 0) return;
+    if (!classes.some((c: any) => c.name === selectedClass)) {
+      setSelectedClass(classes[0].name);
+    }
+  }, [isAdmin, classes, selectedClass]);
+
   const handleOpenSlot = (day: TimetableDay, periodObj: any) => {
     if (!isAdmin) return; // Only admin/curriculum can edit
     setTargetDay(day);
     setTargetPeriod(periodObj.period);
-    setTimeStart(periodObj.start);
-    setTimeEnd(periodObj.end);
+    setTimeStart(periodObj.start || "");
+    setTimeEnd(periodObj.end || "");
 
     // Check if slot already exists
     const existing = slots.find((s: any) => s.day === day && s.period === periodObj.period);
     if (existing) {
+      setSlotType(((existing as any).slot_type as "kbm" | "istirahat") || "kbm");
       setSelectedSubjectId(existing.subject_id);
       setSelectedTeacherId(existing.teacher_id || "");
       setSlotRoom(existing.room || "");
     } else {
+      setSlotType("kbm");
       setSelectedSubjectId(subjects[0]?.id || "");
       setSelectedTeacherId("");
       setSlotRoom("");
@@ -198,9 +219,40 @@ function JadwalPelajaranPage() {
 
   const handleSaveSlot = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (slotType === "istirahat") {
+      if (!timeStart || !timeEnd) {
+        toast.error("Isi jam mulai dan jam selesai istirahat");
+        return;
+      }
+      saveMutation.mutate({
+        data: {
+          academic_year: academicYear,
+          semester,
+          class_name: selectedClass,
+          day: targetDay,
+          period: targetPeriod,
+          time_start: timeStart,
+          time_end: timeEnd,
+          slot_type: "istirahat",
+          subject_id: "istirahat",
+          subject_code: "IST",
+          subject_name: "Istirahat",
+          teacher_id: null,
+          teacher_name: null,
+          room: slotRoom || null,
+        },
+      });
+      return;
+    }
+
     const subject = subjects.find((s: any) => s.id === selectedSubjectId);
     if (!subject) {
       toast.error("Pilih mata pelajaran terlebih dahulu");
+      return;
+    }
+    if (!timeStart || !timeEnd) {
+      toast.error("Isi jam mulai dan jam selesai");
       return;
     }
     const teacher = teachers.find((t: any) => t.id === selectedTeacherId);
@@ -214,6 +266,7 @@ function JadwalPelajaranPage() {
         period: targetPeriod,
         time_start: timeStart,
         time_end: timeEnd,
+        slot_type: "kbm",
         subject_id: subject.id,
         subject_code: subject.code,
         subject_name: subject.name,
@@ -324,6 +377,15 @@ function JadwalPelajaranPage() {
           </CardContent>
         </Card>
 
+        {classMissing && (
+          <Card className="border-amber-400/60 bg-amber-50 dark:bg-amber-500/10">
+            <CardContent className="p-4 text-sm text-amber-800 dark:text-amber-300">
+              Kelas Anda belum diisi pada data anggota, sehingga jadwal pelajaran belum bisa
+              ditampilkan. Mohon hubungi admin untuk menetapkan kelas Anda.
+            </CardContent>
+          </Card>
+        )}
+
         {/* Timetable Grid */}
         <Card className="border-border/60 shadow-sm overflow-hidden">
           <CardHeader className="p-4 pb-2 border-b bg-muted/20">
@@ -335,9 +397,29 @@ function JadwalPelajaranPage() {
                 </CardTitle>
               </div>
               {isAdmin && (
-                <span className="text-xs text-muted-foreground italic">
-                  * Klik slot mana pun untuk mengubah atau mengisi mata pelajaran
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="hidden text-xs text-muted-foreground italic md:inline">
+                    * Klik slot untuk mengisi mapel atau istirahat
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const next =
+                        periods.reduce((max, p) => (p.period > max ? p.period : max), 0) + 1;
+                      if (next > 24) {
+                        toast.error("Maksimal 24 jam pelajaran per hari");
+                        return;
+                      }
+                      setExtraPeriods((prev) => [...prev, next]);
+                      toast.success(`Jam ke-${next} ditambahkan. Klik slotnya untuk mengisi.`);
+                    }}
+                  >
+                    <Plus className="mr-1 h-3.5 w-3.5" />
+                    Tambah Jam ke-
+                  </Button>
+                </div>
               )}
             </div>
           </CardHeader>
@@ -379,7 +461,11 @@ function JadwalPelajaranPage() {
                             isAdmin ? "cursor-pointer hover:bg-primary/5" : ""
                           }`}
                         >
-                          {slot ? (
+                          {slot && (slot as any).slot_type === "istirahat" ? (
+                            <div className="flex h-14 items-center justify-center rounded-md border border-dashed border-amber-400/70 bg-amber-50 p-2 text-[11px] font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-400">
+                              ☕ Istirahat
+                            </div>
+                          ) : slot ? (
                             <div className="rounded-md border border-border/80 bg-card p-2 shadow-2xs space-y-1">
                               <div className="flex items-center justify-between gap-1">
                                 <Badge
@@ -438,6 +524,23 @@ function JadwalPelajaranPage() {
               </DialogHeader>
 
               <div className="space-y-4 py-3">
+                {/* Jenis Slot */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Jenis Slot:</Label>
+                  <Select
+                    value={slotType}
+                    onValueChange={(v) => setSlotType(v as "kbm" | "istirahat")}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="kbm">Mata Pelajaran</SelectItem>
+                      <SelectItem value="istirahat">Istirahat</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 {/* Waktu Jam */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
@@ -455,7 +558,7 @@ function JadwalPelajaranPage() {
                 </div>
 
                 {/* Mata Pelajaran */}
-                <div className="space-y-1.5">
+                <div className={slotType === "istirahat" ? "hidden" : "space-y-1.5"}>
                   <Label className="text-xs font-medium">Pilih Mata Pelajaran:</Label>
                   <Select value={selectedSubjectId} onValueChange={setSelectedSubjectId}>
                     <SelectTrigger>
@@ -472,7 +575,7 @@ function JadwalPelajaranPage() {
                 </div>
 
                 {/* Guru Pengampu */}
-                <div className="space-y-1.5">
+                <div className={slotType === "istirahat" ? "hidden" : "space-y-1.5"}>
                   <Label className="text-xs font-medium">Guru Pengampu:</Label>
                   <Select value={selectedTeacherId} onValueChange={setSelectedTeacherId}>
                     <SelectTrigger>
