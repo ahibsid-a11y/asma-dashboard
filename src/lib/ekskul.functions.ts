@@ -94,8 +94,8 @@ export const getEkskulEnrollmentDataFn = createServerFn({ method: "POST" })
       .parse(data)
   )
   .middleware([requireSupabaseAuth])
-  .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  .handler(async ({ data, context }) => {
+    const supabaseAdmin = (context as any).supabase;
     const store = await loadEkskulStore();
 
     // 1. Ambil ekskul
@@ -194,8 +194,8 @@ export const autoEnrollWajibFn = createServerFn({ method: "POST" })
       .parse(data)
   )
   .middleware([requireSupabaseAuth])
-  .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  .handler(async ({ data, context }) => {
+    const supabaseAdmin = (context as any).supabase;
     const store = await loadEkskulStore();
 
     // 1. Ambil ekskul wajib
@@ -272,8 +272,8 @@ export const getEkskulSessionsAndGradesFn = createServerFn({ method: "POST" })
       .parse(data)
   )
   .middleware([requireSupabaseAuth])
-  .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  .handler(async ({ data, context }) => {
+    const supabaseAdmin = (context as any).supabase;
     const store = await loadEkskulStore();
 
     // 1. Ambil ekskul
@@ -410,8 +410,8 @@ export const getEkskulPaymentsFn = createServerFn({ method: "POST" })
       .parse(data)
   )
   .middleware([requireSupabaseAuth])
-  .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  .handler(async ({ data, context }) => {
+    const supabaseAdmin = (context as any).supabase;
     const store = await loadEkskulStore();
 
     let payments = store.payments;
@@ -631,8 +631,8 @@ export const getEkskulRecapDataFn = createServerFn({ method: "POST" })
       .parse(data)
   )
   .middleware([requireSupabaseAuth])
-  .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  .handler(async ({ data, context }) => {
+    const supabaseAdmin = (context as any).supabase;
     const store = await loadEkskulStore();
 
     // 1. Profil santri
@@ -701,7 +701,7 @@ export const getEkskulRecapDataFn = createServerFn({ method: "POST" })
 export const getCoachOptionsFn = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async () => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const supabaseAdmin = (context as any).supabase;
 
     // Ambil guru, pembina ekskul, wali kelas, atau tendik
     const { data: coaches, error } = await (supabaseAdmin as any)
