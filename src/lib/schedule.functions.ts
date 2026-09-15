@@ -198,7 +198,7 @@ export const getTimetableContext = createServerFn({ method: "POST" })
       academicYear: data.academicYear,
       semester: data.semester,
       days: TIMETABLE_DAYS,
-      periods: DEFAULT_PERIODS,
+      periods: mergePeriods(slots),
       classes,
       subjects,
       teachers,
