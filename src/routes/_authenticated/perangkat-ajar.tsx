@@ -69,9 +69,8 @@ import {
   type CurriculumTimeAllocation,
   type CurriculumTp,
 } from "@/lib/curriculum.functions";
-import { getAcademicSubjects, type AcademicSubject } from "@/lib/grades.functions";
+import { getAcademicSubjects, listClassOptions, type AcademicSubject } from "@/lib/grades.functions";
 
-const CLASS_OPTIONS = ["7A", "7B", "8A", "8B", "9A", "9B"];
 const ACADEMIC_YEARS = ["2026/2027", "2025/2026"];
 const COGNITIVE_LEVELS = [
   "C1 - Mengingat",
