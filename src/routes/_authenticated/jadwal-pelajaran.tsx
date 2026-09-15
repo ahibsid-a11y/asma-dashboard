@@ -515,6 +515,23 @@ function JadwalPelajaranPage() {
               </DialogHeader>
 
               <div className="space-y-4 py-3">
+                {/* Jenis Slot */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Jenis Slot:</Label>
+                  <Select
+                    value={slotType}
+                    onValueChange={(v) => setSlotType(v as "kbm" | "istirahat")}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="kbm">Mata Pelajaran</SelectItem>
+                      <SelectItem value="istirahat">Istirahat</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 {/* Waktu Jam */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
