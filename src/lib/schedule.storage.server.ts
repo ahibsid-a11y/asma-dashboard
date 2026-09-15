@@ -15,6 +15,8 @@ export type ClassSubjectAssignment = {
 
 export type TimetableDay = "Senin" | "Selasa" | "Rabu" | "Kamis" | "Jumat" | "Sabtu" | "Ahad";
 
+export type TimetableSlotType = "kbm" | "istirahat";
+
 export type TimetableSlot = {
   id: string;
   academic_year: string;
@@ -24,6 +26,7 @@ export type TimetableSlot = {
   period: number;
   time_start: string;
   time_end: string;
+  slot_type: TimetableSlotType;
   subject_id: string;
   subject_code: string;
   subject_name: string;
