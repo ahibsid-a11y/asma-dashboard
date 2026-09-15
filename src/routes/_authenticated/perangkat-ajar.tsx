@@ -69,7 +69,7 @@ import {
   type CurriculumTimeAllocation,
   type CurriculumTp,
 } from "@/lib/curriculum.functions";
-import { getAcademicSubjects, listClassOptions, type AcademicSubject } from "@/lib/grades.functions";
+import { listClassSubjects, listClassOptions, type AcademicSubject } from "@/lib/grades.functions";
 
 const ACADEMIC_YEARS = ["2026/2027", "2025/2026"];
 const COGNITIVE_LEVELS = [
@@ -125,7 +125,7 @@ function PerangkatAjarPage() {
   const [promesSemester, setPromesSemester] = useState<"1" | "2">("1");
 
   // Server functions
-  const fetchSubjectsFn = useServerFn(getAcademicSubjects);
+  const fetchSubjectsFn = useServerFn(listClassSubjects);
   const fetchPlanFn = useServerFn(getCurriculumPlan);
   const savePlanMetaFn = useServerFn(updateCurriculumPlanMeta);
   const saveElementFn = useServerFn(saveCurriculumElement);
@@ -133,11 +133,13 @@ function PerangkatAjarPage() {
   const saveTimeAllocFn = useServerFn(saveCurriculumTimeAllocations);
   const savePromesFn = useServerFn(saveCurriculumPromesGrid);
 
-  // 1. Ambil daftar mata pelajaran
+  // 1. Daftar mapel sesuai kelas terpilih (Manajemen Mapel)
   const { data: subjects = [] } = useQuery({
-    queryKey: ["academic-subjects"],
-    queryFn: () => fetchSubjectsFn(),
+    queryKey: ["class-subjects", selectedClass, selectedYear],
+    queryFn: () => fetchSubjectsFn({ data: { class_name: selectedClass, academic_year: selectedYear } }),
+    enabled: Boolean(selectedClass),
   });
+
 
   // Daftar kelas resmi (master Manajemen Kelas)
   const fetchClassesFn = useServerFn(listClassOptions);
@@ -188,13 +190,13 @@ function PerangkatAjarPage() {
   const [localTps, setLocalTps] = useState<CurriculumTp[]>([]);
   const [hasUnsavedTp, setHasUnsavedTp] = useState(false);
 
-  // Sync serverTps to localTps when loaded
-  useMemo(() => {
-    if (serverTps) {
-      setLocalTps(serverTps);
-      setHasUnsavedTp(false);
-    }
-  }, [serverTps]);
+  // Sinkronkan TP dari server, tapi jangan menimpa isian yang belum disimpan
+  useEffect(() => {
+    setLocalTps(serverTps);
+    setHasUnsavedTp(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentSubjectId, selectedClass, selectedYear, serverTps.length]);
+
 
   const activePlan: CurriculumPlan = useMemo(() => {
     if (plan) return plan;
@@ -252,7 +254,7 @@ function PerangkatAjarPage() {
 
   // Local state for time allocations
   const [localTimeAlloc, setLocalTimeAlloc] = useState<CurriculumTimeAllocation[]>([]);
-  useMemo(() => {
+  useEffect(() => {
     if (timeAllocations && timeAllocations.length > 0) {
       setLocalTimeAlloc(timeAllocations);
     } else {
@@ -263,21 +265,20 @@ function PerangkatAjarPage() {
   // Local state for promes cell entries: key = `${tp_id}_${month_name}_${week_number}` -> value: number
   const [localPromesGrid, setLocalPromesGrid] = useState<Record<string, number>>({});
   const [localTpStatuses, setLocalTpStatuses] = useState<Record<string, string>>({});
-  useMemo(() => {
-    if (promesEntries) {
-      const map: Record<string, number> = {};
-      for (const e of promesEntries) {
-        map[`${e.tp_id}_${e.month_name}_${e.week_number}`] = e.allocated_jp;
-      }
-      setLocalPromesGrid(map);
-
-      const statusMap: Record<string, string> = {};
-      for (const t of serverTps) {
-        statusMap[t.id] = t.status_realisasi || "Belum Terlaksana";
-      }
-      setLocalTpStatuses(statusMap);
+  useEffect(() => {
+    const map: Record<string, number> = {};
+    for (const e of promesEntries) {
+      map[`${e.tp_id}_${e.month_name}_${e.week_number}`] = e.allocated_jp;
     }
+    setLocalPromesGrid(map);
+
+    const statusMap: Record<string, string> = {};
+    for (const t of serverTps) {
+      statusMap[t.id] = t.status_realisasi || "Belum Terlaksana";
+    }
+    setLocalTpStatuses(statusMap);
   }, [promesEntries, serverTps]);
+
 
   // Handle Meta Change (JP per minggu)
   const handleJpPerWeekChange = async (valStr: string) => {

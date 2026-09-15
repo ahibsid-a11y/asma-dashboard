@@ -49,7 +49,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
 import {
   calculateLetterGrade,
-  getAcademicSubjects,
+  listClassSubjects,
   getInputGradesSheet,
   listClassOptions,
   manageLearningObjective,
@@ -84,7 +84,7 @@ function InputNilaiPage() {
   const profile = profileQuery.data;
   const queryClient = useQueryClient();
 
-  const fetchSubjects = useServerFn(getAcademicSubjects);
+  const fetchSubjects = useServerFn(listClassSubjects);
   const fetchSheet = useServerFn(getInputGradesSheet);
   const saveBatchFn = useServerFn(saveGradesBatch);
   const manageTpFn = useServerFn(manageLearningObjective);
@@ -113,11 +113,13 @@ function InputNilaiPage() {
   const [newSubGroup, setNewSubGroup] = useState<SubjectGroup>("Umum");
   const [newSubKkm, setNewSubKkm] = useState<number>(75);
 
-  // 1. Ambil daftar mata pelajaran
+  // 1. Ambil daftar mata pelajaran sesuai kelas terpilih (Manajemen Mapel)
   const subjectsQuery = useQuery({
-    queryKey: ["academic-subjects"],
-    queryFn: () => fetchSubjects(),
+    queryKey: ["class-subjects", selectedClass, selectedYear],
+    queryFn: () => fetchSubjects({ data: { class_name: selectedClass, academic_year: selectedYear } }),
+    enabled: Boolean(selectedClass),
   });
+
 
   // Daftar kelas resmi (master Manajemen Kelas)
   const fetchClasses = useServerFn(listClassOptions);
@@ -135,12 +137,14 @@ function InputNilaiPage() {
 
   const subjects = subjectsQuery.data ?? [];
 
-  // Auto-pilih mapel pertama jika belum dipilih
-  useMemo(() => {
-    if (!selectedSubjectId && subjects.length > 0) {
+  // Auto-pilih mapel pertama / reset bila mapel tidak diajarkan di kelas ini
+  useEffect(() => {
+    if (subjects.length === 0) return;
+    if (!selectedSubjectId || !subjects.some((s) => s.id === selectedSubjectId)) {
       setSelectedSubjectId(subjects[0]!.id);
     }
   }, [subjects, selectedSubjectId]);
+
 
   // Mapel yang sedang dipilih
   const currentSubject = useMemo(() => {
@@ -341,7 +345,7 @@ function InputNilaiPage() {
       toast.success("Mata pelajaran baru berhasil ditambahkan");
       setNewSubCode("");
       setNewSubName("");
-      queryClient.invalidateQueries({ queryKey: ["academic-subjects"] });
+      queryClient.invalidateQueries({ queryKey: ["class-subjects"] });
     },
     onError: (err: any) => {
       toast.error(err.message || "Gagal menambah mapel");

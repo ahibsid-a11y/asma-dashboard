@@ -129,6 +129,50 @@ export const getAcademicSubjects = createServerFn({ method: "GET" })
     return ensureSubjects(supabaseAdmin);
   });
 
+/** Mapel yang benar-benar diajarkan pada satu kelas (dari Manajemen Mapel). */
+export async function subjectsForClass(
+  supabaseAdmin: any,
+  className: string,
+  academicYear: string,
+): Promise<AcademicSubject[]> {
+  const subjects = await ensureSubjects(supabaseAdmin);
+  const active = subjects.filter((s) => s.is_active);
+  if (!className) return active;
+
+  try {
+    const { classNameVariants } = await import("./curriculum-plan.server");
+    const { data: rows } = await (supabaseAdmin as any)
+      .from("class_subject_assignments")
+      .select("subject_id")
+      .in("class_name", classNameVariants(className))
+      .eq("academic_year", academicYear);
+
+    const ids = new Set<string>((rows ?? []).map((r: any) => r.subject_id));
+    if (ids.size === 0) return active;
+    const scoped = active.filter((s) => ids.has(s.id));
+    return scoped.length > 0 ? scoped : active;
+  } catch {
+    return active;
+  }
+}
+
+/** Daftar mapel untuk kelas terpilih (Perangkat Ajar, Input Nilai, Rekap Nilai). */
+export const listClassSubjects = createServerFn({ method: "POST" })
+  .validator((data: unknown) =>
+    z
+      .object({
+        class_name: z.string().default(""),
+        academic_year: z.string().default("2026/2027"),
+      })
+      .parse(data),
+  )
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    return subjectsForClass(supabaseAdmin, data.class_name, data.academic_year);
+  });
+
+
 /** 2. Kelola mata pelajaran (Admin / Kurikulum) */
 export const manageSubject = createServerFn({ method: "POST" })
   .validator((data: unknown) =>
@@ -677,9 +721,9 @@ export const getClassGradesRecap = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // 1. Ambil seluruh mapel aktif
-    const subjects = await ensureSubjects(supabaseAdmin);
-    const activeSubjects = subjects.filter((s) => s.is_active);
+    // 1. Mapel yang diajarkan di kelas ini (fallback: semua mapel aktif)
+    const activeSubjects = await subjectsForClass(supabaseAdmin, data.class_name, data.academic_year);
+
 
     const { classNameVariants } = await import("./curriculum-plan.server");
     const classVariants = classNameVariants(data.class_name);
