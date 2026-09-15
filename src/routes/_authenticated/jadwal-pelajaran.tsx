@@ -103,6 +103,8 @@ function JadwalPelajaranPage() {
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>("");
   const [slotRoom, setSlotRoom] = useState<string>("");
+  const [slotType, setSlotType] = useState<"kbm" | "istirahat">("kbm");
+  const [extraPeriods, setExtraPeriods] = useState<number[]>([]);
 
   const [printModalOpen, setPrintModalOpen] = useState(false);
 
