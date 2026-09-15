@@ -377,6 +377,15 @@ function JadwalPelajaranPage() {
           </CardContent>
         </Card>
 
+        {classMissing && (
+          <Card className="border-amber-400/60 bg-amber-50 dark:bg-amber-500/10">
+            <CardContent className="p-4 text-sm text-amber-800 dark:text-amber-300">
+              Kelas Anda belum diisi pada data anggota, sehingga jadwal pelajaran belum bisa
+              ditampilkan. Mohon hubungi admin untuk menetapkan kelas Anda.
+            </CardContent>
+          </Card>
+        )}
+
         {/* Timetable Grid */}
         <Card className="border-border/60 shadow-sm overflow-hidden">
           <CardHeader className="p-4 pb-2 border-b bg-muted/20">
