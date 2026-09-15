@@ -236,7 +236,7 @@ function ReportContent({
 
 function KopSurat({ school, subtitle }: { school: any; subtitle: string }) {
   return (
-    <>
+    <div className="print-section print-avoid-break">
       <div className="flex items-center justify-between gap-4 pb-4 border-b-2 border-slate-900 print:border-black">
         <img
           src={school.logo || "/logo-alhanif.png"}
@@ -275,7 +275,7 @@ function KopSurat({ school, subtitle }: { school: any; subtitle: string }) {
           {subtitle}
         </h3>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -286,7 +286,7 @@ function KopSurat({ school, subtitle }: { school: any; subtitle: string }) {
 function BiodataGrid({ student, semester, academicYear }: { student: any; semester: string; academicYear: string }) {
   const semLabel = semester === "1" ? "1 (Ganjil)" : "2 (Genap)";
   return (
-    <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-xs md:text-sm mb-6 bg-slate-50/70 dark:bg-slate-900/40 print:bg-transparent p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 print:border-none print:p-0">
+    <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-xs md:text-sm mb-6 bg-slate-50/70 dark:bg-slate-900/40 print:bg-transparent p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 print:border-none print:p-0 print-section print-avoid-break">
       <div className="flex">
         <span className="w-32 font-semibold text-slate-600 dark:text-slate-400 print:text-black">Nama Santri</span>
         <span className="font-bold text-slate-900 dark:text-white print:text-black uppercase">
@@ -329,7 +329,7 @@ function BiodataGrid({ student, semester, academicYear }: { student: any; semest
 
 function AttendanceTable({ attendance }: { attendance: { sakit: number; izin: number; alpa: number } }) {
   return (
-    <div className="border border-slate-300 dark:border-slate-700 print:border-black rounded-md overflow-hidden">
+    <div className="border border-slate-300 dark:border-slate-700 print:border-black rounded-md overflow-hidden print-section print-avoid-break">
       <div className="bg-slate-100 dark:bg-slate-800 print:bg-slate-200 px-3 py-1.5 font-bold uppercase border-b border-slate-300 dark:border-slate-700 print:border-black text-center text-xs">
         Ketidakhadiran
       </div>
@@ -371,7 +371,7 @@ function SignatureBlock({
   const cols = extra ? "grid-cols-4" : "grid-cols-3";
 
   return (
-    <div className="pt-4 text-xs md:text-sm">
+    <div className="pt-4 text-xs md:text-sm print-section print-avoid-break report-signature-block">
       <div className="text-right mb-4">
         <span>{dateStr}</span>
       </div>
@@ -427,7 +427,7 @@ function ReportGradesTable({ items, showTp = true }: { items: any[]; showTp?: bo
   }
 
   return (
-    <table className="w-full text-[11px] md:text-xs border-collapse border border-slate-300 dark:border-slate-700 print:border-black">
+    <table className="w-full text-[11px] md:text-xs border-collapse border border-slate-300 dark:border-slate-700 print:border-black print-section print-avoid-break">
       <thead>
         <tr className="bg-slate-100 dark:bg-slate-800 print:bg-slate-200 text-slate-900 dark:text-white print:text-black text-center font-bold">
           <th className="border border-slate-300 dark:border-slate-700 print:border-black px-2 py-1.5 w-8">No</th>
@@ -509,7 +509,7 @@ function RaporPondok({ data }: { data: any }) {
       <BiodataGrid student={data.student} semester={data.semester} academicYear={data.academic_year} />
 
       {/* Kelompok A: Umum */}
-      <div className="mb-6">
+      <div className="mb-6 print-section print-avoid-break">
         <div className="flex items-center gap-2 mb-2">
           <span className="font-bold text-xs uppercase px-2 py-0.5 bg-blue-100 text-blue-900 dark:bg-blue-950 dark:text-blue-200 print:bg-slate-200 print:text-black rounded">
             Kelompok A
@@ -522,7 +522,7 @@ function RaporPondok({ data }: { data: any }) {
       </div>
 
       {/* Kelompok B: Diniyyah */}
-      <div className="mb-6">
+      <div className="mb-6 print-section print-avoid-break">
         <div className="flex items-center gap-2 mb-2">
           <span className="font-bold text-xs uppercase px-2 py-0.5 bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200 print:bg-slate-200 print:text-black rounded">
             Kelompok B
@@ -535,7 +535,7 @@ function RaporPondok({ data }: { data: any }) {
       </div>
 
       {/* Kelompok C: Bahasa Arab */}
-      <div className="mb-6">
+      <div className="mb-6 print-section print-avoid-break">
         <div className="flex items-center gap-2 mb-2">
           <span className="font-bold text-xs uppercase px-2 py-0.5 bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200 print:bg-slate-200 print:text-black rounded">
             Kelompok C
@@ -548,7 +548,7 @@ function RaporPondok({ data }: { data: any }) {
       </div>
 
       {/* Kehadiran & Catatan */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 text-xs">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 text-xs print-section print-avoid-break">
         <AttendanceTable attendance={data.attendance} />
         <div className="md:col-span-2 border border-slate-300 dark:border-slate-700 print:border-black rounded-md overflow-hidden flex flex-col">
           <div className="bg-slate-100 dark:bg-slate-800 print:bg-slate-200 px-3 py-1.5 font-bold uppercase border-b border-slate-300 dark:border-slate-700 print:border-black text-xs">
@@ -585,7 +585,7 @@ function RaporDinas({ data }: { data: any }) {
       <BiodataGrid student={data.student} semester={data.semester} academicYear={data.academic_year} />
 
       {/* Mata Pelajaran */}
-      <div className="mb-6">
+      <div className="mb-6 print-section print-avoid-break">
         <div className="flex items-center gap-2 mb-2">
           <span className="font-bold text-xs uppercase px-2 py-0.5 bg-blue-100 text-blue-900 dark:bg-blue-950 dark:text-blue-200 print:bg-slate-200 print:text-black rounded">A</span>
           <h4 className="text-xs md:text-sm font-bold uppercase tracking-wide">Mata Pelajaran</h4>
@@ -593,42 +593,29 @@ function RaporDinas({ data }: { data: any }) {
         <ReportGradesTable items={data.subjects} showTp={false} />
       </div>
 
-      {/* Kokurikuler */}
-      <div className="mb-6">
+      {/* Kokurikuler (P5/P5RA - Narasi 1 Paragraf) */}
+      <div className="mb-6 print-section print-avoid-break">
         <div className="flex items-center gap-2 mb-2">
           <span className="font-bold text-xs uppercase px-2 py-0.5 bg-violet-100 text-violet-900 dark:bg-violet-950 dark:text-violet-200 print:bg-slate-200 print:text-black rounded">B</span>
-          <h4 className="text-xs md:text-sm font-bold uppercase tracking-wide">Kokurikuler (Projek Penguatan Profil Pelajar Pancasila & Rahmatan Lil 'Alamin)</h4>
+          <h4 className="text-xs md:text-sm font-bold uppercase tracking-wide">
+            Kokurikuler (Projek Penguatan Profil Pelajar Pancasila & Rahmatan Lil 'Alamin)
+          </h4>
         </div>
-        {data.kokurikuler && data.kokurikuler.length > 0 ? (
-          <table className="w-full text-[11px] md:text-xs border-collapse border border-slate-300 dark:border-slate-700 print:border-black">
-            <thead>
-              <tr className="bg-slate-100 dark:bg-slate-800 print:bg-slate-200 text-center font-bold">
-                <th className="border border-slate-300 dark:border-slate-700 print:border-black px-2 py-1.5 w-8">No</th>
-                <th className="border border-slate-300 dark:border-slate-700 print:border-black px-3 py-1.5 text-left">Projek / Tema</th>
-                <th className="border border-slate-300 dark:border-slate-700 print:border-black px-2 py-1.5 w-14">Nilai</th>
-                <th className="border border-slate-300 dark:border-slate-700 print:border-black px-3 py-1.5 text-left">Deskripsi Capaian</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.kokurikuler.map((k: any, i: number) => (
-                <tr key={i} className="border-b border-slate-300 dark:border-slate-700 print:border-black">
-                  <td className="border border-slate-300 dark:border-slate-700 print:border-black px-2 py-1.5 text-center">{i + 1}</td>
-                  <td className="border border-slate-300 dark:border-slate-700 print:border-black px-3 py-1.5">{k.name}</td>
-                  <td className="border border-slate-300 dark:border-slate-700 print:border-black px-2 py-1.5 text-center font-bold">{k.grade}</td>
-                  <td className="border border-slate-300 dark:border-slate-700 print:border-black px-3 py-1.5">{k.description}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <div className="text-xs text-muted-foreground p-3 border rounded text-center italic">
-            Belum ada data kokurikuler. (Akan ditambahkan setelah fitur Projek P5 selesai)
+        <div className="border border-slate-300 dark:border-slate-700 print:border-black rounded-md p-4 text-xs md:text-sm leading-relaxed text-slate-800 dark:text-slate-200 print:text-black bg-slate-50/60 dark:bg-slate-900/30 print:bg-transparent">
+          <div className="flex items-center justify-between font-semibold text-slate-900 dark:text-slate-100 print:text-black mb-2 text-xs">
+            <span>Capaian Projek & Pembiasaan Karakter Santri</span>
+            <span className="text-[11px] font-normal text-slate-500 print:text-slate-700 italic">5 Dimensi Nilai HEBAT</span>
           </div>
-        )}
+          <p className="text-justify leading-relaxed text-[11.5px] md:text-xs">
+            {data.kokurikulerNarrative || (
+              <span className="text-slate-400 italic">Belum ada narasi capaian kokurikuler.</span>
+            )}
+          </p>
+        </div>
       </div>
 
       {/* Ekstrakurikuler */}
-      <div className="mb-6">
+      <div className="mb-6 print-section print-avoid-break">
         <div className="flex items-center gap-2 mb-2">
           <span className="font-bold text-xs uppercase px-2 py-0.5 bg-rose-100 text-rose-900 dark:bg-rose-950 dark:text-rose-200 print:bg-slate-200 print:text-black rounded">C</span>
           <h4 className="text-xs md:text-sm font-bold uppercase tracking-wide">Ekstrakurikuler</h4>
@@ -662,7 +649,7 @@ function RaporDinas({ data }: { data: any }) {
       </div>
 
       {/* Kehadiran */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 text-xs">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 text-xs print-section print-avoid-break">
         <AttendanceTable attendance={data.attendance} />
         <div className="md:col-span-2 border border-slate-300 dark:border-slate-700 print:border-black rounded-md overflow-hidden flex flex-col">
           <div className="bg-slate-100 dark:bg-slate-800 print:bg-slate-200 px-3 py-1.5 font-bold uppercase border-b border-slate-300 dark:border-slate-700 print:border-black text-xs">
@@ -717,7 +704,7 @@ function RaporKesantrian({ data }: { data: any }) {
       <BiodataGrid student={data.student} semester={data.semester} academicYear={data.academic_year} />
 
       {/* Overall Score Card */}
-      <div className="mb-6 p-4 rounded-lg border-2 border-primary/30 bg-primary/5 dark:bg-primary/10 print:bg-slate-50 print:border-black flex items-center justify-between">
+      <div className="mb-6 p-4 rounded-lg border-2 border-primary/30 bg-primary/5 dark:bg-primary/10 print:bg-slate-50 print:border-black flex items-center justify-between print-section print-avoid-break">
         <div>
           <h4 className="text-sm font-bold uppercase tracking-wide">Capaian Keseluruhan Mutaba'ah</h4>
           <p className="text-xs text-slate-600 dark:text-slate-400 print:text-slate-600 mt-0.5">
@@ -733,7 +720,7 @@ function RaporKesantrian({ data }: { data: any }) {
       </div>
 
       {/* Category Breakdown */}
-      <div className="mb-6">
+      <div className="mb-6 print-section print-avoid-break">
         <h4 className="text-xs md:text-sm font-bold uppercase tracking-wide mb-2">Rincian Per Aspek Kehidupan Santri</h4>
         <table className="w-full text-[11px] md:text-xs border-collapse border border-slate-300 dark:border-slate-700 print:border-black">
           <thead>
@@ -776,7 +763,7 @@ function RaporKesantrian({ data }: { data: any }) {
       </div>
 
       {/* Kehadiran & Catatan */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 text-xs">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 text-xs print-section print-avoid-break">
         <AttendanceTable attendance={data.attendance} />
         <div className="md:col-span-2 border border-slate-300 dark:border-slate-700 print:border-black rounded-md overflow-hidden flex flex-col">
           <div className="bg-slate-100 dark:bg-slate-800 print:bg-slate-200 px-3 py-1.5 font-bold uppercase border-b border-slate-300 dark:border-slate-700 print:border-black text-xs">

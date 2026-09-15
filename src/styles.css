@@ -162,7 +162,7 @@
 
 @media print {
   @page {
-    size: A4 portrait;
+    size: 215mm 330mm portrait; /* Format F4 / Folio (215 x 330 mm) */
     margin: 12mm 15mm 15mm 15mm;
   }
 
@@ -200,6 +200,28 @@
     margin: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
+  }
+
+  /* Cegah pemotongan di tengah-tengah section / tabel / tanda tangan */
+  .print-section,
+  .print-avoid-break,
+  .report-signature-block,
+  table,
+  tbody tr,
+  .signature-container {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Pemisah halaman manual jika diperlukan */
+  .page-break-after {
+    break-after: page !important;
+    page-break-after: always !important;
+  }
+
+  .page-break-before {
+    break-before: page !important;
+    page-break-before: always !important;
   }
 }
 

@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { isMemberAdmin } from "@/lib/roles";
+import { generateKokurNarrative, getStudentKokurRecord } from "./kokur.storage.server";
 
 type Ctx = { supabase: any; userId: string };
 
@@ -1374,10 +1375,13 @@ export const getReportCardDinas = createServerFn({ method: "POST" })
     dinasSubjects.unshift(paiItem); // PAI first
     dinasSubjects.push(mulokItem); // Mulok last
 
-    // 8. Kokurikuler (placeholder — will be connected to extracurricular feature later)
-    const kokurikuler: { name: string; grade: string; description: string }[] = [];
+    // 8. Kokurikuler (P5 / P5RA - Narasi 1 Paragraf)
+    const kokurRecord = getStudentKokurRecord(data.student_id, data.semester, data.academic_year);
+    const studentName = student.display_name || student.name || "Santri";
+    const kokurikulerNarrative =
+      kokurRecord?.narrative || generateKokurNarrative(studentName, kokurRecord?.grades || {});
 
-    // 9. Ekstrakurikuler (placeholder)
+    // 9. Ekstrakurikuler (placeholder — akan diisi fitur ekskul)
     const ekstrakurikuler: { name: string; grade: string; description: string }[] = [];
 
     // 10. Kehadiran
@@ -1401,7 +1405,9 @@ export const getReportCardDinas = createServerFn({ method: "POST" })
         logo: "/logo-alhanif.png",
       },
       subjects: dinasSubjects,
-      kokurikuler,
+      kokurikulerNarrative,
+      kokurikulerGrades: kokurRecord?.grades || null,
+      kokurikuler: [],
       ekstrakurikuler,
       attendance,
       signatures,

@@ -6,6 +6,7 @@ import {
   CalendarPlus,
   ClipboardCheck,
   ClipboardList,
+  Compass,
   FileBadge,
   FileSpreadsheet,
   GraduationCap,
@@ -53,6 +54,7 @@ export type NavKey =
   | "perangkat-ajar"
   | "rekap-perangkat-ajar"
   | "input-nilai"
+  | "input-kokur"
   | "nilai-pelajaran"
   | "manajemen-mapel"
   | "jadwal-pelajaran"
@@ -276,6 +278,13 @@ export const NAV_ITEMS: Record<NavKey, NavItem> = {
     icon: PenLine,
     category: "pendidikan",
   },
+  "input-kokur": {
+    key: "input-kokur",
+    to: "/input-kokur",
+    label: "Input Kokurikuler (P5)",
+    icon: Compass,
+    category: "pendidikan",
+  },
   "nilai-pelajaran": {
     key: "nilai-pelajaran",
     to: "/nilai-pelajaran",
@@ -341,6 +350,7 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "jadwal-pelajaran",
     "perangkat-ajar",
     "input-nilai",
+    "input-kokur",
     "profil",
   ],
   mudir: [
@@ -363,6 +373,7 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "jadwal-pelajaran",
     "perangkat-ajar",
     "input-nilai",
+    "input-kokur",
     "profil",
   ],
   kepala_sekolah: [
@@ -385,6 +396,7 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "jadwal-pelajaran",
     "perangkat-ajar",
     "input-nilai",
+    "input-kokur",
     "profil",
   ],
   kepala_tu: [
@@ -417,6 +429,7 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "jadwal-pelajaran",
     "perangkat-ajar",
     "input-nilai",
+    "input-kokur",
     "profil",
   ],
   kabid_kesantrian: [
@@ -469,6 +482,7 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "jadwal-pelajaran",
     "perangkat-ajar",
     "input-nilai",
+    "input-kokur",
     "profil",
   ],
   guru_mapel: [
@@ -481,6 +495,7 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "jadwal-pelajaran",
     "perangkat-ajar",
     "input-nilai",
+    "input-kokur",
     "profil",
   ],
   kepala_rt_sarpras: ["dashboard", "presensi-insidental", "absensi-diri", "kalender", "profil"],

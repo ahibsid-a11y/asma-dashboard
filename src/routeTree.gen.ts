@@ -15,6 +15,7 @@ import { Route as AuthenticatedAbsensiDiriRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAnggotaRouteImport } from './routes/_authenticated/anggota'
 import { Route as AuthenticatedCatatPelanggaranRouteImport } from './routes/_authenticated/catat-pelanggaran'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedInputKokurRouteImport } from './routes/_authenticated/input-kokur'
 import { Route as AuthenticatedInputMutabaahRouteImport } from './routes/_authenticated/input-mutabaah'
 import { Route as AuthenticatedInputNilaiRouteImport } from './routes/_authenticated/input-nilai'
 import { Route as AuthenticatedInputNilaiTahfizRouteImport } from './routes/_authenticated/input-nilai-tahfiz'
@@ -70,6 +71,11 @@ const AuthenticatedCatatPelanggaranRoute =
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedInputKokurRoute = AuthenticatedInputKokurRouteImport.update({
+  id: '/input-kokur',
+  path: '/input-kokur',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedInputMutabaahRoute =
@@ -224,6 +230,7 @@ export interface FileRoutesByFullPath {
   '/anggota': typeof AuthenticatedAnggotaRoute
   '/catat-pelanggaran': typeof AuthenticatedCatatPelanggaranRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/input-kokur': typeof AuthenticatedInputKokurRoute
   '/input-mutabaah': typeof AuthenticatedInputMutabaahRoute
   '/input-nilai': typeof AuthenticatedInputNilaiRoute
   '/input-nilai-tahfiz': typeof AuthenticatedInputNilaiTahfizRoute
@@ -256,6 +263,7 @@ export interface FileRoutesByTo {
   '/anggota': typeof AuthenticatedAnggotaRoute
   '/catat-pelanggaran': typeof AuthenticatedCatatPelanggaranRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/input-kokur': typeof AuthenticatedInputKokurRoute
   '/input-mutabaah': typeof AuthenticatedInputMutabaahRoute
   '/input-nilai': typeof AuthenticatedInputNilaiRoute
   '/input-nilai-tahfiz': typeof AuthenticatedInputNilaiTahfizRoute
@@ -290,6 +298,7 @@ export interface FileRoutesById {
   '/_authenticated/anggota': typeof AuthenticatedAnggotaRoute
   '/_authenticated/catat-pelanggaran': typeof AuthenticatedCatatPelanggaranRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/input-kokur': typeof AuthenticatedInputKokurRoute
   '/_authenticated/input-mutabaah': typeof AuthenticatedInputMutabaahRoute
   '/_authenticated/input-nilai': typeof AuthenticatedInputNilaiRoute
   '/_authenticated/input-nilai-tahfiz': typeof AuthenticatedInputNilaiTahfizRoute
@@ -324,6 +333,7 @@ export interface FileRouteTypes {
     | '/anggota'
     | '/catat-pelanggaran'
     | '/dashboard'
+    | '/input-kokur'
     | '/input-mutabaah'
     | '/input-nilai'
     | '/input-nilai-tahfiz'
@@ -356,6 +366,7 @@ export interface FileRouteTypes {
     | '/anggota'
     | '/catat-pelanggaran'
     | '/dashboard'
+    | '/input-kokur'
     | '/input-mutabaah'
     | '/input-nilai'
     | '/input-nilai-tahfiz'
@@ -389,6 +400,7 @@ export interface FileRouteTypes {
     | '/_authenticated/anggota'
     | '/_authenticated/catat-pelanggaran'
     | '/_authenticated/dashboard'
+    | '/_authenticated/input-kokur'
     | '/_authenticated/input-mutabaah'
     | '/_authenticated/input-nilai'
     | '/_authenticated/input-nilai-tahfiz'
@@ -463,6 +475,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/input-kokur': {
+      id: '/_authenticated/input-kokur'
+      path: '/input-kokur'
+      fullPath: '/input-kokur'
+      preLoaderRoute: typeof AuthenticatedInputKokurRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/input-mutabaah': {
@@ -648,6 +667,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAnggotaRoute: typeof AuthenticatedAnggotaRoute
   AuthenticatedCatatPelanggaranRoute: typeof AuthenticatedCatatPelanggaranRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedInputKokurRoute: typeof AuthenticatedInputKokurRoute
   AuthenticatedInputMutabaahRoute: typeof AuthenticatedInputMutabaahRoute
   AuthenticatedInputNilaiRoute: typeof AuthenticatedInputNilaiRoute
   AuthenticatedInputNilaiTahfizRoute: typeof AuthenticatedInputNilaiTahfizRoute
@@ -680,6 +700,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAnggotaRoute: AuthenticatedAnggotaRoute,
   AuthenticatedCatatPelanggaranRoute: AuthenticatedCatatPelanggaranRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedInputKokurRoute: AuthenticatedInputKokurRoute,
   AuthenticatedInputMutabaahRoute: AuthenticatedInputMutabaahRoute,
   AuthenticatedInputNilaiRoute: AuthenticatedInputNilaiRoute,
   AuthenticatedInputNilaiTahfizRoute: AuthenticatedInputNilaiTahfizRoute,
