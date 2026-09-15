@@ -8,6 +8,7 @@ import {
   createSessionAndAttendance,
   deleteEkskulItem,
   enrollStudentToEkskul,
+  listEkskuls,
   loadEkskulStore,
   recordPaymentUpdate,
   saveOrUpdateEkskul,
@@ -99,11 +100,92 @@ export const getEkskulEnrollmentDataFn = createServerFn({ method: "POST" })
     const supabase = (context as any).supabase;
     const store = await loadEkskulStore();
 
-    // 1. Ambil ekskul wajib
-    const wajibEkskuls = store.ekskuls.filter((e) => e.category === "wajib" && e.is_active);
+    const ekskul = store.ekskuls.find((e) => e.id === data.ekskulId);
+    if (!ekskul) throw new Error("Ekskul tidak ditemukan");
+
+    const enrollments = store.enrollments.filter(
+      (enr) =>
+        enr.ekskul_id === data.ekskulId &&
+        enr.semester === data.semester &&
+        enr.academic_year === data.academicYear &&
+        enr.status === "aktif"
+    );
+
+    const studentIds = enrollments.map((e) => e.student_id);
+    const studentsMap = new Map<string, any>();
+    if (studentIds.length > 0) {
+      const { data: students } = await supabase
+        .from("profiles")
+        .select("id, name, display_name, nis_nip, class, dorm, avatar")
+        .in("id", studentIds);
+      for (const s of students || []) {
+        studentsMap.set(s.id, normalizeStudent(s));
+      }
+    }
+
+    const memberList = enrollments
+      .map((enr) => ({
+        enrollment: enr,
+        student:
+          studentsMap.get(enr.student_id) ??
+          ({ id: enr.student_id, full_name: "Santri", class_name: "-" } as any),
+      }))
+      .sort((a, b) => String(a.student.full_name).localeCompare(String(b.student.full_name)));
+
+    return {
+      ekskul,
+      members: memberList,
+      totalMembers: memberList.length,
+    };
+  });
+
+export const enrollStudentFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) =>
+    z
+      .object({
+        ekskulId: z.string(),
+        studentId: z.string(),
+        semester: z.string().default("1"),
+        academicYear: z.string().default("2026/2027"),
+      })
+      .parse(data)
+  )
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ data }) => {
+    const enrollment = await enrollStudentToEkskul({
+      ekskul_id: data.ekskulId,
+      student_id: data.studentId,
+      semester: data.semester,
+      academic_year: data.academicYear,
+    });
+    return { success: true, enrollment };
+  });
+
+export const unenrollStudentFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) => z.object({ enrollmentId: z.string() }).parse(data))
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ data }) => {
+    const success = await unenrollStudentFromEkskul(data.enrollmentId);
+    return { success };
+  });
+
+export const autoEnrollWajibFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) =>
+    z
+      .object({
+        semester: z.string().default("1"),
+        academicYear: z.string().default("2026/2027"),
+      })
+      .parse(data)
+  )
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ data, context }) => {
+    const supabase = (context as any).supabase;
+    const wajibEkskuls = (await listEkskuls()).filter(
+      (e) => e.category === "wajib" && e.is_active
+    );
     if (wajibEkskuls.length === 0) return { success: true, count: 0 };
 
-    // 2. Ambil seluruh santri aktif
     const { data: students } = await supabase
       .from("profiles")
       .select("id")
@@ -112,7 +194,7 @@ export const getEkskulEnrollmentDataFn = createServerFn({ method: "POST" })
 
     const count = await bulkEnrollStudents({
       ekskulIds: wajibEkskuls.map((e) => e.id),
-      studentIds: ((students ?? []) as { id: string }[]).map((s) => s.id),
+      studentIds: ((students ?? []) as { id: string }[]).map((st) => st.id),
       semester: data.semester,
       academic_year: data.academicYear,
     });
