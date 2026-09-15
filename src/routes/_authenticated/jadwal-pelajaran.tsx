@@ -566,7 +566,7 @@ function JadwalPelajaranPage() {
                 </div>
 
                 {/* Guru Pengampu */}
-                <div className="space-y-1.5">
+                <div className={slotType === "istirahat" ? "hidden" : "space-y-1.5"}>
                   <Label className="text-xs font-medium">Guru Pengampu:</Label>
                   <Select value={selectedTeacherId} onValueChange={setSelectedTeacherId}>
                     <SelectTrigger>
