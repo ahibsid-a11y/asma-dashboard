@@ -1,0 +1,1 @@
+ALTER TABLE public.timetable_slots ADD COLUMN IF NOT EXISTS slot_type text NOT NULL DEFAULT 'kbm';

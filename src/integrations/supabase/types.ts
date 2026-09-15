@@ -1567,6 +1567,7 @@ export type Database = {
           period: number
           room: string | null
           semester: string
+          slot_type: string
           subject_code: string
           subject_id: string
           subject_name: string
@@ -1585,6 +1586,7 @@ export type Database = {
           period: number
           room?: string | null
           semester?: string
+          slot_type?: string
           subject_code?: string
           subject_id?: string
           subject_name?: string
@@ -1603,6 +1605,7 @@ export type Database = {
           period?: number
           room?: string | null
           semester?: string
+          slot_type?: string
           subject_code?: string
           subject_id?: string
           subject_name?: string
