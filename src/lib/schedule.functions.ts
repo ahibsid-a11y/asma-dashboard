@@ -29,6 +29,26 @@ const DEFAULT_CLASSES = [
   { id: "c-12", name: "XII", grade: 12 },
 ];
 
+/** Gabungkan jam default dengan jam tambahan yang sudah dipakai pada slot tersimpan. */
+function mergePeriods(slots: { period: number; time_start?: string; time_end?: string }[]) {
+  const map = new Map<number, { period: number; start: string; end: string }>();
+  for (const p of DEFAULT_PERIODS) map.set(p.period, { ...p });
+  for (const s of slots) {
+    const existing = map.get(s.period);
+    if (existing) {
+      if (s.time_start) existing.start = s.time_start;
+      if (s.time_end) existing.end = s.time_end;
+    } else {
+      map.set(s.period, {
+        period: s.period,
+        start: s.time_start || "",
+        end: s.time_end || "",
+      });
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => a.period - b.period);
+}
+
 /**
  * 1. Mengambil Konteks Penugasan Mapel & Guru per Kelas
  */
@@ -178,7 +198,7 @@ export const getTimetableContext = createServerFn({ method: "POST" })
       academicYear: data.academicYear,
       semester: data.semester,
       days: TIMETABLE_DAYS,
-      periods: DEFAULT_PERIODS,
+      periods: mergePeriods(slots),
       classes,
       subjects,
       teachers,
@@ -199,12 +219,13 @@ export const saveTimetableSlot = createServerFn({ method: "POST" })
         semester: z.enum(["1", "2"]).default("1"),
         class_name: z.string().min(1),
         day: z.enum(["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Ahad"]),
-        period: z.coerce.number().min(1).max(8),
+        period: z.coerce.number().min(1).max(24),
         time_start: z.string().min(1),
         time_end: z.string().min(1),
-        subject_id: z.string().min(1),
-        subject_code: z.string().min(1),
-        subject_name: z.string().min(1),
+        slot_type: z.enum(["kbm", "istirahat"]).default("kbm"),
+        subject_id: z.string().default(""),
+        subject_code: z.string().default(""),
+        subject_name: z.string().default(""),
         teacher_id: z.string().nullable().optional(),
         teacher_name: z.string().nullable().optional(),
         room: z.string().nullable().optional(),
@@ -222,6 +243,7 @@ export const saveTimetableSlot = createServerFn({ method: "POST" })
       period: data.period,
       time_start: data.time_start,
       time_end: data.time_end,
+      slot_type: data.slot_type,
       subject_id: data.subject_id,
       subject_code: data.subject_code,
       subject_name: data.subject_name,
@@ -282,19 +304,23 @@ export const getMyTimetable = createServerFn({ method: "POST" })
       .maybeSingle();
 
     const isStudent = myProfile?.account_type === "santri";
-    const studentClass = myProfile?.class || "VII A";
+    const studentClass: string | null = myProfile?.class ?? null;
 
     const slots = isStudent
-      ? await getTimetableSlots(data.academicYear, data.semester, studentClass)
+      ? studentClass
+        ? await getTimetableSlots(data.academicYear, data.semester, studentClass)
+        : []
       : await getTimetableSlots(data.academicYear, data.semester, undefined, ctx.userId);
 
     return {
       isStudent,
       profile: myProfile,
+      studentClass,
+      classMissing: isStudent && !studentClass,
       academicYear: data.academicYear,
       semester: data.semester,
       days: TIMETABLE_DAYS,
-      periods: DEFAULT_PERIODS,
+      periods: mergePeriods(slots),
       slots,
     };
   });

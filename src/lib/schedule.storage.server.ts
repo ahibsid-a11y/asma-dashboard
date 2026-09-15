@@ -15,6 +15,8 @@ export type ClassSubjectAssignment = {
 
 export type TimetableDay = "Senin" | "Selasa" | "Rabu" | "Kamis" | "Jumat" | "Sabtu" | "Ahad";
 
+export type TimetableSlotType = "kbm" | "istirahat";
+
 export type TimetableSlot = {
   id: string;
   academic_year: string;
@@ -24,6 +26,7 @@ export type TimetableSlot = {
   period: number;
   time_start: string;
   time_end: string;
+  slot_type: TimetableSlotType;
   subject_id: string;
   subject_code: string;
   subject_name: string;
@@ -176,7 +179,7 @@ export async function saveSlot(
   const db = await admin();
   const { id, ...fields } = data;
 
-  if (fields.teacher_id) {
+  if (fields.teacher_id && fields.slot_type !== "istirahat") {
     const conflict = await checkTeacherConflict(
       fields.academic_year,
       fields.semester,
@@ -198,6 +201,7 @@ export async function saveSlot(
     period: fields.period,
     time_start: fields.time_start ?? "",
     time_end: fields.time_end ?? "",
+    slot_type: fields.slot_type ?? "kbm",
     subject_id: fields.subject_id ?? "",
     subject_code: fields.subject_code ?? "",
     subject_name: fields.subject_name ?? "",
