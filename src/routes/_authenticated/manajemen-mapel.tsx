@@ -41,11 +41,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
+import { manageSubject } from "@/lib/grades.functions";
 import {
   deleteClassSubjectAssignment,
   getSubjectAssignmentContext,
   saveClassSubjectAssignment,
 } from "@/lib/schedule.functions";
+
 
 export const Route = createFileRoute("/_authenticated/manajemen-mapel")({
   head: () => ({
@@ -88,6 +90,61 @@ function ManajemenMapelPage() {
   // Copy Dialog State
   const [copyDialogOpen, setCopyDialogOpen] = useState(false);
   const [targetClass, setTargetClass] = useState<string>("VII B");
+
+  // Dialog buat mapel baru (manual, belum ada di katalog)
+  const [newSubjectOpen, setNewSubjectOpen] = useState(false);
+  const [newCode, setNewCode] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newGroup, setNewGroup] = useState<"Umum" | "Diniyyah" | "Bahasa Arab" | "Muatan Lokal">("Umum");
+  const [newKkm, setNewKkm] = useState<number>(75);
+  const [newJp, setNewJp] = useState<number>(2);
+  const createSubjectFn = useServerFn(manageSubject);
+
+  const createSubjectMutation = useMutation({
+    mutationFn: async () => {
+      if (!newName.trim() || newName.trim().length < 3) {
+        throw new Error("Nama mata pelajaran minimal 3 huruf");
+      }
+      const res: any = await createSubjectFn({
+        data: {
+          action: "create",
+          code: (newCode.trim() || newName.trim().slice(0, 4)).toUpperCase(),
+          name: newName.trim(),
+          group: newGroup,
+          kkm: Number(newKkm) || 75,
+        },
+      });
+      const created = res?.created;
+      if (created?.id && selectedClass) {
+        await saveAssignment({
+          data: {
+            academic_year: academicYear,
+            class_name: selectedClass,
+            subject_id: created.id,
+            subject_code: created.code,
+            subject_name: created.name,
+            subject_group: created.group,
+            teacher_id: null,
+            teacher_name: null,
+            jp_per_week: Number(newJp) || 2,
+          },
+        });
+      }
+      return created;
+    },
+    onSuccess: () => {
+      toast.success("Mata pelajaran baru dibuat dan langsung ditambahkan ke kelas ini");
+      setNewSubjectOpen(false);
+      setNewCode("");
+      setNewName("");
+      setNewKkm(75);
+      setNewJp(2);
+      queryClient.invalidateQueries({ queryKey: ["schedule-assignment-context"] });
+      queryClient.invalidateQueries({ queryKey: ["class-subjects"] });
+    },
+    onError: (err: any) => toast.error(err.message || "Gagal membuat mata pelajaran"),
+  });
+
 
   const contextQuery = useQuery({
     queryKey: ["schedule-assignment-context", academicYear, selectedClass],
