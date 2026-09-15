@@ -51,6 +51,7 @@ import {
   calculateLetterGrade,
   getAcademicSubjects,
   getInputGradesSheet,
+  listClassOptions,
   manageLearningObjective,
   manageSubject,
   saveGradesBatch,
