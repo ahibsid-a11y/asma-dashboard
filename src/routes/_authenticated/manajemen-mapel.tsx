@@ -96,6 +96,12 @@ function ManajemenMapelPage() {
 
   const subjects = contextQuery.data?.subjects || [];
   const classes = contextQuery.data?.classes || [];
+
+  useEffect(() => {
+    if (!selectedClass && classes.length > 0 && classes[0]?.name) {
+      setSelectedClass(classes[0].name as string);
+    }
+  }, [classes, selectedClass]);
   const teachers = contextQuery.data?.teachers || [];
   const assignments = contextQuery.data?.assignments || [];
 
