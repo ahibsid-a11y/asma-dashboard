@@ -700,7 +700,7 @@ export const getEkskulRecapDataFn = createServerFn({ method: "POST" })
 
 export const getCoachOptionsFn = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async () => {
+  .handler(async ({ context }) => {
     const supabaseAdmin = (context as any).supabase;
 
     // Ambil guru, pembina ekskul, wali kelas, atau tendik
