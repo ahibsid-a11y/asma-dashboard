@@ -227,27 +227,17 @@ export const getLearningObjectives = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    let tps: LearningObjective[] = [];
-    try {
-      const { data: tpData, error } = await (supabaseAdmin as any)
-        .from("learning_objectives")
-        .select("*")
-        .eq("subject_id", data.subject_id)
-        .eq("class_name", data.class_name)
-        .eq("semester", data.semester)
-        .eq("academic_year", data.academic_year)
-        .order("order_index", { ascending: true });
-
-      if (!error && tpData && tpData.length > 0) {
-        tps = tpData as LearningObjective[];
-      }
-    } catch {}
-
-    if (tps.length === 0) {
-      const storage = await import("./curriculum.storage.server");
-      const cTps = storage.getTps(data.subject_id, data.class_name, data.academic_year);
-      tps = cTps.filter((t) => t.semester === data.semester) as any;
-    }
+    const { classNameVariants } = await import("./curriculum-plan.server");
+    const { data: tpData, error } = await (supabaseAdmin as any)
+      .from("learning_objectives")
+      .select("*")
+      .eq("subject_id", data.subject_id)
+      .in("class_name", classNameVariants(data.class_name))
+      .eq("semester", data.semester)
+      .eq("academic_year", data.academic_year)
+      .order("order_index", { ascending: true });
+    if (error) throw new Error(error.message);
+    const tps: LearningObjective[] = (tpData ?? []) as LearningObjective[];
 
     return tps;
   });
