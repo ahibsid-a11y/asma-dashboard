@@ -681,13 +681,16 @@ export const getClassGradesRecap = createServerFn({ method: "POST" })
     const subjects = await ensureSubjects(supabaseAdmin);
     const activeSubjects = subjects.filter((s) => s.is_active);
 
+    const { classNameVariants } = await import("./curriculum-plan.server");
+    const classVariants = classNameVariants(data.class_name);
+
     // 2. Ambil santri di kelas tersebut
     const { data: students } = await (supabaseAdmin as any)
       .from("profiles")
       .select("id,name,display_name,nis_nip,dorm,class,avatar")
       .eq("account_type", "santri")
       .eq("status", "Aktif")
-      .eq("class", data.class_name)
+      .in("class", classVariants)
       .order("name", { ascending: true });
 
     const studentIds = (students ?? []).map((s: any) => s.id);
