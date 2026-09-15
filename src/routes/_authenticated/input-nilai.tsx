@@ -119,6 +119,20 @@ function InputNilaiPage() {
     queryFn: () => fetchSubjects(),
   });
 
+  // Daftar kelas resmi (master Manajemen Kelas)
+  const fetchClasses = useServerFn(listClassOptions);
+  const classesQuery = useQuery({
+    queryKey: ["class-options"],
+    queryFn: () => fetchClasses(),
+  });
+  const classOptions = classesQuery.data ?? [];
+
+  useEffect(() => {
+    if (!selectedClass && classOptions.length > 0) {
+      setSelectedClass(classOptions[0]!);
+    }
+  }, [classOptions, selectedClass]);
+
   const subjects = subjectsQuery.data ?? [];
 
   // Auto-pilih mapel pertama jika belum dipilih
