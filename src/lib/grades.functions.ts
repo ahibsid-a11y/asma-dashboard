@@ -1000,3 +1000,577 @@ export const getMyGrades = createServerFn({ method: "GET" })
       overallAverage: gpa,
     };
   });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPER: Resolve Wali Kelas & Kepala Sekolah from database
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function resolveSignatures(supabaseAdmin: any, className: string | null) {
+  let homeroomTeacherName = "Wali Kelas";
+  let homeroomTeacherNiy = "-";
+  let headmasterName = "Kepala Sekolah";
+  let headmasterNiy = "-";
+
+  try {
+    // Get homeroom teacher from classes table → join profiles
+    if (className) {
+      const { data: classRow } = await (supabaseAdmin as any)
+        .from("classes")
+        .select("homeroom_teacher_id")
+        .eq("name", className)
+        .maybeSingle();
+
+      if (classRow?.homeroom_teacher_id) {
+        const { data: teacher } = await (supabaseAdmin as any)
+          .from("profiles")
+          .select("name,nis_nip")
+          .eq("id", classRow.homeroom_teacher_id)
+          .maybeSingle();
+
+        if (teacher) {
+          homeroomTeacherName = teacher.name || "Wali Kelas";
+          homeroomTeacherNiy = teacher.nis_nip || "-";
+        }
+      }
+    }
+
+    // Get Kepala Sekolah
+    const { data: ks } = await (supabaseAdmin as any)
+      .from("profiles")
+      .select("name,nis_nip")
+      .eq("account_type", "kepala_sekolah")
+      .eq("status", "Aktif")
+      .limit(1);
+
+    if (ks && ks[0]) {
+      headmasterName = ks[0].name || "Kepala Sekolah";
+      headmasterNiy = ks[0].nis_nip || "-";
+    }
+  } catch {
+    // ignore
+  }
+
+  return { homeroomTeacherName, homeroomTeacherNiy, headmasterName, headmasterNiy };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPER: Resolve attendance data for a student within a semester
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function resolveAttendance(supabaseAdmin: any, studentId: string, semester: string, academicYear: string) {
+  let sakit = 0;
+  let izin = 0;
+  let alpa = 0;
+
+  try {
+    // Determine date range based on semester and academic year
+    const [startYear] = academicYear.split("/").map(Number);
+    let dateFrom: string;
+    let dateTo: string;
+
+    if (semester === "1") {
+      dateFrom = `${startYear}-07-01`;
+      dateTo = `${startYear}-12-31`;
+    } else {
+      dateFrom = `${(startYear || 0) + 1}-01-01`;
+      dateTo = `${(startYear || 0) + 1}-06-30`;
+    }
+
+    const { data: att } = await (supabaseAdmin as any)
+      .from("attendance_records")
+      .select("status")
+      .eq("user_id", studentId)
+      .gte("attendance_date", dateFrom)
+      .lte("attendance_date", dateTo);
+
+    for (const a of att ?? []) {
+      const s = (a.status || "").toLowerCase();
+      if (s === "sakit") sakit++;
+      else if (s === "izin") izin++;
+      else if (s === "alfa" || s === "alpha" || s === "alpa") alpa++;
+    }
+  } catch {
+    // ignore
+  }
+
+  return { sakit, izin, alpa };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 10. RAPOR PONDOK — Seluruh mapel (Umum + Diniyyah + Bahasa Arab)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const getReportCardPondok = createServerFn({ method: "POST" })
+  .validator((data: unknown) =>
+    z
+      .object({
+        student_id: z.string().min(1),
+        semester: z.string().default("1"),
+        academic_year: z.string().default("2026/2027"),
+      })
+      .parse(data),
+  )
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // 1. Profil santri
+    const { data: student, error: stdErr } = await (supabaseAdmin as any)
+      .from("profiles")
+      .select("id,name,display_name,nis_nip,dorm,class,avatar,halaqoh")
+      .eq("id", data.student_id)
+      .maybeSingle();
+
+    if (stdErr || !student) throw new Error("Santri tidak ditemukan");
+
+    // 2. Daftar mapel aktif
+    const allSubjects = await ensureSubjects(supabaseAdmin);
+    const activeSubjects = allSubjects.filter((s) => s.is_active);
+
+    // 3. Nilai summaries
+    const { data: summaries } = await (supabaseAdmin as any)
+      .from("student_subject_summaries")
+      .select("*")
+      .eq("student_id", data.student_id)
+      .eq("semester", data.semester)
+      .eq("academic_year", data.academic_year);
+
+    const summaryMap = new Map<string, StudentSubjectSummary>();
+    for (const sum of summaries ?? []) {
+      summaryMap.set(sum.subject_id, sum as StudentSubjectSummary);
+    }
+
+    // 4. Nilai per-TP
+    let tpDetailsBySubject: Record<string, { code: string; desc: string; score: number }[]> = {};
+    try {
+      const { data: tpGrades } = await (supabaseAdmin as any)
+        .from("student_tp_grades")
+        .select(`
+          score,
+          learning_objectives!inner (
+            id, subject_id, code, description, order_index
+          )
+        `)
+        .eq("student_id", data.student_id);
+
+      for (const g of tpGrades ?? []) {
+        const lo = g.learning_objectives;
+        if (!lo) continue;
+        if (!tpDetailsBySubject[lo.subject_id]) {
+          tpDetailsBySubject[lo.subject_id] = [];
+        }
+        tpDetailsBySubject[lo.subject_id]!.push({
+          code: lo.code,
+          desc: lo.description,
+          score: Number(g.score),
+        });
+      }
+    } catch {}
+
+    // 5. Kelompokkan mapel
+    const grouped = {
+      umum: [] as any[],
+      diniyyah: [] as any[],
+      bahasa_arab: [] as any[],
+    };
+
+    for (const sbj of activeSubjects) {
+      const sum = summaryMap.get(sbj.id);
+      const tpList = (tpDetailsBySubject[sbj.id] || []).sort((a, b) => a.code.localeCompare(b.code));
+      const finalScore = sum?.final_score ?? 0;
+      const letterGrade = sum?.letter_grade ?? "-";
+
+      const item = {
+        subject: sbj,
+        finalScore,
+        letterGrade,
+        avgTpScore: sum?.avg_tp_score ?? 0,
+        stsScore: sum?.sts_score ?? 0,
+        sasScore: sum?.sas_score ?? 0,
+        highestDesc: sum?.highest_tp_desc || null,
+        lowestDesc: sum?.lowest_tp_desc || null,
+        teacherNotes: sum?.teacher_notes || null,
+        tpList,
+      };
+
+      if (sbj.group === "Umum") grouped.umum.push(item);
+      else if (sbj.group === "Diniyyah") grouped.diniyyah.push(item);
+      else if (sbj.group === "Bahasa Arab") grouped.bahasa_arab.push(item);
+    }
+
+    // 6. Kehadiran
+    const attendance = await resolveAttendance(supabaseAdmin, data.student_id, data.semester, data.academic_year);
+
+    // 7. Wali Kelas & Kepala Sekolah dari DB
+    const signatures = await resolveSignatures(supabaseAdmin, student.class);
+
+    return {
+      reportType: "pondok" as const,
+      student,
+      semester: data.semester,
+      academic_year: data.academic_year,
+      school: {
+        name: "SMPIT Putra Al-Hanif",
+        fullName: "AL-HANIF ISLAMIC BOARDING SCHOOL (AHIBS)",
+        foundation: "Yayasan Al-Hanif Cilegon",
+        address: "Jl. KH. Abdul Latif, Link. Cibeber, Kel. Cibeber, Kec. Cibeber, Kota Cilegon, Banten 42425",
+        npsn: "69989823",
+        accreditation: "A",
+        logo: "/logo-alhanif.png",
+      },
+      groupedSubjects: grouped,
+      attendance,
+      signatures,
+    };
+  });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 11. RAPOR DINAS — Format Kemendikdasmen
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const getReportCardDinas = createServerFn({ method: "POST" })
+  .validator((data: unknown) =>
+    z
+      .object({
+        student_id: z.string().min(1),
+        semester: z.string().default("1"),
+        academic_year: z.string().default("2026/2027"),
+      })
+      .parse(data),
+  )
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // 1. Profil santri
+    const { data: student, error: stdErr } = await (supabaseAdmin as any)
+      .from("profiles")
+      .select("id,name,display_name,nis_nip,dorm,class,avatar,halaqoh")
+      .eq("id", data.student_id)
+      .maybeSingle();
+
+    if (stdErr || !student) throw new Error("Santri tidak ditemukan");
+
+    // 2. Daftar mapel aktif
+    const allSubjects = await ensureSubjects(supabaseAdmin);
+    const activeSubjects = allSubjects.filter((s) => s.is_active);
+
+    // 3. Nilai summaries
+    const { data: summaries } = await (supabaseAdmin as any)
+      .from("student_subject_summaries")
+      .select("*")
+      .eq("student_id", data.student_id)
+      .eq("semester", data.semester)
+      .eq("academic_year", data.academic_year);
+
+    const summaryMap = new Map<string, StudentSubjectSummary>();
+    for (const sum of summaries ?? []) {
+      summaryMap.set(sum.subject_id, sum as StudentSubjectSummary);
+    }
+
+    // 4. Mapel Kemendikdasmen (group Umum)
+    const umumSubjects = activeSubjects.filter((s) => s.group === "Umum");
+    const diniyyahSubjects = activeSubjects.filter((s) => s.group === "Diniyyah");
+    const bahasaArabSubjects = activeSubjects.filter((s) => s.group === "Bahasa Arab");
+
+    // Build items for Umum
+    const umumItems = umumSubjects.map((sbj) => {
+      const sum = summaryMap.get(sbj.id);
+      return {
+        subject: sbj,
+        finalScore: sum?.final_score ?? 0,
+        letterGrade: sum?.letter_grade ?? "-",
+        highestDesc: sum?.highest_tp_desc || null,
+        lowestDesc: sum?.lowest_tp_desc || null,
+        teacherNotes: sum?.teacher_notes || null,
+      };
+    });
+
+    // 5. Calculate PAI = average of Diniyyah subjects
+    let paiScore = 0;
+    let paiCount = 0;
+    const paiComponents: { name: string; score: number }[] = [];
+    for (const sbj of diniyyahSubjects) {
+      const sum = summaryMap.get(sbj.id);
+      const score = sum?.final_score ?? 0;
+      paiComponents.push({ name: sbj.name, score });
+      if (score > 0) {
+        paiScore += score;
+        paiCount++;
+      }
+    }
+    const paiFinalScore = paiCount > 0 ? Math.round((paiScore / paiCount) * 10) / 10 : 0;
+    const paiLetterGrade = paiFinalScore > 0 ? calculateLetterGrade(paiFinalScore).grade : "-";
+
+    // Best performing diniyyah
+    const bestDiniyyah = paiComponents.reduce((best, c) => (c.score > best.score ? c : best), { name: "", score: 0 });
+    const worstDiniyyah = paiComponents.filter(c => c.score > 0).reduce((worst, c) => (c.score < worst.score ? c : worst), { name: "", score: 999 });
+
+    const paiItem = {
+      subject: {
+        id: "pai_combined",
+        code: "PAI",
+        name: "Pendidikan Agama Islam & Budi Pekerti",
+        group: "Umum" as SubjectGroup,
+        kkm: 75,
+        order_index: 1,
+        is_active: true,
+      },
+      finalScore: paiFinalScore,
+      letterGrade: paiLetterGrade,
+      highestDesc: bestDiniyyah.score >= 75
+        ? `Menunjukkan penguasaan yang sangat baik dalam ${bestDiniyyah.name}.`
+        : null,
+      lowestDesc: worstDiniyyah.score < 75 && worstDiniyyah.score < 999
+        ? `Perlu bimbingan dan peningkatan pemahaman dalam ${worstDiniyyah.name}.`
+        : null,
+      teacherNotes: null,
+      components: paiComponents,
+    };
+
+    // 6. Calculate Mulok = average of Bahasa Arab subjects
+    let mulokScore = 0;
+    let mulokCount = 0;
+    const mulokComponents: { name: string; score: number }[] = [];
+    for (const sbj of bahasaArabSubjects) {
+      const sum = summaryMap.get(sbj.id);
+      const score = sum?.final_score ?? 0;
+      mulokComponents.push({ name: sbj.name, score });
+      if (score > 0) {
+        mulokScore += score;
+        mulokCount++;
+      }
+    }
+    const mulokFinalScore = mulokCount > 0 ? Math.round((mulokScore / mulokCount) * 10) / 10 : 0;
+    const mulokLetterGrade = mulokFinalScore > 0 ? calculateLetterGrade(mulokFinalScore).grade : "-";
+
+    const bestMulok = mulokComponents.reduce((best, c) => (c.score > best.score ? c : best), { name: "", score: 0 });
+    const worstMulok = mulokComponents.filter(c => c.score > 0).reduce((worst, c) => (c.score < worst.score ? c : worst), { name: "", score: 999 });
+
+    const mulokItem = {
+      subject: {
+        id: "mulok_combined",
+        code: "MULOK",
+        name: "Muatan Lokal (Bahasa Arab)",
+        group: "Muatan Lokal" as SubjectGroup,
+        kkm: 75,
+        order_index: 90,
+        is_active: true,
+      },
+      finalScore: mulokFinalScore,
+      letterGrade: mulokLetterGrade,
+      highestDesc: bestMulok.score >= 75
+        ? `Menunjukkan penguasaan yang sangat baik dalam ${bestMulok.name}.`
+        : null,
+      lowestDesc: worstMulok.score < 75 && worstMulok.score < 999
+        ? `Perlu bimbingan dan peningkatan pemahaman dalam ${worstMulok.name}.`
+        : null,
+      teacherNotes: null,
+      components: mulokComponents,
+    };
+
+    // 7. Merge: Replace original PAI with combined PAI, filter out diniyyah/arab subjects, add Mulok
+    const dinasSubjects = umumItems.filter((i) => i.subject.code !== "PAI");
+    dinasSubjects.unshift(paiItem); // PAI first
+    dinasSubjects.push(mulokItem); // Mulok last
+
+    // 8. Kokurikuler (placeholder — will be connected to extracurricular feature later)
+    const kokurikuler: { name: string; grade: string; description: string }[] = [];
+
+    // 9. Ekstrakurikuler (placeholder)
+    const ekstrakurikuler: { name: string; grade: string; description: string }[] = [];
+
+    // 10. Kehadiran
+    const attendance = await resolveAttendance(supabaseAdmin, data.student_id, data.semester, data.academic_year);
+
+    // 11. Tanda Tangan
+    const signatures = await resolveSignatures(supabaseAdmin, student.class);
+
+    return {
+      reportType: "dinas" as const,
+      student,
+      semester: data.semester,
+      academic_year: data.academic_year,
+      school: {
+        name: "SMPIT Putra Al-Hanif",
+        fullName: "AL-HANIF ISLAMIC BOARDING SCHOOL (AHIBS)",
+        foundation: "Yayasan Al-Hanif Cilegon",
+        address: "Jl. KH. Abdul Latif, Link. Cibeber, Kel. Cibeber, Kec. Cibeber, Kota Cilegon, Banten 42425",
+        npsn: "69989823",
+        accreditation: "A",
+        logo: "/logo-alhanif.png",
+      },
+      subjects: dinasSubjects,
+      kokurikuler,
+      ekstrakurikuler,
+      attendance,
+      signatures,
+    };
+  });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 12. RAPOR KESANTRIAN — Ringkasan Mutabaah per Kategori
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const getReportCardKesantrian = createServerFn({ method: "POST" })
+  .validator((data: unknown) =>
+    z
+      .object({
+        student_id: z.string().min(1),
+        semester: z.string().default("1"),
+        academic_year: z.string().default("2026/2027"),
+      })
+      .parse(data),
+  )
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // 1. Profil santri
+    const { data: student, error: stdErr } = await (supabaseAdmin as any)
+      .from("profiles")
+      .select("id,name,display_name,nis_nip,dorm,class,avatar,halaqoh")
+      .eq("id", data.student_id)
+      .maybeSingle();
+
+    if (stdErr || !student) throw new Error("Santri tidak ditemukan");
+
+    // 2. Determine date range for semester
+    const [startYear] = data.academic_year.split("/").map(Number);
+    let dateFrom: string;
+    let dateTo: string;
+    if (data.semester === "1") {
+      dateFrom = `${startYear}-07-01`;
+      dateTo = `${startYear}-12-31`;
+    } else {
+      dateFrom = `${(startYear || 0) + 1}-01-01`;
+      dateTo = `${(startYear || 0) + 1}-06-30`;
+    }
+
+    // 3. Get mutabaah activities
+    let activities: { id: string; title: string; category: string; order_index: number }[] = [];
+    try {
+      const { data: actData } = await (supabaseAdmin as any)
+        .from("mutabaah_activities")
+        .select("id,title,category,order_index")
+        .eq("is_active", true)
+        .order("order_index", { ascending: true });
+      if (actData) activities = actData;
+    } catch {}
+
+    // 4. Get mutabaah records for this student in date range
+    let records: { activity_id: string; status: boolean; date: string }[] = [];
+    try {
+      const { data: recData } = await (supabaseAdmin as any)
+        .from("mutabaah_records")
+        .select("activity_id,status,date")
+        .eq("student_id", data.student_id)
+        .gte("date", dateFrom)
+        .lte("date", dateTo);
+      if (recData) records = recData;
+    } catch {}
+
+    // 5. Count days with any records
+    const uniqueDates = new Set(records.map((r) => r.date));
+    const totalDays = uniqueDates.size || 1;
+
+    // 6. Build category summary
+    const categoryMap = new Map<string, { total: number; completed: number; activities: string[] }>();
+
+    for (const act of activities) {
+      if (!categoryMap.has(act.category)) {
+        categoryMap.set(act.category, { total: 0, completed: 0, activities: [] });
+      }
+      const cat = categoryMap.get(act.category)!;
+      cat.activities.push(act.title);
+
+      // Count how many days this activity was completed
+      const actRecords = records.filter((r) => r.activity_id === act.id && r.status);
+      cat.total += totalDays;
+      cat.completed += actRecords.length;
+    }
+
+    const categorySummary = Array.from(categoryMap.entries()).map(([category, stats]) => {
+      const percentage = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
+      let grade: string;
+      let label: string;
+      if (percentage >= 90) { grade = "A"; label = "Sangat Baik"; }
+      else if (percentage >= 80) { grade = "B"; label = "Baik"; }
+      else if (percentage >= 70) { grade = "C"; label = "Cukup"; }
+      else if (percentage >= 60) { grade = "D"; label = "Kurang"; }
+      else { grade = "E"; label = "Sangat Kurang"; }
+
+      return {
+        category,
+        activities: stats.activities,
+        totalExpected: stats.total,
+        totalCompleted: stats.completed,
+        percentage,
+        grade,
+        label,
+      };
+    });
+
+    // 7. Overall mutabaah score
+    const totalExpected = categorySummary.reduce((s, c) => s + c.totalExpected, 0);
+    const totalCompleted = categorySummary.reduce((s, c) => s + c.totalCompleted, 0);
+    const overallPercentage = totalExpected > 0 ? Math.round((totalCompleted / totalExpected) * 100) : 0;
+
+    // 8. Musyrif info from dorm
+    let musyrifName = "Musyrif Asrama";
+    let musyrifNiy = "-";
+    try {
+      if (student.dorm) {
+        const { data: dormRow } = await (supabaseAdmin as any)
+          .from("dorms")
+          .select("musyrif_id")
+          .eq("name", student.dorm)
+          .maybeSingle();
+
+        if (dormRow?.musyrif_id) {
+          const { data: musyrif } = await (supabaseAdmin as any)
+            .from("profiles")
+            .select("name,nis_nip")
+            .eq("id", dormRow.musyrif_id)
+            .maybeSingle();
+          if (musyrif) {
+            musyrifName = musyrif.name || "Musyrif Asrama";
+            musyrifNiy = musyrif.nis_nip || "-";
+          }
+        }
+      }
+    } catch {}
+
+    // 9. Signatures
+    const signatures = await resolveSignatures(supabaseAdmin, student.class);
+
+    // 10. Kehadiran
+    const attendance = await resolveAttendance(supabaseAdmin, data.student_id, data.semester, data.academic_year);
+
+    return {
+      reportType: "kesantrian" as const,
+      student,
+      semester: data.semester,
+      academic_year: data.academic_year,
+      school: {
+        name: "SMPIT Putra Al-Hanif",
+        fullName: "AL-HANIF ISLAMIC BOARDING SCHOOL (AHIBS)",
+        foundation: "Yayasan Al-Hanif Cilegon",
+        address: "Jl. KH. Abdul Latif, Link. Cibeber, Kel. Cibeber, Kec. Cibeber, Kota Cilegon, Banten 42425",
+        npsn: "69989823",
+        accreditation: "A",
+        logo: "/logo-alhanif.png",
+      },
+      mutabaah: {
+        totalDays,
+        categorySummary,
+        overallPercentage,
+      },
+      attendance,
+      musyrif: {
+        name: musyrifName,
+        niy: musyrifNiy,
+      },
+      signatures,
+    };
+  });
