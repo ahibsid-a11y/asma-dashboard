@@ -186,6 +186,14 @@ function JadwalPelajaranPage() {
     },
   });
 
+  // Pastikan kelas terpilih benar-benar ada pada data master kelas
+  useEffect(() => {
+    if (!isAdmin || classes.length === 0) return;
+    if (!classes.some((c: any) => c.name === selectedClass)) {
+      setSelectedClass(classes[0].name);
+    }
+  }, [isAdmin, classes, selectedClass]);
+
   const handleOpenSlot = (day: TimetableDay, periodObj: any) => {
     if (!isAdmin) return; // Only admin/curriculum can edit
     setTargetDay(day);
