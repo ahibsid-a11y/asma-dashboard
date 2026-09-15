@@ -372,7 +372,7 @@ export const manageLearningObjective = createServerFn({ method: "POST" })
 /** Daftar kelas resmi untuk dropdown Input Nilai & Perangkat Ajar */
 export const listClassOptions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async () => {
+  .handler(async (): Promise<string[]> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data } = await (supabaseAdmin as any)
       .from("classes")
