@@ -410,9 +410,9 @@ function InputNilaiPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {["7A", "7B", "8A", "8B", "9A", "9B"].map((c) => (
+                    {classOptions.map((c) => (
                       <SelectItem key={c} value={c}>
-                        Kelas {c}
+                        {c}
                       </SelectItem>
                     ))}
                   </SelectContent>
