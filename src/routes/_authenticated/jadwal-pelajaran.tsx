@@ -190,16 +190,18 @@ function JadwalPelajaranPage() {
     if (!isAdmin) return; // Only admin/curriculum can edit
     setTargetDay(day);
     setTargetPeriod(periodObj.period);
-    setTimeStart(periodObj.start);
-    setTimeEnd(periodObj.end);
+    setTimeStart(periodObj.start || "");
+    setTimeEnd(periodObj.end || "");
 
     // Check if slot already exists
     const existing = slots.find((s: any) => s.day === day && s.period === periodObj.period);
     if (existing) {
+      setSlotType(((existing as any).slot_type as "kbm" | "istirahat") || "kbm");
       setSelectedSubjectId(existing.subject_id);
       setSelectedTeacherId(existing.teacher_id || "");
       setSlotRoom(existing.room || "");
     } else {
+      setSlotType("kbm");
       setSelectedSubjectId(subjects[0]?.id || "");
       setSelectedTeacherId("");
       setSlotRoom("");
@@ -209,9 +211,40 @@ function JadwalPelajaranPage() {
 
   const handleSaveSlot = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (slotType === "istirahat") {
+      if (!timeStart || !timeEnd) {
+        toast.error("Isi jam mulai dan jam selesai istirahat");
+        return;
+      }
+      saveMutation.mutate({
+        data: {
+          academic_year: academicYear,
+          semester,
+          class_name: selectedClass,
+          day: targetDay,
+          period: targetPeriod,
+          time_start: timeStart,
+          time_end: timeEnd,
+          slot_type: "istirahat",
+          subject_id: "istirahat",
+          subject_code: "IST",
+          subject_name: "Istirahat",
+          teacher_id: null,
+          teacher_name: null,
+          room: slotRoom || null,
+        },
+      });
+      return;
+    }
+
     const subject = subjects.find((s: any) => s.id === selectedSubjectId);
     if (!subject) {
       toast.error("Pilih mata pelajaran terlebih dahulu");
+      return;
+    }
+    if (!timeStart || !timeEnd) {
+      toast.error("Isi jam mulai dan jam selesai");
       return;
     }
     const teacher = teachers.find((t: any) => t.id === selectedTeacherId);
@@ -225,6 +258,7 @@ function JadwalPelajaranPage() {
         period: targetPeriod,
         time_start: timeStart,
         time_end: timeEnd,
+        slot_type: "kbm",
         subject_id: subject.id,
         subject_code: subject.code,
         subject_name: subject.name,
