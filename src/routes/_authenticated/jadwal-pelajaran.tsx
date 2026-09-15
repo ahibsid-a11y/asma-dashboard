@@ -388,9 +388,29 @@ function JadwalPelajaranPage() {
                 </CardTitle>
               </div>
               {isAdmin && (
-                <span className="text-xs text-muted-foreground italic">
-                  * Klik slot mana pun untuk mengubah atau mengisi mata pelajaran
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="hidden text-xs text-muted-foreground italic md:inline">
+                    * Klik slot untuk mengisi mapel atau istirahat
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const next =
+                        periods.reduce((max, p) => (p.period > max ? p.period : max), 0) + 1;
+                      if (next > 24) {
+                        toast.error("Maksimal 24 jam pelajaran per hari");
+                        return;
+                      }
+                      setExtraPeriods((prev) => [...prev, next]);
+                      toast.success(`Jam ke-${next} ditambahkan. Klik slotnya untuk mengisi.`);
+                    }}
+                  >
+                    <Plus className="mr-1 h-3.5 w-3.5" />
+                    Tambah Jam ke-
+                  </Button>
+                </div>
               )}
             </div>
           </CardHeader>
