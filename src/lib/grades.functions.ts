@@ -709,7 +709,7 @@ export const getClassGradesRecap = createServerFn({ method: "POST" })
     const { data: summaries } = await (supabaseAdmin as any)
       .from("student_subject_summaries")
       .select("*")
-      .eq("class_name", data.class_name)
+      .in("class_name", classVariants)
       .eq("semester", data.semester)
       .eq("academic_year", data.academic_year)
       .in("student_id", studentIds);
