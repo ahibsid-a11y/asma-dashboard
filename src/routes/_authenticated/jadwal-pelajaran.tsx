@@ -452,7 +452,11 @@ function JadwalPelajaranPage() {
                             isAdmin ? "cursor-pointer hover:bg-primary/5" : ""
                           }`}
                         >
-                          {slot ? (
+                          {slot && (slot as any).slot_type === "istirahat" ? (
+                            <div className="flex h-14 items-center justify-center rounded-md border border-dashed border-amber-400/70 bg-amber-50 p-2 text-[11px] font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-400">
+                              ☕ Istirahat
+                            </div>
+                          ) : slot ? (
                             <div className="rounded-md border border-border/80 bg-card p-2 shadow-2xs space-y-1">
                               <div className="flex items-center justify-between gap-1">
                                 <Badge
