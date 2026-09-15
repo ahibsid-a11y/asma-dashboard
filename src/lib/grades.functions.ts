@@ -543,12 +543,14 @@ export const saveGradesBatch = createServerFn({ method: "POST" })
     const ctx = context as Ctx;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+    const { classNameVariants } = await import("./curriculum-plan.server");
+
     // Ambil TP untuk menyusun deskripsi capaian
     const { data: tps } = await (supabaseAdmin as any)
       .from("learning_objectives")
       .select("id,code,description")
       .eq("subject_id", data.subject_id)
-      .eq("class_name", data.class_name)
+      .in("class_name", classNameVariants(data.class_name))
       .eq("semester", data.semester)
       .eq("academic_year", data.academic_year);
 
