@@ -651,9 +651,9 @@ function PerangkatAjarPage() {
                     <SelectValue placeholder="Pilih Kelas" />
                   </SelectTrigger>
                   <SelectContent>
-                    {CLASS_OPTIONS.map((cls) => (
+                    {classOptions.map((cls) => (
                       <SelectItem key={cls} value={cls}>
-                        Kelas {cls} (Putra)
+                        {cls}
                       </SelectItem>
                     ))}
                   </SelectContent>
