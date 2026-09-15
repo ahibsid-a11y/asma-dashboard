@@ -1777,6 +1777,7 @@ export type Database = {
         | "musyrif_halaqoh"
         | "wali_kelas"
         | "guru_mapel"
+        | "pembina_ekskul"
         | "kepala_tu"
         | "kepala_rt_sarpras"
         | "tendik"
@@ -1931,6 +1932,7 @@ export const Constants = {
         "musyrif_halaqoh",
         "wali_kelas",
         "guru_mapel",
+        "pembina_ekskul",
         "kepala_tu",
         "kepala_rt_sarpras",
         "tendik",

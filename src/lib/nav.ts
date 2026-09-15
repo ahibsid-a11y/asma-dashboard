@@ -1,4 +1,5 @@
 import {
+  Activity,
   BedDouble,
   BookMarked,
   BookOpen,
@@ -58,6 +59,11 @@ export type NavKey =
   | "nilai-pelajaran"
   | "manajemen-mapel"
   | "jadwal-pelajaran"
+  | "manajemen-ekskul"
+  | "kegiatan-ekskul"
+  | "pendaftaran-ekskul"
+  | "ekskul-saya"
+  | "rekap-ekskul"
   | "profil";
 
 export type NavCategory =
@@ -306,6 +312,41 @@ export const NAV_ITEMS: Record<NavKey, NavItem> = {
     icon: CalendarDays,
     category: "pendidikan",
   },
+  "manajemen-ekskul": {
+    key: "manajemen-ekskul",
+    to: "/manajemen-ekskul",
+    label: "Manajemen Ekskul",
+    icon: Activity,
+    category: "manajemen",
+  },
+  "kegiatan-ekskul": {
+    key: "kegiatan-ekskul",
+    to: "/kegiatan-ekskul",
+    label: "Kegiatan & Nilai Ekskul",
+    icon: Activity,
+    category: "kesantrian",
+  },
+  "pendaftaran-ekskul": {
+    key: "pendaftaran-ekskul",
+    to: "/pendaftaran-ekskul",
+    label: "Pendaftaran Ekskul",
+    icon: Sparkles,
+    category: "kesantrian",
+  },
+  "ekskul-saya": {
+    key: "ekskul-saya",
+    to: "/ekskul-saya",
+    label: "Ekskul Saya",
+    icon: Activity,
+    category: "kesantrian",
+  },
+  "rekap-ekskul": {
+    key: "rekap-ekskul",
+    to: "/rekap-ekskul",
+    label: "Rekap Ekstrakurikuler",
+    icon: FileSpreadsheet,
+    category: "rekap",
+  },
 
   profil: { key: "profil", to: "/profil", label: "Profil Saya", icon: UserCog, category: "akun" },
 };
@@ -328,6 +369,7 @@ const REKAP_ALL: NavKey[] = [
   "rekap-pelanggaran",
   "rekap-mutabaah",
   "rekap-tahfiz",
+  "rekap-ekskul",
 ];
 
 const MENUS: Record<AccountType, NavKey[]> = {
@@ -338,6 +380,7 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "manajemen-asrama",
     "manajemen-halaqoh",
     "manajemen-mapel",
+    "manajemen-ekskul",
     ...REKAP_ALL,
     "scan-presensi",
     "presensi-insidental",
@@ -346,6 +389,8 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "catat-pelanggaran",
     "perizinan",
     "input-nilai-tahfiz",
+    "kegiatan-ekskul",
+    "pendaftaran-ekskul",
     "kalender",
     "jadwal-pelajaran",
     "perangkat-ajar",
@@ -491,11 +536,22 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "presensi-insidental",
     "absensi-diri",
     "catat-pelanggaran",
+    "kegiatan-ekskul",
     "kalender",
     "jadwal-pelajaran",
     "perangkat-ajar",
     "input-nilai",
     "input-kokur",
+    "profil",
+  ],
+  pembina_ekskul: [
+    "dashboard",
+    "manajemen-ekskul",
+    "kegiatan-ekskul",
+    "rekap-ekskul",
+    "scan-presensi",
+    "absensi-diri",
+    "kalender",
     "profil",
   ],
   kepala_rt_sarpras: ["dashboard", "presensi-insidental", "absensi-diri", "kalender", "profil"],
@@ -507,6 +563,8 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "pelanggaran-saya",
     "perizinan",
     "nilai-tahfiz-saya",
+    "pendaftaran-ekskul",
+    "ekskul-saya",
     "kalender",
     "jadwal-pelajaran",
     "nilai-pelajaran",

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { isMemberAdmin } from "@/lib/roles";
 import { generateKokurNarrative, getStudentKokurRecord } from "./kokur.storage.server";
+import { getStudentReportEkskulGrades } from "./ekskul.storage.server";
 
 type Ctx = { supabase: any; userId: string };
 
@@ -1465,8 +1466,8 @@ export const getReportCardDinas = createServerFn({ method: "POST" })
     const kokurikulerNarrative =
       kokurRecord?.narrative || generateKokurNarrative(studentName, kokurRecord?.grades || {});
 
-    // 9. Ekstrakurikuler (placeholder — akan diisi fitur ekskul)
-    const ekstrakurikuler: { name: string; grade: string; description: string }[] = [];
+    // 9. Ekstrakurikuler (Seksi C Rapor Dinas)
+    const ekstrakurikuler = getStudentReportEkskulGrades(data.student_id, data.semester, data.academic_year);
 
     // 10. Kehadiran
     const attendance = await resolveAttendance(supabaseAdmin, data.student_id, data.semester, data.academic_year);

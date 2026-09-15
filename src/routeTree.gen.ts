@@ -15,13 +15,16 @@ import { Route as AuthenticatedAbsensiDiriRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAnggotaRouteImport } from './routes/_authenticated/anggota'
 import { Route as AuthenticatedCatatPelanggaranRouteImport } from './routes/_authenticated/catat-pelanggaran'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedEkskulSayaRouteImport } from './routes/_authenticated/ekskul-saya'
 import { Route as AuthenticatedInputKokurRouteImport } from './routes/_authenticated/input-kokur'
 import { Route as AuthenticatedInputMutabaahRouteImport } from './routes/_authenticated/input-mutabaah'
 import { Route as AuthenticatedInputNilaiRouteImport } from './routes/_authenticated/input-nilai'
 import { Route as AuthenticatedInputNilaiTahfizRouteImport } from './routes/_authenticated/input-nilai-tahfiz'
 import { Route as AuthenticatedJadwalPelajaranRouteImport } from './routes/_authenticated/jadwal-pelajaran'
 import { Route as AuthenticatedKalenderRouteImport } from './routes/_authenticated/kalender'
+import { Route as AuthenticatedKegiatanEkskulRouteImport } from './routes/_authenticated/kegiatan-ekskul'
 import { Route as AuthenticatedManajemenAsramaRouteImport } from './routes/_authenticated/manajemen-asrama'
+import { Route as AuthenticatedManajemenEkskulRouteImport } from './routes/_authenticated/manajemen-ekskul'
 import { Route as AuthenticatedManajemenHalaqohRouteImport } from './routes/_authenticated/manajemen-halaqoh'
 import { Route as AuthenticatedManajemenKelasRouteImport } from './routes/_authenticated/manajemen-kelas'
 import { Route as AuthenticatedManajemenMapelRouteImport } from './routes/_authenticated/manajemen-mapel'
@@ -29,11 +32,13 @@ import { Route as AuthenticatedMutabaahSayaRouteImport } from './routes/_authent
 import { Route as AuthenticatedNilaiPelajaranRouteImport } from './routes/_authenticated/nilai-pelajaran'
 import { Route as AuthenticatedNilaiTahfizSayaRouteImport } from './routes/_authenticated/nilai-tahfiz-saya'
 import { Route as AuthenticatedPelanggaranSayaRouteImport } from './routes/_authenticated/pelanggaran-saya'
+import { Route as AuthenticatedPendaftaranEkskulRouteImport } from './routes/_authenticated/pendaftaran-ekskul'
 import { Route as AuthenticatedPengaturanSesiRouteImport } from './routes/_authenticated/pengaturan-sesi'
 import { Route as AuthenticatedPerangkatAjarRouteImport } from './routes/_authenticated/perangkat-ajar'
 import { Route as AuthenticatedPerizinanRouteImport } from './routes/_authenticated/perizinan'
 import { Route as AuthenticatedPresensiInsidentalRouteImport } from './routes/_authenticated/presensi-insidental'
 import { Route as AuthenticatedProfilRouteImport } from './routes/_authenticated/profil'
+import { Route as AuthenticatedRekapEkskulRouteImport } from './routes/_authenticated/rekap-ekskul'
 import { Route as AuthenticatedRekapMutabaahRouteImport } from './routes/_authenticated/rekap-mutabaah'
 import { Route as AuthenticatedRekapNilaiRouteImport } from './routes/_authenticated/rekap-nilai'
 import { Route as AuthenticatedRekapPelanggaranRouteImport } from './routes/_authenticated/rekap-pelanggaran'
@@ -73,6 +78,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedEkskulSayaRoute = AuthenticatedEkskulSayaRouteImport.update({
+  id: '/ekskul-saya',
+  path: '/ekskul-saya',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedInputKokurRoute = AuthenticatedInputKokurRouteImport.update({
   id: '/input-kokur',
   path: '/input-kokur',
@@ -106,10 +116,22 @@ const AuthenticatedKalenderRoute = AuthenticatedKalenderRouteImport.update({
   path: '/kalender',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedKegiatanEkskulRoute =
+  AuthenticatedKegiatanEkskulRouteImport.update({
+    id: '/kegiatan-ekskul',
+    path: '/kegiatan-ekskul',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedManajemenAsramaRoute =
   AuthenticatedManajemenAsramaRouteImport.update({
     id: '/manajemen-asrama',
     path: '/manajemen-asrama',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedManajemenEkskulRoute =
+  AuthenticatedManajemenEkskulRouteImport.update({
+    id: '/manajemen-ekskul',
+    path: '/manajemen-ekskul',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedManajemenHalaqohRoute =
@@ -154,6 +176,12 @@ const AuthenticatedPelanggaranSayaRoute =
     path: '/pelanggaran-saya',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedPendaftaranEkskulRoute =
+  AuthenticatedPendaftaranEkskulRouteImport.update({
+    id: '/pendaftaran-ekskul',
+    path: '/pendaftaran-ekskul',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedPengaturanSesiRoute =
   AuthenticatedPengaturanSesiRouteImport.update({
     id: '/pengaturan-sesi',
@@ -182,6 +210,12 @@ const AuthenticatedProfilRoute = AuthenticatedProfilRouteImport.update({
   path: '/profil',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedRekapEkskulRoute =
+  AuthenticatedRekapEkskulRouteImport.update({
+    id: '/rekap-ekskul',
+    path: '/rekap-ekskul',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedRekapMutabaahRoute =
   AuthenticatedRekapMutabaahRouteImport.update({
     id: '/rekap-mutabaah',
@@ -230,13 +264,16 @@ export interface FileRoutesByFullPath {
   '/anggota': typeof AuthenticatedAnggotaRoute
   '/catat-pelanggaran': typeof AuthenticatedCatatPelanggaranRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/ekskul-saya': typeof AuthenticatedEkskulSayaRoute
   '/input-kokur': typeof AuthenticatedInputKokurRoute
   '/input-mutabaah': typeof AuthenticatedInputMutabaahRoute
   '/input-nilai': typeof AuthenticatedInputNilaiRoute
   '/input-nilai-tahfiz': typeof AuthenticatedInputNilaiTahfizRoute
   '/jadwal-pelajaran': typeof AuthenticatedJadwalPelajaranRoute
   '/kalender': typeof AuthenticatedKalenderRoute
+  '/kegiatan-ekskul': typeof AuthenticatedKegiatanEkskulRoute
   '/manajemen-asrama': typeof AuthenticatedManajemenAsramaRoute
+  '/manajemen-ekskul': typeof AuthenticatedManajemenEkskulRoute
   '/manajemen-halaqoh': typeof AuthenticatedManajemenHalaqohRoute
   '/manajemen-kelas': typeof AuthenticatedManajemenKelasRoute
   '/manajemen-mapel': typeof AuthenticatedManajemenMapelRoute
@@ -244,11 +281,13 @@ export interface FileRoutesByFullPath {
   '/nilai-pelajaran': typeof AuthenticatedNilaiPelajaranRoute
   '/nilai-tahfiz-saya': typeof AuthenticatedNilaiTahfizSayaRoute
   '/pelanggaran-saya': typeof AuthenticatedPelanggaranSayaRoute
+  '/pendaftaran-ekskul': typeof AuthenticatedPendaftaranEkskulRoute
   '/pengaturan-sesi': typeof AuthenticatedPengaturanSesiRoute
   '/perangkat-ajar': typeof AuthenticatedPerangkatAjarRoute
   '/perizinan': typeof AuthenticatedPerizinanRoute
   '/presensi-insidental': typeof AuthenticatedPresensiInsidentalRoute
   '/profil': typeof AuthenticatedProfilRoute
+  '/rekap-ekskul': typeof AuthenticatedRekapEkskulRoute
   '/rekap-mutabaah': typeof AuthenticatedRekapMutabaahRoute
   '/rekap-nilai': typeof AuthenticatedRekapNilaiRoute
   '/rekap-pelanggaran': typeof AuthenticatedRekapPelanggaranRoute
@@ -263,13 +302,16 @@ export interface FileRoutesByTo {
   '/anggota': typeof AuthenticatedAnggotaRoute
   '/catat-pelanggaran': typeof AuthenticatedCatatPelanggaranRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/ekskul-saya': typeof AuthenticatedEkskulSayaRoute
   '/input-kokur': typeof AuthenticatedInputKokurRoute
   '/input-mutabaah': typeof AuthenticatedInputMutabaahRoute
   '/input-nilai': typeof AuthenticatedInputNilaiRoute
   '/input-nilai-tahfiz': typeof AuthenticatedInputNilaiTahfizRoute
   '/jadwal-pelajaran': typeof AuthenticatedJadwalPelajaranRoute
   '/kalender': typeof AuthenticatedKalenderRoute
+  '/kegiatan-ekskul': typeof AuthenticatedKegiatanEkskulRoute
   '/manajemen-asrama': typeof AuthenticatedManajemenAsramaRoute
+  '/manajemen-ekskul': typeof AuthenticatedManajemenEkskulRoute
   '/manajemen-halaqoh': typeof AuthenticatedManajemenHalaqohRoute
   '/manajemen-kelas': typeof AuthenticatedManajemenKelasRoute
   '/manajemen-mapel': typeof AuthenticatedManajemenMapelRoute
@@ -277,11 +319,13 @@ export interface FileRoutesByTo {
   '/nilai-pelajaran': typeof AuthenticatedNilaiPelajaranRoute
   '/nilai-tahfiz-saya': typeof AuthenticatedNilaiTahfizSayaRoute
   '/pelanggaran-saya': typeof AuthenticatedPelanggaranSayaRoute
+  '/pendaftaran-ekskul': typeof AuthenticatedPendaftaranEkskulRoute
   '/pengaturan-sesi': typeof AuthenticatedPengaturanSesiRoute
   '/perangkat-ajar': typeof AuthenticatedPerangkatAjarRoute
   '/perizinan': typeof AuthenticatedPerizinanRoute
   '/presensi-insidental': typeof AuthenticatedPresensiInsidentalRoute
   '/profil': typeof AuthenticatedProfilRoute
+  '/rekap-ekskul': typeof AuthenticatedRekapEkskulRoute
   '/rekap-mutabaah': typeof AuthenticatedRekapMutabaahRoute
   '/rekap-nilai': typeof AuthenticatedRekapNilaiRoute
   '/rekap-pelanggaran': typeof AuthenticatedRekapPelanggaranRoute
@@ -298,13 +342,16 @@ export interface FileRoutesById {
   '/_authenticated/anggota': typeof AuthenticatedAnggotaRoute
   '/_authenticated/catat-pelanggaran': typeof AuthenticatedCatatPelanggaranRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/ekskul-saya': typeof AuthenticatedEkskulSayaRoute
   '/_authenticated/input-kokur': typeof AuthenticatedInputKokurRoute
   '/_authenticated/input-mutabaah': typeof AuthenticatedInputMutabaahRoute
   '/_authenticated/input-nilai': typeof AuthenticatedInputNilaiRoute
   '/_authenticated/input-nilai-tahfiz': typeof AuthenticatedInputNilaiTahfizRoute
   '/_authenticated/jadwal-pelajaran': typeof AuthenticatedJadwalPelajaranRoute
   '/_authenticated/kalender': typeof AuthenticatedKalenderRoute
+  '/_authenticated/kegiatan-ekskul': typeof AuthenticatedKegiatanEkskulRoute
   '/_authenticated/manajemen-asrama': typeof AuthenticatedManajemenAsramaRoute
+  '/_authenticated/manajemen-ekskul': typeof AuthenticatedManajemenEkskulRoute
   '/_authenticated/manajemen-halaqoh': typeof AuthenticatedManajemenHalaqohRoute
   '/_authenticated/manajemen-kelas': typeof AuthenticatedManajemenKelasRoute
   '/_authenticated/manajemen-mapel': typeof AuthenticatedManajemenMapelRoute
@@ -312,11 +359,13 @@ export interface FileRoutesById {
   '/_authenticated/nilai-pelajaran': typeof AuthenticatedNilaiPelajaranRoute
   '/_authenticated/nilai-tahfiz-saya': typeof AuthenticatedNilaiTahfizSayaRoute
   '/_authenticated/pelanggaran-saya': typeof AuthenticatedPelanggaranSayaRoute
+  '/_authenticated/pendaftaran-ekskul': typeof AuthenticatedPendaftaranEkskulRoute
   '/_authenticated/pengaturan-sesi': typeof AuthenticatedPengaturanSesiRoute
   '/_authenticated/perangkat-ajar': typeof AuthenticatedPerangkatAjarRoute
   '/_authenticated/perizinan': typeof AuthenticatedPerizinanRoute
   '/_authenticated/presensi-insidental': typeof AuthenticatedPresensiInsidentalRoute
   '/_authenticated/profil': typeof AuthenticatedProfilRoute
+  '/_authenticated/rekap-ekskul': typeof AuthenticatedRekapEkskulRoute
   '/_authenticated/rekap-mutabaah': typeof AuthenticatedRekapMutabaahRoute
   '/_authenticated/rekap-nilai': typeof AuthenticatedRekapNilaiRoute
   '/_authenticated/rekap-pelanggaran': typeof AuthenticatedRekapPelanggaranRoute
@@ -333,13 +382,16 @@ export interface FileRouteTypes {
     | '/anggota'
     | '/catat-pelanggaran'
     | '/dashboard'
+    | '/ekskul-saya'
     | '/input-kokur'
     | '/input-mutabaah'
     | '/input-nilai'
     | '/input-nilai-tahfiz'
     | '/jadwal-pelajaran'
     | '/kalender'
+    | '/kegiatan-ekskul'
     | '/manajemen-asrama'
+    | '/manajemen-ekskul'
     | '/manajemen-halaqoh'
     | '/manajemen-kelas'
     | '/manajemen-mapel'
@@ -347,11 +399,13 @@ export interface FileRouteTypes {
     | '/nilai-pelajaran'
     | '/nilai-tahfiz-saya'
     | '/pelanggaran-saya'
+    | '/pendaftaran-ekskul'
     | '/pengaturan-sesi'
     | '/perangkat-ajar'
     | '/perizinan'
     | '/presensi-insidental'
     | '/profil'
+    | '/rekap-ekskul'
     | '/rekap-mutabaah'
     | '/rekap-nilai'
     | '/rekap-pelanggaran'
@@ -366,13 +420,16 @@ export interface FileRouteTypes {
     | '/anggota'
     | '/catat-pelanggaran'
     | '/dashboard'
+    | '/ekskul-saya'
     | '/input-kokur'
     | '/input-mutabaah'
     | '/input-nilai'
     | '/input-nilai-tahfiz'
     | '/jadwal-pelajaran'
     | '/kalender'
+    | '/kegiatan-ekskul'
     | '/manajemen-asrama'
+    | '/manajemen-ekskul'
     | '/manajemen-halaqoh'
     | '/manajemen-kelas'
     | '/manajemen-mapel'
@@ -380,11 +437,13 @@ export interface FileRouteTypes {
     | '/nilai-pelajaran'
     | '/nilai-tahfiz-saya'
     | '/pelanggaran-saya'
+    | '/pendaftaran-ekskul'
     | '/pengaturan-sesi'
     | '/perangkat-ajar'
     | '/perizinan'
     | '/presensi-insidental'
     | '/profil'
+    | '/rekap-ekskul'
     | '/rekap-mutabaah'
     | '/rekap-nilai'
     | '/rekap-pelanggaran'
@@ -400,13 +459,16 @@ export interface FileRouteTypes {
     | '/_authenticated/anggota'
     | '/_authenticated/catat-pelanggaran'
     | '/_authenticated/dashboard'
+    | '/_authenticated/ekskul-saya'
     | '/_authenticated/input-kokur'
     | '/_authenticated/input-mutabaah'
     | '/_authenticated/input-nilai'
     | '/_authenticated/input-nilai-tahfiz'
     | '/_authenticated/jadwal-pelajaran'
     | '/_authenticated/kalender'
+    | '/_authenticated/kegiatan-ekskul'
     | '/_authenticated/manajemen-asrama'
+    | '/_authenticated/manajemen-ekskul'
     | '/_authenticated/manajemen-halaqoh'
     | '/_authenticated/manajemen-kelas'
     | '/_authenticated/manajemen-mapel'
@@ -414,11 +476,13 @@ export interface FileRouteTypes {
     | '/_authenticated/nilai-pelajaran'
     | '/_authenticated/nilai-tahfiz-saya'
     | '/_authenticated/pelanggaran-saya'
+    | '/_authenticated/pendaftaran-ekskul'
     | '/_authenticated/pengaturan-sesi'
     | '/_authenticated/perangkat-ajar'
     | '/_authenticated/perizinan'
     | '/_authenticated/presensi-insidental'
     | '/_authenticated/profil'
+    | '/_authenticated/rekap-ekskul'
     | '/_authenticated/rekap-mutabaah'
     | '/_authenticated/rekap-nilai'
     | '/_authenticated/rekap-pelanggaran'
@@ -477,6 +541,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/ekskul-saya': {
+      id: '/_authenticated/ekskul-saya'
+      path: '/ekskul-saya'
+      fullPath: '/ekskul-saya'
+      preLoaderRoute: typeof AuthenticatedEkskulSayaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/input-kokur': {
       id: '/_authenticated/input-kokur'
       path: '/input-kokur'
@@ -519,11 +590,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedKalenderRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/kegiatan-ekskul': {
+      id: '/_authenticated/kegiatan-ekskul'
+      path: '/kegiatan-ekskul'
+      fullPath: '/kegiatan-ekskul'
+      preLoaderRoute: typeof AuthenticatedKegiatanEkskulRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/manajemen-asrama': {
       id: '/_authenticated/manajemen-asrama'
       path: '/manajemen-asrama'
       fullPath: '/manajemen-asrama'
       preLoaderRoute: typeof AuthenticatedManajemenAsramaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/manajemen-ekskul': {
+      id: '/_authenticated/manajemen-ekskul'
+      path: '/manajemen-ekskul'
+      fullPath: '/manajemen-ekskul'
+      preLoaderRoute: typeof AuthenticatedManajemenEkskulRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/manajemen-halaqoh': {
@@ -575,6 +660,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPelanggaranSayaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/pendaftaran-ekskul': {
+      id: '/_authenticated/pendaftaran-ekskul'
+      path: '/pendaftaran-ekskul'
+      fullPath: '/pendaftaran-ekskul'
+      preLoaderRoute: typeof AuthenticatedPendaftaranEkskulRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/pengaturan-sesi': {
       id: '/_authenticated/pengaturan-sesi'
       path: '/pengaturan-sesi'
@@ -608,6 +700,13 @@ declare module '@tanstack/react-router' {
       path: '/profil'
       fullPath: '/profil'
       preLoaderRoute: typeof AuthenticatedProfilRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/rekap-ekskul': {
+      id: '/_authenticated/rekap-ekskul'
+      path: '/rekap-ekskul'
+      fullPath: '/rekap-ekskul'
+      preLoaderRoute: typeof AuthenticatedRekapEkskulRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/rekap-mutabaah': {
@@ -667,13 +766,16 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAnggotaRoute: typeof AuthenticatedAnggotaRoute
   AuthenticatedCatatPelanggaranRoute: typeof AuthenticatedCatatPelanggaranRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedEkskulSayaRoute: typeof AuthenticatedEkskulSayaRoute
   AuthenticatedInputKokurRoute: typeof AuthenticatedInputKokurRoute
   AuthenticatedInputMutabaahRoute: typeof AuthenticatedInputMutabaahRoute
   AuthenticatedInputNilaiRoute: typeof AuthenticatedInputNilaiRoute
   AuthenticatedInputNilaiTahfizRoute: typeof AuthenticatedInputNilaiTahfizRoute
   AuthenticatedJadwalPelajaranRoute: typeof AuthenticatedJadwalPelajaranRoute
   AuthenticatedKalenderRoute: typeof AuthenticatedKalenderRoute
+  AuthenticatedKegiatanEkskulRoute: typeof AuthenticatedKegiatanEkskulRoute
   AuthenticatedManajemenAsramaRoute: typeof AuthenticatedManajemenAsramaRoute
+  AuthenticatedManajemenEkskulRoute: typeof AuthenticatedManajemenEkskulRoute
   AuthenticatedManajemenHalaqohRoute: typeof AuthenticatedManajemenHalaqohRoute
   AuthenticatedManajemenKelasRoute: typeof AuthenticatedManajemenKelasRoute
   AuthenticatedManajemenMapelRoute: typeof AuthenticatedManajemenMapelRoute
@@ -681,11 +783,13 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedNilaiPelajaranRoute: typeof AuthenticatedNilaiPelajaranRoute
   AuthenticatedNilaiTahfizSayaRoute: typeof AuthenticatedNilaiTahfizSayaRoute
   AuthenticatedPelanggaranSayaRoute: typeof AuthenticatedPelanggaranSayaRoute
+  AuthenticatedPendaftaranEkskulRoute: typeof AuthenticatedPendaftaranEkskulRoute
   AuthenticatedPengaturanSesiRoute: typeof AuthenticatedPengaturanSesiRoute
   AuthenticatedPerangkatAjarRoute: typeof AuthenticatedPerangkatAjarRoute
   AuthenticatedPerizinanRoute: typeof AuthenticatedPerizinanRoute
   AuthenticatedPresensiInsidentalRoute: typeof AuthenticatedPresensiInsidentalRoute
   AuthenticatedProfilRoute: typeof AuthenticatedProfilRoute
+  AuthenticatedRekapEkskulRoute: typeof AuthenticatedRekapEkskulRoute
   AuthenticatedRekapMutabaahRoute: typeof AuthenticatedRekapMutabaahRoute
   AuthenticatedRekapNilaiRoute: typeof AuthenticatedRekapNilaiRoute
   AuthenticatedRekapPelanggaranRoute: typeof AuthenticatedRekapPelanggaranRoute
@@ -700,13 +804,16 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAnggotaRoute: AuthenticatedAnggotaRoute,
   AuthenticatedCatatPelanggaranRoute: AuthenticatedCatatPelanggaranRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedEkskulSayaRoute: AuthenticatedEkskulSayaRoute,
   AuthenticatedInputKokurRoute: AuthenticatedInputKokurRoute,
   AuthenticatedInputMutabaahRoute: AuthenticatedInputMutabaahRoute,
   AuthenticatedInputNilaiRoute: AuthenticatedInputNilaiRoute,
   AuthenticatedInputNilaiTahfizRoute: AuthenticatedInputNilaiTahfizRoute,
   AuthenticatedJadwalPelajaranRoute: AuthenticatedJadwalPelajaranRoute,
   AuthenticatedKalenderRoute: AuthenticatedKalenderRoute,
+  AuthenticatedKegiatanEkskulRoute: AuthenticatedKegiatanEkskulRoute,
   AuthenticatedManajemenAsramaRoute: AuthenticatedManajemenAsramaRoute,
+  AuthenticatedManajemenEkskulRoute: AuthenticatedManajemenEkskulRoute,
   AuthenticatedManajemenHalaqohRoute: AuthenticatedManajemenHalaqohRoute,
   AuthenticatedManajemenKelasRoute: AuthenticatedManajemenKelasRoute,
   AuthenticatedManajemenMapelRoute: AuthenticatedManajemenMapelRoute,
@@ -714,11 +821,13 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedNilaiPelajaranRoute: AuthenticatedNilaiPelajaranRoute,
   AuthenticatedNilaiTahfizSayaRoute: AuthenticatedNilaiTahfizSayaRoute,
   AuthenticatedPelanggaranSayaRoute: AuthenticatedPelanggaranSayaRoute,
+  AuthenticatedPendaftaranEkskulRoute: AuthenticatedPendaftaranEkskulRoute,
   AuthenticatedPengaturanSesiRoute: AuthenticatedPengaturanSesiRoute,
   AuthenticatedPerangkatAjarRoute: AuthenticatedPerangkatAjarRoute,
   AuthenticatedPerizinanRoute: AuthenticatedPerizinanRoute,
   AuthenticatedPresensiInsidentalRoute: AuthenticatedPresensiInsidentalRoute,
   AuthenticatedProfilRoute: AuthenticatedProfilRoute,
+  AuthenticatedRekapEkskulRoute: AuthenticatedRekapEkskulRoute,
   AuthenticatedRekapMutabaahRoute: AuthenticatedRekapMutabaahRoute,
   AuthenticatedRekapNilaiRoute: AuthenticatedRekapNilaiRoute,
   AuthenticatedRekapPelanggaranRoute: AuthenticatedRekapPelanggaranRoute,
