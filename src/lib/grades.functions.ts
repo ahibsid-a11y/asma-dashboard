@@ -721,9 +721,9 @@ export const getClassGradesRecap = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // 1. Ambil seluruh mapel aktif
-    const subjects = await ensureSubjects(supabaseAdmin);
-    const activeSubjects = subjects.filter((s) => s.is_active);
+    // 1. Mapel yang diajarkan di kelas ini (fallback: semua mapel aktif)
+    const activeSubjects = await subjectsForClass(supabaseAdmin, data.class_name, data.academic_year);
+
 
     const { classNameVariants } = await import("./curriculum-plan.server");
     const classVariants = classNameVariants(data.class_name);
