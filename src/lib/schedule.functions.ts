@@ -223,6 +223,7 @@ export const saveTimetableSlot = createServerFn({ method: "POST" })
       period: data.period,
       time_start: data.time_start,
       time_end: data.time_end,
+      slot_type: data.slot_type,
       subject_id: data.subject_id,
       subject_code: data.subject_code,
       subject_name: data.subject_name,
@@ -283,19 +284,23 @@ export const getMyTimetable = createServerFn({ method: "POST" })
       .maybeSingle();
 
     const isStudent = myProfile?.account_type === "santri";
-    const studentClass = myProfile?.class || "VII A";
+    const studentClass: string | null = myProfile?.class ?? null;
 
     const slots = isStudent
-      ? await getTimetableSlots(data.academicYear, data.semester, studentClass)
+      ? studentClass
+        ? await getTimetableSlots(data.academicYear, data.semester, studentClass)
+        : []
       : await getTimetableSlots(data.academicYear, data.semester, undefined, ctx.userId);
 
     return {
       isStudent,
       profile: myProfile,
+      studentClass,
+      classMissing: isStudent && !studentClass,
       academicYear: data.academicYear,
       semester: data.semester,
       days: TIMETABLE_DAYS,
-      periods: DEFAULT_PERIODS,
+      periods: mergePeriods(slots),
       slots,
     };
   });
