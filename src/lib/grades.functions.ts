@@ -426,42 +426,37 @@ export const getInputGradesSheet = createServerFn({ method: "POST" })
       };
     }
 
-    // TP aktif
+    const { classNameVariants } = await import("./curriculum-plan.server");
+    const classVariants = classNameVariants(data.class_name);
+
+    // TP aktif — sumber tunggal: Perangkat Ajar (learning_objectives)
     let tps: LearningObjective[] = [];
-    try {
-      const { data: tpData } = await (supabaseAdmin as any)
+    {
+      const { data: tpData, error: tpErr } = await (supabaseAdmin as any)
         .from("learning_objectives")
         .select("*")
         .eq("subject_id", data.subject_id)
-        .eq("class_name", data.class_name)
+        .in("class_name", classVariants)
         .eq("semester", data.semester)
         .eq("academic_year", data.academic_year)
         .order("order_index", { ascending: true });
-      if (tpData && tpData.length > 0) {
-        tps = tpData as LearningObjective[];
-      }
-    } catch {}
-
-    if (tps.length === 0) {
-      const storage = await import("./curriculum.storage.server");
-      const cTps = storage.getTps(data.subject_id, data.class_name, data.academic_year);
-      tps = cTps.filter((t) => t.semester === data.semester) as any;
+      if (tpErr) throw new Error(tpErr.message);
+      tps = (tpData ?? []) as LearningObjective[];
     }
 
     // Santri di kelas tersebut
     let students: any[] = [];
-    try {
+    {
       const { data: stdData, error: stdErr } = await (supabaseAdmin as any)
         .from("profiles")
         .select("id,name,display_name,nis_nip,dorm,class,avatar")
         .eq("account_type", "santri")
         .eq("status", "Aktif")
-        .eq("class", data.class_name)
+        .in("class", classVariants)
         .order("name", { ascending: true });
-      if (!stdErr && stdData) {
-        students = stdData;
-      }
-    } catch {}
+      if (stdErr) throw new Error(stdErr.message);
+      students = stdData ?? [];
+    }
 
     const studentIds = students.map((s: any) => s.id);
 
