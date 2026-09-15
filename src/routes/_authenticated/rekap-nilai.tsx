@@ -77,6 +77,14 @@ function RekapNilaiPage() {
   const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
 
   const fetchRecapFn = useServerFn(getClassGradesRecap);
+  const fetchClassesFn = useServerFn(listClassOptions);
+  const { data: classOptions = [] } = useQuery({
+    queryKey: ["class-options"],
+    queryFn: () => fetchClassesFn(),
+  });
+  useEffect(() => {
+    if (!selectedClass && classOptions.length > 0) setSelectedClass(classOptions[0]!);
+  }, [classOptions, selectedClass]);
 
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ["class-grades-recap", selectedClass, selectedSemester, selectedYear],

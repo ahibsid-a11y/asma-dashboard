@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState, useRef } from "react";
+import { listClassOptions } from "@/lib/grades.functions";
 import {
   AlertCircle,
   BookOpen,
@@ -72,6 +73,11 @@ function RekapPerangkatAjarPage() {
   const [auditModalOpen, setAuditModalOpen] = useState(false);
 
   const fetchRecapFn = useServerFn(getCurriculumSupervisionRecap);
+  const fetchClassesFn = useServerFn(listClassOptions);
+  const { data: classOptions = [] } = useQuery({
+    queryKey: ["class-options"],
+    queryFn: () => fetchClassesFn(),
+  });
 
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ["curriculum-supervision-recap", selectedClass, selectedYear],
