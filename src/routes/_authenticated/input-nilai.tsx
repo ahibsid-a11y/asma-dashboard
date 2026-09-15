@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   BookOpen,
@@ -51,6 +51,7 @@ import {
   calculateLetterGrade,
   getAcademicSubjects,
   getInputGradesSheet,
+  listClassOptions,
   manageLearningObjective,
   manageSubject,
   saveGradesBatch,
@@ -90,7 +91,7 @@ function InputNilaiPage() {
   const manageSubjectFn = useServerFn(manageSubject);
 
   // Filter selection states
-  const [selectedClass, setSelectedClass] = useState<string>("7A");
+  const [selectedClass, setSelectedClass] = useState<string>("");
   const [selectedSemester, setSelectedSemester] = useState<string>("1");
   const [selectedYear, setSelectedYear] = useState<string>("2026/2027");
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
@@ -117,6 +118,20 @@ function InputNilaiPage() {
     queryKey: ["academic-subjects"],
     queryFn: () => fetchSubjects(),
   });
+
+  // Daftar kelas resmi (master Manajemen Kelas)
+  const fetchClasses = useServerFn(listClassOptions);
+  const classesQuery = useQuery({
+    queryKey: ["class-options"],
+    queryFn: () => fetchClasses(),
+  });
+  const classOptions = classesQuery.data ?? [];
+
+  useEffect(() => {
+    if (!selectedClass && classOptions.length > 0) {
+      setSelectedClass(classOptions[0]!);
+    }
+  }, [classOptions, selectedClass]);
 
   const subjects = subjectsQuery.data ?? [];
 
@@ -410,9 +425,9 @@ function InputNilaiPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {["7A", "7B", "8A", "8B", "9A", "9B"].map((c) => (
+                    {classOptions.map((c) => (
                       <SelectItem key={c} value={c}>
-                        Kelas {c}
+                        {c}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -685,7 +700,7 @@ function InputNilaiPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-semibold flex items-center gap-2">
                   <Layers className="h-4 w-4 text-primary" />
-                  Kelola Tujuan Pembelajaran (TP) — Mapel {currentSubject?.name} (Kelas {selectedClass})
+                  Kelola Tujuan Pembelajaran (TP) — Mapel {currentSubject?.name} ({selectedClass})
                 </CardTitle>
                 <CardDescription className="text-xs">
                   Tujuan Pembelajaran ini menjadi materi ajar yang dinilai sepanjang semester dan menjadi dasar deskripsi capaian pada buku rapor santri.

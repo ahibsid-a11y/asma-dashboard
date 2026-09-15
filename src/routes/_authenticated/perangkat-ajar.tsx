@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   BookOpen,
@@ -69,9 +69,8 @@ import {
   type CurriculumTimeAllocation,
   type CurriculumTp,
 } from "@/lib/curriculum.functions";
-import { getAcademicSubjects, type AcademicSubject } from "@/lib/grades.functions";
+import { getAcademicSubjects, listClassOptions, type AcademicSubject } from "@/lib/grades.functions";
 
-const CLASS_OPTIONS = ["7A", "7B", "8A", "8B", "9A", "9B"];
 const ACADEMIC_YEARS = ["2026/2027", "2025/2026"];
 const COGNITIVE_LEVELS = [
   "C1 - Mengingat",
@@ -108,7 +107,7 @@ function PerangkatAjarPage() {
   const { data: profile } = useCurrentProfile();
   const queryClient = useQueryClient();
 
-  const [selectedClass, setSelectedClass] = useState("7A");
+  const [selectedClass, setSelectedClass] = useState("");
   const [selectedYear, setSelectedYear] = useState("2026/2027");
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
 
@@ -139,6 +138,19 @@ function PerangkatAjarPage() {
     queryKey: ["academic-subjects"],
     queryFn: () => fetchSubjectsFn(),
   });
+
+  // Daftar kelas resmi (master Manajemen Kelas)
+  const fetchClassesFn = useServerFn(listClassOptions);
+  const { data: classOptions = [] } = useQuery({
+    queryKey: ["class-options"],
+    queryFn: () => fetchClassesFn(),
+  });
+
+  useEffect(() => {
+    if (!selectedClass && classOptions.length > 0) {
+      setSelectedClass(classOptions[0]!);
+    }
+  }, [classOptions, selectedClass]);
 
   // Set default subject when loaded
   const currentSubjectId = selectedSubjectId || (subjects.length > 0 ? (subjects[0]?.id ?? "") : "");
@@ -343,7 +355,7 @@ function PerangkatAjarPage() {
   const handleAddTpRow = (semester: "1" | "2" = "1") => {
     const nextOrder = localTps.length + 1;
     const defaultElem = elements.length > 0 && elements[0] ? elements[0].name : "Materi Pokok";
-    const classPrefix = selectedClass && selectedClass.length > 0 ? selectedClass.charAt(0) : "7";
+    const classPrefix = (selectedClass.match(/\d+/)?.[0] ?? "7").charAt(0);
     const newTp: CurriculumTp = {
       id: `temp_${Date.now()}_${Math.random()}`,
       plan_id: plan?.id || null,
@@ -651,9 +663,9 @@ function PerangkatAjarPage() {
                     <SelectValue placeholder="Pilih Kelas" />
                   </SelectTrigger>
                   <SelectContent>
-                    {CLASS_OPTIONS.map((cls) => (
+                    {classOptions.map((cls) => (
                       <SelectItem key={cls} value={cls}>
-                        Kelas {cls} (Putra)
+                        {cls}
                       </SelectItem>
                     ))}
                   </SelectContent>

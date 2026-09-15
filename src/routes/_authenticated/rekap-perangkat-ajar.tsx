@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState, useRef } from "react";
+import { listClassOptions } from "@/lib/grades.functions";
 import {
   AlertCircle,
   BookOpen,
@@ -45,7 +46,7 @@ import {
 import { useCurrentProfile } from "@/hooks/use-current-profile";
 import { getCurriculumSupervisionRecap } from "@/lib/curriculum.functions";
 
-const CLASS_OPTIONS = ["all", "7A", "7B", "8A", "8B", "9A", "9B"];
+
 const ACADEMIC_YEARS = ["2026/2027", "2025/2026"];
 
 export const Route = createFileRoute("/_authenticated/rekap-perangkat-ajar")({
@@ -72,6 +73,11 @@ function RekapPerangkatAjarPage() {
   const [auditModalOpen, setAuditModalOpen] = useState(false);
 
   const fetchRecapFn = useServerFn(getCurriculumSupervisionRecap);
+  const fetchClassesFn = useServerFn(listClassOptions);
+  const { data: classOptions = [] } = useQuery({
+    queryKey: ["class-options"],
+    queryFn: () => fetchClassesFn(),
+  });
 
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ["curriculum-supervision-recap", selectedClass, selectedYear],
@@ -160,9 +166,9 @@ function RekapPerangkatAjarPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Semua Kelas (7, 8, 9)</SelectItem>
-                    {CLASS_OPTIONS.filter((c) => c !== "all").map((cls) => (
+                    {classOptions.map((cls: string) => (
                       <SelectItem key={cls} value={cls}>
-                        Kelas {cls} (Putra)
+                        {cls}
                       </SelectItem>
                     ))}
                   </SelectContent>
