@@ -179,7 +179,7 @@ export async function saveSlot(
   const db = await admin();
   const { id, ...fields } = data;
 
-  if (fields.teacher_id) {
+  if (fields.teacher_id && fields.slot_type !== "istirahat") {
     const conflict = await checkTeacherConflict(
       fields.academic_year,
       fields.semester,
