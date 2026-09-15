@@ -396,3 +396,50 @@ export async function getStudentReportEkskulGrades(
 
   return result;
 }
+
+/**
+ * Pendaftaran massal santri ke beberapa program sekaligus (dipakai tombol
+ * "Daftarkan Santri ke Ekskul Wajib"). Data yang sudah ada dilewati.
+ */
+export async function bulkEnrollStudents(params: {
+  ekskulIds: string[];
+  studentIds: string[];
+  semester: string;
+  academic_year: string;
+}): Promise<number> {
+  const supabase = await db();
+  const { data: existing } = await supabase
+    .from("ekskul_enrollments")
+    .select("ekskul_id,student_id")
+    .eq("semester", params.semester)
+    .eq("academic_year", params.academic_year);
+
+  const seen = new Set(
+    ((existing ?? []) as { ekskul_id: string; student_id: string }[]).map(
+      (r) => `${r.ekskul_id}::${r.student_id}`,
+    ),
+  );
+
+  const rows: Record<string, unknown>[] = [];
+  for (const ekskulId of params.ekskulIds) {
+    for (const studentId of params.studentIds) {
+      if (seen.has(`${ekskulId}::${studentId}`)) continue;
+      rows.push({
+        ekskul_id: ekskulId,
+        student_id: studentId,
+        semester: params.semester,
+        academic_year: params.academic_year,
+        status: "aktif",
+      });
+    }
+  }
+  if (rows.length === 0) return 0;
+
+  let inserted = 0;
+  for (let i = 0; i < rows.length; i += 200) {
+    const chunk = rows.slice(i, i + 200);
+    const { error } = await supabase.from("ekskul_enrollments").insert(chunk);
+    if (!error) inserted += chunk.length;
+  }
+  return inserted;
+}
