@@ -107,7 +107,7 @@ function PerangkatAjarPage() {
   const { data: profile } = useCurrentProfile();
   const queryClient = useQueryClient();
 
-  const [selectedClass, setSelectedClass] = useState("7A");
+  const [selectedClass, setSelectedClass] = useState("");
   const [selectedYear, setSelectedYear] = useState("2026/2027");
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
 
