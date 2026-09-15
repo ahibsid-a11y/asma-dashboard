@@ -136,7 +136,16 @@ function JadwalPelajaranPage() {
   });
 
   const days = contextQuery.data?.days || myScheduleQuery.data?.days || [];
-  const periods = contextQuery.data?.periods || myScheduleQuery.data?.periods || [];
+  const basePeriods = contextQuery.data?.periods || myScheduleQuery.data?.periods || [];
+  const periods = useMemo(() => {
+    const map = new Map<number, { period: number; start: string; end: string }>();
+    for (const p of basePeriods) map.set(p.period, p as any);
+    for (const n of extraPeriods) {
+      if (!map.has(n)) map.set(n, { period: n, start: "", end: "" });
+    }
+    return Array.from(map.values()).sort((a, b) => a.period - b.period);
+  }, [basePeriods, extraPeriods]);
+  const classMissing = (myScheduleQuery.data as any)?.classMissing === true;
   const classes = contextQuery.data?.classes || [];
   const subjects = contextQuery.data?.subjects || [];
   const teachers = contextQuery.data?.teachers || [];
