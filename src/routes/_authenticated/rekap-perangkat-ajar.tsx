@@ -45,7 +45,7 @@ import {
 import { useCurrentProfile } from "@/hooks/use-current-profile";
 import { getCurriculumSupervisionRecap } from "@/lib/curriculum.functions";
 
-const CLASS_OPTIONS = ["all", "7A", "7B", "8A", "8B", "9A", "9B"];
+
 const ACADEMIC_YEARS = ["2026/2027", "2025/2026"];
 
 export const Route = createFileRoute("/_authenticated/rekap-perangkat-ajar")({
@@ -160,9 +160,9 @@ function RekapPerangkatAjarPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Semua Kelas (7, 8, 9)</SelectItem>
-                    {CLASS_OPTIONS.filter((c) => c !== "all").map((cls) => (
+                    {classOptions.map((cls: string) => (
                       <SelectItem key={cls} value={cls}>
-                        Kelas {cls} (Putra)
+                        {cls}
                       </SelectItem>
                     ))}
                   </SelectContent>

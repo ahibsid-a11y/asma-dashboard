@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   BookOpen,
   CheckCircle2,
@@ -75,7 +75,7 @@ function ManajemenMapelPage() {
   const saveAssignment = useServerFn(saveClassSubjectAssignment);
   const deleteAssignment = useServerFn(deleteClassSubjectAssignment);
 
-  const [selectedClass, setSelectedClass] = useState<string>("VII A");
+  const [selectedClass, setSelectedClass] = useState<string>("");
   const [academicYear, setAcademicYear] = useState<string>("2026/2027");
 
   // Dialog State
@@ -264,7 +264,7 @@ function ManajemenMapelPage() {
                   <SelectContent>
                     {classes.map((c: any) => (
                       <SelectItem key={c.id} value={c.name}>
-                        Kelas {c.name}
+                        {c.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -295,7 +295,7 @@ function ManajemenMapelPage() {
                 <BookOpen className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Total Mapel Kelas {selectedClass}</p>
+                <p className="text-xs text-muted-foreground">Total Mapel {selectedClass}</p>
                 <p className="text-xl font-bold">{assignments.length} Mapel</p>
               </div>
             </CardContent>
@@ -334,7 +334,7 @@ function ManajemenMapelPage() {
           <CardHeader className="p-4 pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-semibold">
-                Daftar Mata Pelajaran: Kelas {selectedClass}
+                Daftar Mata Pelajaran: {selectedClass}
               </CardTitle>
               <Badge variant="outline" className="text-xs font-normal">
                 {assignments.length} Mata Pelajaran
@@ -351,7 +351,7 @@ function ManajemenMapelPage() {
             ) : assignments.length === 0 ? (
               <div className="py-16 text-center space-y-3">
                 <BookOpen className="mx-auto h-8 w-8 text-muted-foreground" />
-                <p className="text-sm font-semibold">Belum Ada Mapel di Kelas {selectedClass}</p>
+                <p className="text-sm font-semibold">Belum Ada Mapel di {selectedClass}</p>
                 <p className="text-xs text-muted-foreground max-w-sm mx-auto">
                   Klik tombol "Tambah Mapel Kelas" di atas untuk menambahkan mapel pertama, atau
                   salin dari kelas lain.
@@ -452,7 +452,7 @@ function ManajemenMapelPage() {
             <form onSubmit={handleSave}>
               <DialogHeader>
                 <DialogTitle>
-                  {editId ? "Edit Penugasan Mapel" : "Tambah Mapel di Kelas " + selectedClass}
+                  {editId ? "Edit Penugasan Mapel" : "Tambah Mapel di " + selectedClass}
                 </DialogTitle>
                 <DialogDescription>
                   Tentukan mata pelajaran, guru pengampu, serta alokasi JP per minggu.
@@ -529,7 +529,7 @@ function ManajemenMapelPage() {
         <Dialog open={copyDialogOpen} onOpenChange={setCopyDialogOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Salin Mapel Kelas {selectedClass}</DialogTitle>
+              <DialogTitle>Salin Mapel {selectedClass}</DialogTitle>
               <DialogDescription>
                 Salin seluruh ({assignments.length}) mata pelajaran dari kelas{" "}
                 <span className="font-semibold text-foreground">{selectedClass}</span> ke kelas
@@ -548,7 +548,7 @@ function ManajemenMapelPage() {
                     .filter((c: any) => c.name !== selectedClass)
                     .map((c: any) => (
                       <SelectItem key={c.id} value={c.name}>
-                        Kelas {c.name}
+                        {c.name}
                       </SelectItem>
                     ))}
                 </SelectContent>

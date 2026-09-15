@@ -700,7 +700,7 @@ function InputNilaiPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-semibold flex items-center gap-2">
                   <Layers className="h-4 w-4 text-primary" />
-                  Kelola Tujuan Pembelajaran (TP) — Mapel {currentSubject?.name} (Kelas {selectedClass})
+                  Kelola Tujuan Pembelajaran (TP) — Mapel {currentSubject?.name} ({selectedClass})
                 </CardTitle>
                 <CardDescription className="text-xs">
                   Tujuan Pembelajaran ini menjadi materi ajar yang dinilai sepanjang semester dan menjadi dasar deskripsi capaian pada buku rapor santri.

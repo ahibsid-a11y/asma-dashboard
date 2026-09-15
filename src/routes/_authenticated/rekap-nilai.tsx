@@ -42,9 +42,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
-import { getClassGradesRecap, type AcademicSubject } from "@/lib/grades.functions";
-
-const CLASS_OPTIONS = ["7A", "7B", "8A", "8B", "9A", "9B"];
+import { getClassGradesRecap, listClassOptions, type AcademicSubject } from "@/lib/grades.functions";
 const SEMESTER_OPTIONS = [
   { value: "1", label: "Semester 1 (Ganjil)" },
   { value: "2", label: "Semester 2 (Genap)" },
@@ -68,7 +66,7 @@ export const Route = createFileRoute("/_authenticated/rekap-nilai")({
 function RekapNilaiPage() {
   const { data: profile } = useCurrentProfile();
 
-  const [selectedClass, setSelectedClass] = useState("7A");
+  const [selectedClass, setSelectedClass] = useState("");
   const [selectedSemester, setSelectedSemester] = useState("1");
   const [selectedYear, setSelectedYear] = useState("2026/2027");
   const [searchQuery, setSearchQuery] = useState("");
@@ -262,7 +260,7 @@ function RekapNilaiPage() {
                     <SelectValue placeholder="Pilih Kelas" />
                   </SelectTrigger>
                   <SelectContent>
-                    {CLASS_OPTIONS.map((cls) => (
+                    {classOptions.map((cls: string) => (
                       <SelectItem key={cls} value={cls} className="font-medium">
                         Kelas {cls} (Putra)
                       </SelectItem>
@@ -335,7 +333,7 @@ function RekapNilaiPage() {
               <div>
                 <p className="text-xs font-medium text-muted-foreground">Total Santri</p>
                 <p className="text-xl font-bold tracking-tight">{totalStudents} Santri</p>
-                <p className="text-[11px] text-muted-foreground">Kelas {selectedClass}</p>
+                <p className="text-[11px] text-muted-foreground">{selectedClass}</p>
               </div>
             </CardContent>
           </Card>
@@ -447,7 +445,7 @@ function RekapNilaiPage() {
             {isLoading ? (
               <div className="min-h-[350px] flex flex-col items-center justify-center text-muted-foreground gap-3">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                <p className="text-sm">Memuat Buku Leger Nilai Kelas {selectedClass}...</p>
+                <p className="text-sm">Memuat Buku Leger Nilai {selectedClass}...</p>
               </div>
             ) : rankedStudents.length === 0 ? (
               <Card className="border-dashed">
@@ -455,7 +453,7 @@ function RekapNilaiPage() {
                   <GraduationCap className="w-10 h-10 text-muted-foreground/40 mb-3" />
                   <p className="font-semibold text-foreground">Tidak Ada Santri Ditemukan</p>
                   <p className="text-sm text-muted-foreground max-w-sm mt-1">
-                    Belum ada santri aktif yang terdaftar di Kelas {selectedClass}.
+                    Belum ada santri aktif yang terdaftar di {selectedClass}.
                   </p>
                 </CardContent>
               </Card>
@@ -741,7 +739,7 @@ function RekapNilaiPage() {
                 <Card className="border-border/60 shadow-xs">
                   <CardHeader className="py-4 px-5 border-b">
                     <CardTitle className="text-base font-semibold">
-                      Daftar Lengkap Peringkat Santri Kelas {selectedClass}
+                      Daftar Lengkap Peringkat Santri {selectedClass}
                     </CardTitle>
                     <CardDescription className="text-xs">
                       Berdasarkan rata-rata nilai akhir seluruh mata pelajaran yang telah diinput
@@ -810,7 +808,7 @@ function RekapNilaiPage() {
                   </div>
                   <h3 className="font-bold text-lg text-foreground">Semua Nilai Mencapai KKM!</h3>
                   <p className="text-sm text-muted-foreground max-w-md mt-1">
-                    Alhamdulillah, seluruh santri di Kelas {selectedClass} telah mencapai KKM (Kriteria
+                    Alhamdulillah, seluruh santri di {selectedClass} telah mencapai KKM (Kriteria
                     Ketuntasan Minimal) pada semua mata pelajaran yang telah dinilai.
                   </p>
                 </CardContent>
