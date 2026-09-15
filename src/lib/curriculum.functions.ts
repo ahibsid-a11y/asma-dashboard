@@ -435,7 +435,7 @@ export const saveCurriculumTpBatch = createServerFn({ method: "POST" })
         await (supabaseAdmin as any)
           .from("curriculum_plans")
           .update({ total_tp_count: upsertRows.length, updated_at: new Date().toISOString() })
-          .eq("id", data.plan_id);
+          .eq("id", planUuid);
       } catch {}
     }
 
