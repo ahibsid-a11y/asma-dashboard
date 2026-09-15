@@ -29,6 +29,26 @@ const DEFAULT_CLASSES = [
   { id: "c-12", name: "XII", grade: 12 },
 ];
 
+/** Gabungkan jam default dengan jam tambahan yang sudah dipakai pada slot tersimpan. */
+function mergePeriods(slots: { period: number; time_start?: string; time_end?: string }[]) {
+  const map = new Map<number, { period: number; start: string; end: string }>();
+  for (const p of DEFAULT_PERIODS) map.set(p.period, { ...p });
+  for (const s of slots) {
+    const existing = map.get(s.period);
+    if (existing) {
+      if (s.time_start) existing.start = s.time_start;
+      if (s.time_end) existing.end = s.time_end;
+    } else {
+      map.set(s.period, {
+        period: s.period,
+        start: s.time_start || "",
+        end: s.time_end || "",
+      });
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => a.period - b.period);
+}
+
 /**
  * 1. Mengambil Konteks Penugasan Mapel & Guru per Kelas
  */
