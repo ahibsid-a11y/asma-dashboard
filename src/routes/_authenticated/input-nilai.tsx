@@ -113,11 +113,13 @@ function InputNilaiPage() {
   const [newSubGroup, setNewSubGroup] = useState<SubjectGroup>("Umum");
   const [newSubKkm, setNewSubKkm] = useState<number>(75);
 
-  // 1. Ambil daftar mata pelajaran
+  // 1. Ambil daftar mata pelajaran sesuai kelas terpilih (Manajemen Mapel)
   const subjectsQuery = useQuery({
-    queryKey: ["academic-subjects"],
-    queryFn: () => fetchSubjects(),
+    queryKey: ["class-subjects", selectedClass, selectedYear],
+    queryFn: () => fetchSubjects({ data: { class_name: selectedClass, academic_year: selectedYear } }),
+    enabled: Boolean(selectedClass),
   });
+
 
   // Daftar kelas resmi (master Manajemen Kelas)
   const fetchClasses = useServerFn(listClassOptions);

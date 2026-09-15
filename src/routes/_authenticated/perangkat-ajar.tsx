@@ -69,7 +69,7 @@ import {
   type CurriculumTimeAllocation,
   type CurriculumTp,
 } from "@/lib/curriculum.functions";
-import { getAcademicSubjects, listClassOptions, type AcademicSubject } from "@/lib/grades.functions";
+import { listClassSubjects, listClassOptions, type AcademicSubject } from "@/lib/grades.functions";
 
 const ACADEMIC_YEARS = ["2026/2027", "2025/2026"];
 const COGNITIVE_LEVELS = [
@@ -125,7 +125,7 @@ function PerangkatAjarPage() {
   const [promesSemester, setPromesSemester] = useState<"1" | "2">("1");
 
   // Server functions
-  const fetchSubjectsFn = useServerFn(getAcademicSubjects);
+  const fetchSubjectsFn = useServerFn(listClassSubjects);
   const fetchPlanFn = useServerFn(getCurriculumPlan);
   const savePlanMetaFn = useServerFn(updateCurriculumPlanMeta);
   const saveElementFn = useServerFn(saveCurriculumElement);
@@ -133,11 +133,13 @@ function PerangkatAjarPage() {
   const saveTimeAllocFn = useServerFn(saveCurriculumTimeAllocations);
   const savePromesFn = useServerFn(saveCurriculumPromesGrid);
 
-  // 1. Ambil daftar mata pelajaran
+  // 1. Daftar mapel sesuai kelas terpilih (Manajemen Mapel)
   const { data: subjects = [] } = useQuery({
-    queryKey: ["academic-subjects"],
-    queryFn: () => fetchSubjectsFn(),
+    queryKey: ["class-subjects", selectedClass, selectedYear],
+    queryFn: () => fetchSubjectsFn({ data: { class_name: selectedClass, academic_year: selectedYear } }),
+    enabled: Boolean(selectedClass),
   });
+
 
   // Daftar kelas resmi (master Manajemen Kelas)
   const fetchClassesFn = useServerFn(listClassOptions);
