@@ -139,6 +139,19 @@ function PerangkatAjarPage() {
     queryFn: () => fetchSubjectsFn(),
   });
 
+  // Daftar kelas resmi (master Manajemen Kelas)
+  const fetchClassesFn = useServerFn(listClassOptions);
+  const { data: classOptions = [] } = useQuery({
+    queryKey: ["class-options"],
+    queryFn: () => fetchClassesFn(),
+  });
+
+  useEffect(() => {
+    if (!selectedClass && classOptions.length > 0) {
+      setSelectedClass(classOptions[0]!);
+    }
+  }, [classOptions, selectedClass]);
+
   // Set default subject when loaded
   const currentSubjectId = selectedSubjectId || (subjects.length > 0 ? (subjects[0]?.id ?? "") : "");
 
