@@ -400,6 +400,8 @@ const MENUS: Record<AccountType, NavKey[]> = {
   ],
   mudir: [
     "dashboard",
+    "manajemen-ekskul",
+    "kegiatan-ekskul",
     "anggota",
     "manajemen-kelas",
     "manajemen-asrama",
@@ -423,6 +425,8 @@ const MENUS: Record<AccountType, NavKey[]> = {
   ],
   kepala_sekolah: [
     "dashboard",
+    "manajemen-ekskul",
+    "kegiatan-ekskul",
     "anggota",
     "manajemen-kelas",
     "manajemen-asrama",
@@ -463,6 +467,8 @@ const MENUS: Record<AccountType, NavKey[]> = {
 
   waka_kurikulum: [
     "dashboard",
+    "manajemen-ekskul",
+    "kegiatan-ekskul",
     "manajemen-mapel",
     ...REKAP_ALL,
     "scan-presensi",
@@ -479,6 +485,8 @@ const MENUS: Record<AccountType, NavKey[]> = {
   ],
   kabid_kesantrian: [
     "dashboard",
+    "manajemen-ekskul",
+    "kegiatan-ekskul",
     ...REKAP_ALL,
     "scan-presensi",
     "presensi-insidental",

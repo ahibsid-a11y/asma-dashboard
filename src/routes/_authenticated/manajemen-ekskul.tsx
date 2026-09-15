@@ -53,7 +53,7 @@ import type {
   EkskulCategory,
   EkskulFeePeriod,
   EkskulItem,
-} from "@/lib/ekskul.storage.server";
+} from "@/lib/ekskul.types";
 
 export const Route = createFileRoute("/_authenticated/manajemen-ekskul")({
   head: () => ({
