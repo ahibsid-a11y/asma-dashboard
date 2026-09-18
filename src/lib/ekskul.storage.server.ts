@@ -1,517 +1,371 @@
-import fs from "node:fs";
-import path from "node:path";
+/**
+ * Penyimpanan data ekstrakurikuler di database (Supabase), agar data tetap ada
+ * setelah aplikasi dipublish. Semua penulisan dilakukan lewat service role.
+ */
 import crypto from "node:crypto";
 
-export type EkskulCategory = "wajib" | "pilihan";
-export type EkskulFeePeriod = "per_bulan" | "per_semester" | "sekali";
+import { createClient } from "@supabase/supabase-js";
+import { getRequest } from "@tanstack/react-start/server";
 
-export interface EkskulItem {
-  id: string;
-  name: string;
-  category: EkskulCategory;
-  fee: number; // 0 untuk wajib, nominal rupiah untuk pilihan
-  fee_period: EkskulFeePeriod;
-  coach_name: string;
-  coach_id?: string | undefined;
-  schedule_day: string; // Misal "Sabtu", "Ahad"
-  schedule_time: string; // Misal "16:00 - 17:30"
-  location: string; // Misal "Lapangan Pesantren", "Lab Komputer"
-  quota?: number | undefined;
-  description: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
+import type {
+  EkskulAttendanceRecord,
+  EkskulCategory,
+  EkskulEnrollment,
+  EkskulGrade,
+  EkskulItem,
+  EkskulPayment,
+  EkskulSession,
+  EkskulStoreData,
+} from "./ekskul.types";
 
-export interface EkskulEnrollment {
-  id: string;
-  ekskul_id: string;
-  student_id: string;
-  semester: string;
-  academic_year: string;
-  session_label?: string | undefined; // Misal "Sesi 1 (4 Pertemuan / Juli)"
-  enrolled_at: string;
-  status: "aktif" | "menunggu_konfirmasi" | "selesai" | "keluar";
-}
+export type {
+  EkskulAttendanceRecord,
+  EkskulCategory,
+  EkskulEnrollment,
+  EkskulFeePeriod,
+  EkskulGrade,
+  EkskulItem,
+  EkskulPayment,
+  EkskulSession,
+  EkskulStoreData,
+} from "./ekskul.types";
 
-export interface EkskulPayment {
-  id: string;
-  enrollment_id: string;
-  student_id: string;
-  ekskul_id: string;
-  period_label: string; // Misal: "Juli 2026", "Semester 1 (Ganjil)"
-  amount: number;
-  status: "lunas" | "belum_bayar";
-  payment_date?: string | undefined;
-  payment_method?: "tunai" | "transfer" | "potong_tabungan" | undefined;
-  notes?: string | undefined;
-  receipt_no?: string | undefined;
-  verified_by?: string | undefined;
-  updated_at: string;
-}
-
-export interface EkskulSession {
-  id: string;
-  ekskul_id: string;
-  session_number?: number | undefined; // Pertemuan 1, 2, 3, 4
-  session_label?: string | undefined; // Sesi 1, Sesi 2
-  date: string; // YYYY-MM-DD
-  topic: string;
-  academic_year: string;
-  semester: string;
-  created_at: string;
-}
-
-export interface EkskulAttendanceRecord {
-  id: string;
-  session_id: string;
-  student_id: string;
-  status: "hadir" | "izin" | "sakit" | "alpa";
-  notes?: string | undefined;
-}
-
-export interface EkskulGrade {
-  id: string;
-  ekskul_id: string;
-  student_id: string;
-  semester: string;
-  academic_year: string;
-  grade: "A" | "B" | "C" | "D";
-  predicate: "Sangat Baik" | "Baik" | "Cukup" | "Kurang";
-  description: string;
-  updated_at: string;
-}
-
-interface EkskulStoreData {
-  ekskuls: EkskulItem[];
-  enrollments: EkskulEnrollment[];
-  payments: EkskulPayment[];
-  sessions: EkskulSession[];
-  attendances: EkskulAttendanceRecord[];
-  grades: EkskulGrade[];
-}
-
-const STORE_PATH = path.resolve(process.cwd(), "data", "ekskul_store.json");
-
-export const DEFAULT_EKSKULS: EkskulItem[] = [
-  {
-    id: "ekskul-pramuka",
-    name: "Praja Muda Karana (Pramuka)",
-    category: "wajib",
-    fee: 0,
-    fee_period: "sekali",
-    coach_name: "Kak Rahmat Hidayat",
-    schedule_day: "Sabtu",
-    schedule_time: "14:00 - 15:30",
-    location: "Lapangan Utama Pesantren",
-    quota: 200,
-    description: "Kegiatan kepanduan, kepemimpinan, kemandirian, dan kedisiplinan santri.",
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "ekskul-tapak-suci",
-    name: "Seni Bela Diri Tapak Suci",
-    category: "wajib",
-    fee: 0,
-    fee_period: "sekali",
-    coach_name: "Ust. Supriyadi, S.Pd.I",
-    schedule_day: "Ahad",
-    schedule_time: "08:00 - 10:00",
-    location: "Aula Serbaguna / Lapangan Olahraga",
-    quota: 200,
-    description: "Seni bela diri bela Islam, kebugaran fisik, ketangkasan, dan pembentukan mental tangguh.",
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "ekskul-panahan",
-    name: "Panahan Tradisional & Horsebow",
-    category: "pilihan",
-    fee: 75000,
-    fee_period: "per_bulan",
-    coach_name: "Coach Farhan Al-Fatih",
-    schedule_day: "Sabtu",
-    schedule_time: "16:00 - 17:30",
-    location: "Area Panahan Terbuka",
-    quota: 25,
-    description: "Olahraga sunnah memanah melatih fokus, kesabaran, kekuatan otot bahu, dan ketenangan jiwa.",
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "ekskul-futsal",
-    name: "Futsal & Sepak Bola Santri",
-    category: "pilihan",
-    fee: 50000,
-    fee_period: "per_bulan",
-    coach_name: "Coach Dedi Kurniawan",
-    schedule_day: "Kamis",
-    schedule_time: "16:00 - 17:30",
-    location: "Lapangan Futsal AHIBS",
-    quota: 30,
-    description: "Pembinaan teknik sepak bola mini, kerja sama tim, stamina, dan sportivitas santri.",
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "ekskul-robotik",
-    name: "Robotik & Coding Arduino",
-    category: "pilihan",
-    fee: 100000,
-    fee_period: "per_bulan",
-    coach_name: "Eng. Teguh Prasetyo, S.T",
-    schedule_day: "Sabtu",
-    schedule_time: "09:00 - 11:00",
-    location: "Lab Komputer & Multimedia",
-    quota: 20,
-    description: "Pengenalan teknologi IoT, perakitan mikrokontroler, algoritma logika, dan robot cerdas.",
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "ekskul-english-club",
-    name: "English Conversation Club",
-    category: "pilihan",
-    fee: 50000,
-    fee_period: "per_bulan",
-    coach_name: "Miss Nurul Fauziyah, M.Pd",
-    schedule_day: "Rabu",
-    schedule_time: "16:00 - 17:15",
-    location: "Ruang Diskusi Perpustakaan",
-    quota: 25,
-    description: "Praktik percakapan bahasa Inggris aktif, storytelling, pidato (speech), dan debat santri.",
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "ekskul-desain-multimedia",
-    name: "Desain Grafis & Multimedia Dakwah",
-    category: "pilihan",
-    fee: 65000,
-    fee_period: "per_bulan",
-    coach_name: "Ust. M. Rizky Pratama",
-    schedule_day: "Ahad",
-    schedule_time: "10:30 - 12:00",
-    location: "Lab Komputer",
-    quota: 20,
-    description: "Kreativitas pembuatan poster dakwah, editing video dasar, tipografi, dan media islami.",
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
-
-function ensureStoreDir(): void {
-  const dir = path.dirname(STORE_PATH);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-}
-
-export function loadEkskulStore(): EkskulStoreData {
+/**
+ * Akses database memakai identitas pengguna yang sedang login (aturan keamanan
+ * baris tetap berlaku). Bila tidak ada sesi pada permintaan, gunakan klien
+ * layanan sebagai cadangan.
+ */
+async function db(): Promise<any> {
+  const url = process.env["SUPABASE_URL"] || process.env["VITE_SUPABASE_URL"];
+  const key =
+    process.env["SUPABASE_PUBLISHABLE_KEY"] || process.env["VITE_SUPABASE_PUBLISHABLE_KEY"];
+  let authorization = "";
   try {
-    ensureStoreDir();
-    if (!fs.existsSync(STORE_PATH)) {
-      const initial: EkskulStoreData = {
-        ekskuls: DEFAULT_EKSKULS,
-        enrollments: [],
-        payments: [],
-        sessions: [],
-        attendances: [],
-        grades: [],
-      };
-      fs.writeFileSync(STORE_PATH, JSON.stringify(initial, null, 2), "utf-8");
-      return initial;
-    }
-    const raw = fs.readFileSync(STORE_PATH, "utf-8");
-    const parsed = JSON.parse(raw);
-    return {
-      ekskuls: parsed.ekskuls?.length ? parsed.ekskuls : DEFAULT_EKSKULS,
-      enrollments: parsed.enrollments || [],
-      payments: parsed.payments || [],
-      sessions: parsed.sessions || [],
-      attendances: parsed.attendances || [],
-      grades: parsed.grades || [],
-    };
-  } catch (err) {
-    console.error("Failed to load ekskul store:", err);
-    return {
-      ekskuls: DEFAULT_EKSKULS,
-      enrollments: [],
-      payments: [],
-      sessions: [],
-      attendances: [],
-      grades: [],
-    };
+    authorization = getRequest()?.headers.get("authorization") ?? "";
+  } catch {
+    authorization = "";
   }
+  if (url && key && authorization) {
+    return createClient(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { headers: { apikey: key, Authorization: authorization } },
+    }) as any;
+  }
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  return supabaseAdmin as any;
 }
 
-export function saveEkskulStore(data: EkskulStoreData): void {
-  try {
-    ensureStoreDir();
-    fs.writeFileSync(STORE_PATH, JSON.stringify(data, null, 2), "utf-8");
-  } catch (err) {
-    console.error("Failed to save ekskul store:", err);
-    throw err;
-  }
+function slugify(name: string): string {
+  const base = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .slice(0, 40);
+  return `ekskul-${base || crypto.randomUUID().slice(0, 8)}`;
 }
 
 // ──────────────────────────────────────────────────────────────
-// Helpers
+// Pembacaan
 // ──────────────────────────────────────────────────────────────
 
-export function getEkskulById(id: string): EkskulItem | undefined {
-  const store = loadEkskulStore();
-  return store.ekskuls.find((e) => e.id === id);
+export async function loadEkskulStore(): Promise<EkskulStoreData> {
+  const supabase = await db();
+  const [ekskuls, enrollments, payments, sessions, attendances, grades] = await Promise.all([
+    supabase.from("ekskuls").select("*").order("category").order("name"),
+    supabase.from("ekskul_enrollments").select("*"),
+    supabase.from("ekskul_payments").select("*"),
+    supabase.from("ekskul_sessions").select("*").order("date", { ascending: false }),
+    supabase.from("ekskul_attendances").select("*"),
+    supabase.from("ekskul_grades").select("*"),
+  ]);
+
+  return {
+    ekskuls: (ekskuls.data ?? []) as EkskulItem[],
+    enrollments: (enrollments.data ?? []) as EkskulEnrollment[],
+    payments: (payments.data ?? []) as EkskulPayment[],
+    sessions: (sessions.data ?? []) as EkskulSession[],
+    attendances: (attendances.data ?? []) as EkskulAttendanceRecord[],
+    grades: (grades.data ?? []) as EkskulGrade[],
+  };
 }
 
-export function saveOrUpdateEkskul(item: Partial<EkskulItem> & { name: string; category: EkskulCategory }): EkskulItem {
-  const store = loadEkskulStore();
-  const now = new Date().toISOString();
-  if (item.id) {
-    const idx = store.ekskuls.findIndex((e) => e.id === item.id);
-    if (idx !== -1) {
-      store.ekskuls[idx] = {
-        ...store.ekskuls[idx]!,
-        ...item,
-        updated_at: now,
-      };
-      saveEkskulStore(store);
-      return store.ekskuls[idx]!;
-    }
-  }
+export async function listEkskuls(): Promise<EkskulItem[]> {
+  const supabase = await db();
+  const { data } = await supabase.from("ekskuls").select("*").order("category").order("name");
+  return (data ?? []) as EkskulItem[];
+}
 
-  const newItem: EkskulItem = {
-    id: item.id || `ekskul-${crypto.randomUUID().slice(0, 8)}`,
+export async function getEkskulById(id: string): Promise<EkskulItem | undefined> {
+  const supabase = await db();
+  const { data } = await supabase.from("ekskuls").select("*").eq("id", id).maybeSingle();
+  return (data ?? undefined) as EkskulItem | undefined;
+}
+
+// ──────────────────────────────────────────────────────────────
+// Master ekskul
+// ──────────────────────────────────────────────────────────────
+
+export async function saveOrUpdateEkskul(
+  item: Partial<EkskulItem> & { name: string; category: EkskulCategory },
+): Promise<EkskulItem> {
+  const supabase = await db();
+  const row: Record<string, unknown> = {
+    id: item.id || slugify(item.name),
     name: item.name,
     category: item.category,
     fee: item.fee ?? 0,
     fee_period: item.fee_period ?? "per_bulan",
     coach_name: item.coach_name || "Belum Ditentukan",
-    coach_id: item.coach_id ?? undefined,
+    coach_id: item.coach_id || null,
     schedule_day: item.schedule_day || "Sabtu",
     schedule_time: item.schedule_time || "16:00 - 17:30",
     location: item.location || "Pesantren",
     quota: item.quota ?? 30,
     description: item.description || "",
     is_active: item.is_active ?? true,
-    created_at: now,
-    updated_at: now,
   };
 
-  store.ekskuls.push(newItem);
-  saveEkskulStore(store);
-  return newItem;
+  const { data, error } = await supabase
+    .from("ekskuls")
+    .upsert(row, { onConflict: "id" })
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+  return data as EkskulItem;
 }
 
-export function deleteEkskulItem(id: string): boolean {
-  const store = loadEkskulStore();
-  const beforeLen = store.ekskuls.length;
-  store.ekskuls = store.ekskuls.filter((e) => e.id !== id);
-  if (store.ekskuls.length !== beforeLen) {
-    saveEkskulStore(store);
-    return true;
-  }
-  return false;
+export async function deleteEkskulItem(id: string): Promise<boolean> {
+  const supabase = await db();
+  const { error } = await supabase.from("ekskuls").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  return true;
 }
 
-// Enrollment helpers
-export function enrollStudentToEkskul(data: {
+// ──────────────────────────────────────────────────────────────
+// Pendaftaran
+// ──────────────────────────────────────────────────────────────
+
+export async function enrollStudentToEkskul(data: {
   ekskul_id: string;
   student_id: string;
   semester: string;
   academic_year: string;
   session_label?: string | undefined;
-}): EkskulEnrollment {
-  const store = loadEkskulStore();
-  const existing = store.enrollments.find(
-    (e) =>
-      e.ekskul_id === data.ekskul_id &&
-      e.student_id === data.student_id &&
-      e.semester === data.semester &&
-      e.academic_year === data.academic_year
-  );
-  const ekskul = store.ekskuls.find((e) => e.id === data.ekskul_id);
+}): Promise<EkskulEnrollment> {
+  const supabase = await db();
+  const ekskul = await getEkskulById(data.ekskul_id);
   const isPilihan = ekskul?.category === "pilihan";
+  const initialStatus = isPilihan && ekskul && ekskul.fee > 0 ? "menunggu_konfirmasi" : "aktif";
   const sessionLabel = data.session_label || "Sesi 1 (4 Pertemuan)";
 
+  const { data: existing } = await supabase
+    .from("ekskul_enrollments")
+    .select("*")
+    .eq("ekskul_id", data.ekskul_id)
+    .eq("student_id", data.student_id)
+    .eq("semester", data.semester)
+    .eq("academic_year", data.academic_year)
+    .maybeSingle();
+
   if (existing) {
-    if (existing.status === "keluar") {
-      existing.status = isPilihan && ekskul && ekskul.fee > 0 ? "menunggu_konfirmasi" : "aktif";
-      existing.session_label = sessionLabel;
-      saveEkskulStore(store);
+    if (existing.status !== "aktif") {
+      const { data: revived } = await supabase
+        .from("ekskul_enrollments")
+        .update({ status: initialStatus })
+        .eq("id", existing.id)
+        .select("*")
+        .single();
+      return revived as EkskulEnrollment;
     }
-    return existing;
+    return existing as EkskulEnrollment;
   }
 
-  const enrollment: EkskulEnrollment = {
-    id: `enr-${crypto.randomUUID().slice(0, 8)}`,
-    ekskul_id: data.ekskul_id,
-    student_id: data.student_id,
-    semester: data.semester,
-    academic_year: data.academic_year,
-    session_label: sessionLabel,
-    enrolled_at: new Date().toISOString(),
-    status: isPilihan && ekskul && ekskul.fee > 0 ? "menunggu_konfirmasi" : "aktif",
-  };
-  store.enrollments.push(enrollment);
+  const { data: enrollment, error } = await supabase
+    .from("ekskul_enrollments")
+    .insert({
+      ekskul_id: data.ekskul_id,
+      student_id: data.student_id,
+      semester: data.semester,
+      academic_year: data.academic_year,
+      status: initialStatus,
+    })
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
 
-  // Jika ekskul berbayar, otomatis buat tagihan awal jika belum ada
+  // Tagihan awal otomatis untuk ekskul pilihan berbayar
   if (ekskul && isPilihan && ekskul.fee > 0) {
     const periodLabel =
-      ekskul.fee_period === "per_semester"
-        ? `Semester ${data.semester}`
-        : sessionLabel;
-    const payment: EkskulPayment = {
-      id: `pay-${crypto.randomUUID().slice(0, 8)}`,
+      ekskul.fee_period === "per_semester" ? `Semester ${data.semester}` : sessionLabel;
+    await supabase.from("ekskul_payments").insert({
       enrollment_id: enrollment.id,
-      student_id: data.student_id,
       ekskul_id: data.ekskul_id,
+      student_id: data.student_id,
       period_label: periodLabel,
       amount: ekskul.fee,
       status: "belum_bayar",
-      updated_at: new Date().toISOString(),
-    };
-    store.payments.push(payment);
+    });
   }
 
-  saveEkskulStore(store);
-  return enrollment;
+  return enrollment as EkskulEnrollment;
 }
 
-export function approveStudentEnrollment(enrollmentId: string, approvedBy?: string): EkskulEnrollment | null {
-  const store = loadEkskulStore();
-  const enr = store.enrollments.find((e) => e.id === enrollmentId);
-  if (!enr) return null;
-  enr.status = "aktif";
+export async function approveStudentEnrollment(
+  enrollmentId: string,
+  approvedBy?: string
+): Promise<EkskulEnrollment | null> {
+  const supabase = await db();
+  const { data: enr, error } = await supabase
+    .from("ekskul_enrollments")
+    .update({ status: "aktif" })
+    .eq("id", enrollmentId)
+    .select("*")
+    .maybeSingle();
+  if (error || !enr) return null;
 
-  // Tandai juga pembayaran terkait jika belum lunas
-  const payment = store.payments.find((p) => p.enrollment_id === enrollmentId);
-  if (payment) {
-    payment.status = "lunas";
-    payment.payment_date = new Date().toISOString().split("T")[0];
-    payment.verified_by = approvedBy || "Admin / Pembina";
-    payment.updated_at = new Date().toISOString();
-  }
+  // Update status pembayaran terkait menjadi lunas bila ada
+  await supabase
+    .from("ekskul_payments")
+    .update({
+      status: "lunas",
+      payment_date: new Date().toISOString().split("T")[0],
+      notes: approvedBy ? `Disetujui oleh ${approvedBy}` : "Disetujui admin",
+    })
+    .eq("enrollment_id", enrollmentId)
+    .eq("status", "belum_bayar");
 
-  saveEkskulStore(store);
-  return enr;
+  return enr as EkskulEnrollment;
 }
 
-export function unenrollStudentFromEkskul(enrollmentId: string): boolean {
-  const store = loadEkskulStore();
-  const enr = store.enrollments.find((e) => e.id === enrollmentId);
-  if (enr) {
-    enr.status = "keluar";
-    saveEkskulStore(store);
-    return true;
-  }
-  return false;
+export async function unenrollStudentFromEkskul(enrollmentId: string): Promise<boolean> {
+  const supabase = await db();
+  const { error } = await supabase
+    .from("ekskul_enrollments")
+    .update({ status: "keluar" })
+    .eq("id", enrollmentId);
+  if (error) throw new Error(error.message);
+  return true;
 }
 
-// Payment helpers
-export function recordPaymentUpdate(data: {
+// ──────────────────────────────────────────────────────────────
+// Pembayaran
+// ──────────────────────────────────────────────────────────────
+
+export async function recordPaymentUpdate(data: {
   paymentId: string;
   status: "lunas" | "belum_bayar";
   payment_method?: "tunai" | "transfer" | "potong_tabungan" | undefined;
   notes?: string | undefined;
   verified_by?: string | undefined;
-}): EkskulPayment | null {
-  const store = loadEkskulStore();
-  const payment = store.payments.find((p) => p.id === data.paymentId);
-  if (!payment) return null;
-
-  payment.status = data.status;
+}): Promise<EkskulPayment | null> {
+  const supabase = await db();
+  const patch: Record<string, unknown> = { status: data.status };
   if (data.status === "lunas") {
-    payment.payment_date = new Date().toISOString().split("T")[0];
-    payment.receipt_no = `REC-EKSKUL-${Date.now().toString().slice(-6)}`;
-    // Otomatis aktifkan enrollment siswa saat lunas
-    if (payment.enrollment_id) {
-      const enr = store.enrollments.find((e) => e.id === payment.enrollment_id);
-      if (enr) enr.status = "aktif";
-    }
+    patch["payment_date"] = new Date().toISOString().split("T")[0];
+    patch["receipt_no"] = `REC-EKSKUL-${Date.now().toString().slice(-6)}`;
   } else {
-    delete payment.payment_date;
-    delete payment.receipt_no;
+    patch["payment_date"] = null;
+    patch["receipt_no"] = null;
   }
-  if (data.payment_method) payment.payment_method = data.payment_method;
-  if (data.notes !== undefined) payment.notes = data.notes;
-  if (data.verified_by) payment.verified_by = data.verified_by;
-  payment.updated_at = new Date().toISOString();
+  if (data.payment_method) patch["payment_method"] = data.payment_method;
+  if (data.notes !== undefined) patch["notes"] = data.notes;
+  if (data.verified_by) patch["verified_by"] = data.verified_by;
 
-  saveEkskulStore(store);
-  return payment;
+  const { data: updated, error } = await supabase
+    .from("ekskul_payments")
+    .update(patch)
+    .eq("id", data.paymentId)
+    .select("*")
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+
+  if (updated && data.status === "lunas" && updated.enrollment_id) {
+    await supabase
+      .from("ekskul_enrollments")
+      .update({ status: "aktif" })
+      .eq("id", updated.enrollment_id);
+  }
+
+  return (updated ?? null) as EkskulPayment | null;
 }
 
-export function createBillingForStudent(data: {
+export async function createBillingForStudent(data: {
   enrollment_id: string;
   student_id: string;
   ekskul_id: string;
   period_label: string;
   amount: number;
-}): EkskulPayment {
-  const store = loadEkskulStore();
-  const payment: EkskulPayment = {
-    id: `pay-${crypto.randomUUID().slice(0, 8)}`,
-    enrollment_id: data.enrollment_id,
-    student_id: data.student_id,
-    ekskul_id: data.ekskul_id,
-    period_label: data.period_label,
-    amount: data.amount,
-    status: "belum_bayar",
-    updated_at: new Date().toISOString(),
-  };
-  store.payments.push(payment);
-  saveEkskulStore(store);
-  return payment;
+}): Promise<EkskulPayment> {
+  const supabase = await db();
+  const { data: payment, error } = await supabase
+    .from("ekskul_payments")
+    .insert({
+      enrollment_id: data.enrollment_id,
+      student_id: data.student_id,
+      ekskul_id: data.ekskul_id,
+      period_label: data.period_label,
+      amount: data.amount,
+      status: "belum_bayar",
+    })
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+  return payment as EkskulPayment;
 }
 
-// Session & Attendance helpers
-export function createSessionAndAttendance(data: {
+// ──────────────────────────────────────────────────────────────
+// Sesi & presensi
+// ──────────────────────────────────────────────────────────────
+
+export async function createSessionAndAttendance(data: {
   ekskul_id: string;
   date: string;
   topic: string;
   academic_year: string;
   semester: string;
-  records: { student_id: string; status: "hadir" | "izin" | "sakit" | "alpa"; notes?: string | undefined }[];
+  records: {
+    student_id: string;
+    status: "hadir" | "izin" | "sakit" | "alpa";
+    notes?: string | undefined;
+  }[];
   created_by?: string | undefined;
-}): EkskulSession {
-  const store = loadEkskulStore();
-  const session: EkskulSession = {
-    id: `sess-${crypto.randomUUID().slice(0, 8)}`,
-    ekskul_id: data.ekskul_id,
-    date: data.date,
-    topic: data.topic,
-    academic_year: data.academic_year,
-    semester: data.semester,
-    created_at: new Date().toISOString(),
-  };
+}): Promise<EkskulSession> {
+  const supabase = await db();
+  const { data: session, error } = await supabase
+    .from("ekskul_sessions")
+    .insert({
+      ekskul_id: data.ekskul_id,
+      date: data.date,
+      topic: data.topic,
+      semester: data.semester,
+      academic_year: data.academic_year,
+      created_by: data.created_by || null,
+    })
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
 
-  store.sessions.push(session);
-
-  for (const rec of data.records) {
-    store.attendances.push({
-      id: `att-${crypto.randomUUID().slice(0, 8)}`,
-      session_id: session.id,
-      student_id: rec.student_id,
-      status: rec.status,
-      notes: rec.notes || "",
-    });
+  if (data.records.length > 0) {
+    const { error: attError } = await supabase.from("ekskul_attendances").upsert(
+      data.records.map((rec) => ({
+        session_id: session.id,
+        student_id: rec.student_id,
+        status: rec.status,
+        notes: rec.notes || "",
+      })),
+      { onConflict: "session_id,student_id" },
+    );
+    if (attError) throw new Error(attError.message);
   }
 
-  saveEkskulStore(store);
-  return session;
+  return session as EkskulSession;
 }
 
-// Grades helpers (Untuk Rapor Dinas Seksi C)
-export function saveStudentEkskulGrade(data: {
+// ──────────────────────────────────────────────────────────────
+// Nilai rapor ekskul
+// ──────────────────────────────────────────────────────────────
+
+export async function saveStudentEkskulGrade(data: {
   ekskul_id: string;
   student_id: string;
   semester: string;
@@ -519,87 +373,112 @@ export function saveStudentEkskulGrade(data: {
   grade: "A" | "B" | "C" | "D";
   predicate: "Sangat Baik" | "Baik" | "Cukup" | "Kurang";
   description: string;
-}): EkskulGrade {
-  const store = loadEkskulStore();
-  const existingIdx = store.grades.findIndex(
-    (g) =>
-      g.ekskul_id === data.ekskul_id &&
-      g.student_id === data.student_id &&
-      g.semester === data.semester &&
-      g.academic_year === data.academic_year
-  );
-
-  const now = new Date().toISOString();
-  if (existingIdx !== -1) {
-    store.grades[existingIdx] = {
-      ...store.grades[existingIdx]!,
-      ...data,
-      updated_at: now,
-    };
-    saveEkskulStore(store);
-    return store.grades[existingIdx]!;
-  }
-
-  const newGrade: EkskulGrade = {
-    id: `grd-${crypto.randomUUID().slice(0, 8)}`,
-    ...data,
-    updated_at: now,
-  };
-  store.grades.push(newGrade);
-  saveEkskulStore(store);
-  return newGrade;
+}): Promise<EkskulGrade> {
+  const supabase = await db();
+  const { data: saved, error } = await supabase
+    .from("ekskul_grades")
+    .upsert(data, { onConflict: "ekskul_id,student_id,semester,academic_year" })
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+  return saved as EkskulGrade;
 }
 
-export function getStudentReportEkskulGrades(
+export async function getStudentReportEkskulGrades(
   studentId: string,
   semester: string,
-  academicYear: string
-): { name: string; grade: string; description: string }[] {
-  const store = loadEkskulStore();
-  // 1. Cari grades tersimpan
-  const studentGrades = store.grades.filter(
-    (g) =>
-      g.student_id === studentId &&
-      g.semester === semester &&
-      g.academic_year === academicYear
-  );
+  academicYear: string,
+): Promise<{ name: string; grade: string; description: string }[]> {
+  const supabase = await db();
+  const ekskuls = await listEkskuls();
+  const byId = new Map(ekskuls.map((e) => [e.id, e]));
+
+  const { data: grades } = await supabase
+    .from("ekskul_grades")
+    .select("*")
+    .eq("student_id", studentId)
+    .eq("semester", semester)
+    .eq("academic_year", academicYear);
 
   const result: { name: string; grade: string; description: string }[] = [];
+  for (const g of (grades ?? []) as EkskulGrade[]) {
+    const ekskul = byId.get(g.ekskul_id);
+    if (!ekskul) continue;
+    result.push({
+      name: ekskul.name,
+      grade: g.grade,
+      description:
+        g.description ||
+        `Menunjukkan keaktifan dan penguasaan teknik yang ${g.predicate.toLowerCase()} dalam kegiatan ${ekskul.name}.`,
+    });
+  }
 
-  for (const g of studentGrades) {
-    const ekskul = store.ekskuls.find((e) => e.id === g.ekskul_id);
-    if (ekskul) {
+  if (result.length === 0) {
+    const { data: enrollments } = await supabase
+      .from("ekskul_enrollments")
+      .select("ekskul_id")
+      .eq("student_id", studentId)
+      .eq("semester", semester)
+      .eq("academic_year", academicYear)
+      .eq("status", "aktif");
+
+    for (const enr of (enrollments ?? []) as { ekskul_id: string }[]) {
+      const ekskul = byId.get(enr.ekskul_id);
+      if (!ekskul) continue;
       result.push({
         name: ekskul.name,
-        grade: g.grade,
-        description:
-          g.description ||
-          `Menunjukkan keaktifan dan penguasaan teknik yang ${g.predicate.toLowerCase()} dalam kegiatan ${ekskul.name}.`,
+        grade: "B",
+        description: `Aktif mengikuti seluruh rangkaian kegiatan ${ekskul.name} semester ini dengan disiplin.`,
       });
     }
   }
 
-  // 2. Jika belum ada nilai formal tapi santri aktif terdaftar di ekskul, tampilkan sebagai aktif
-  if (result.length === 0) {
-    const activeEnrollments = store.enrollments.filter(
-      (enr) =>
-        enr.student_id === studentId &&
-        enr.semester === semester &&
-        enr.academic_year === academicYear &&
-        enr.status === "aktif"
-    );
+  return result;
+}
 
-    for (const enr of activeEnrollments) {
-      const ekskul = store.ekskuls.find((e) => e.id === enr.ekskul_id);
-      if (ekskul) {
-        result.push({
-          name: ekskul.name,
-          grade: "B",
-          description: `Aktif mengikuti seluruh rangkaian kegiatan ${ekskul.name} semester ini dengan disiplin.`,
-        });
-      }
+/**
+ * Pendaftaran massal santri ke beberapa program sekaligus (dipakai tombol
+ * "Daftarkan Santri ke Ekskul Wajib"). Data yang sudah ada dilewati.
+ */
+export async function bulkEnrollStudents(params: {
+  ekskulIds: string[];
+  studentIds: string[];
+  semester: string;
+  academic_year: string;
+}): Promise<number> {
+  const supabase = await db();
+  const { data: existing } = await supabase
+    .from("ekskul_enrollments")
+    .select("ekskul_id,student_id")
+    .eq("semester", params.semester)
+    .eq("academic_year", params.academic_year);
+
+  const seen = new Set(
+    ((existing ?? []) as { ekskul_id: string; student_id: string }[]).map(
+      (r) => `${r.ekskul_id}::${r.student_id}`,
+    ),
+  );
+
+  const rows: Record<string, unknown>[] = [];
+  for (const ekskulId of params.ekskulIds) {
+    for (const studentId of params.studentIds) {
+      if (seen.has(`${ekskulId}::${studentId}`)) continue;
+      rows.push({
+        ekskul_id: ekskulId,
+        student_id: studentId,
+        semester: params.semester,
+        academic_year: params.academic_year,
+        status: "aktif",
+      });
     }
   }
+  if (rows.length === 0) return 0;
 
-  return result;
+  let inserted = 0;
+  for (let i = 0; i < rows.length; i += 200) {
+    const chunk = rows.slice(i, i + 200);
+    const { error } = await supabase.from("ekskul_enrollments").insert(chunk);
+    if (!error) inserted += chunk.length;
+  }
+  return inserted;
 }
