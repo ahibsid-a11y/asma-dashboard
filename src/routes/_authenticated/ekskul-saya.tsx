@@ -260,13 +260,18 @@ function EkskulSayaPage() {
                   <CardContent className="p-4 space-y-5 text-xs">
                     {/* 2 Kolom Utama: Kehadiran & Keuangan */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* KOLOM 1: KEHADIRAN (ABSENSI) */}
+                      {/* KOLOM 1: KEHADIRAN (ABSENSI PERSESI 4 PERTEMUAN) */}
                       <div className="p-3.5 rounded-lg border border-border bg-card space-y-3">
                         <div className="flex items-center justify-between">
-                          <h4 className="font-bold text-foreground flex items-center gap-1.5 text-xs">
-                            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                            Fokus Kehadiran & Absensi Sesi
-                          </h4>
+                          <div>
+                            <h4 className="font-bold text-foreground flex items-center gap-1.5 text-xs">
+                              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                              Absensi Sesi ({item.enrollment?.session_label || "Sesi 1"})
+                            </h4>
+                            <span className="text-[10px] text-muted-foreground">
+                              1 Sesi = 4 Pertemuan Latihan Rutin
+                            </span>
+                          </div>
                           <span className="font-extrabold text-sm text-emerald-600">
                             {att?.attendanceRate || 100}%
                           </span>
@@ -274,28 +279,67 @@ function EkskulSayaPage() {
 
                         <Progress value={att?.attendanceRate || 100} className="h-2" />
 
-                        <div className="grid grid-cols-4 gap-2 text-center pt-1">
-                          <div className="p-1.5 rounded bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
-                            <div className="font-black text-sm">{att?.hadir || 0}</div>
-                            <div className="text-[10px] uppercase font-bold">Hadir</div>
-                          </div>
-                          <div className="p-1.5 rounded bg-blue-50 text-blue-900 dark:bg-blue-950/40 dark:text-blue-200">
-                            <div className="font-black text-sm">{att?.izin || 0}</div>
-                            <div className="text-[10px] uppercase font-bold">Izin</div>
-                          </div>
-                          <div className="p-1.5 rounded bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-                            <div className="font-black text-sm">{att?.sakit || 0}</div>
-                            <div className="text-[10px] uppercase font-bold">Sakit</div>
-                          </div>
-                          <div className="p-1.5 rounded bg-rose-50 text-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
-                            <div className="font-black text-sm">{att?.alpa || 0}</div>
-                            <div className="text-[10px] uppercase font-bold">Alpa</div>
+                        {/* Rincian 4 Pertemuan Per Sesi */}
+                        <div className="space-y-1.5 pt-1">
+                          <span className="text-[10.5px] font-bold text-muted-foreground uppercase tracking-wide block">
+                            Rincian 4 Pertemuan Sesi:
+                          </span>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            {[1, 2, 3, 4].map((meetingNum) => {
+                              const rec = att?.records?.[meetingNum - 1];
+                              const status = rec?.status;
+
+                              return (
+                                <div
+                                  key={meetingNum}
+                                  className={`p-2 rounded-md border text-center transition-all ${
+                                    status === "hadir"
+                                      ? "bg-emerald-50 border-emerald-300 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200"
+                                      : status === "izin"
+                                      ? "bg-blue-50 border-blue-300 text-blue-900 dark:bg-blue-950/40 dark:text-blue-200"
+                                      : status === "sakit"
+                                      ? "bg-amber-50 border-amber-300 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
+                                      : status === "alpa"
+                                      ? "bg-rose-50 border-rose-300 text-rose-900 dark:bg-rose-950/40 dark:text-rose-200"
+                                      : "bg-muted/30 border-dashed border-border text-muted-foreground"
+                                  }`}
+                                >
+                                  <div className="text-[10px] font-bold uppercase">
+                                    Pertemuan {meetingNum}
+                                  </div>
+                                  <div className="text-xs font-black mt-0.5 capitalize">
+                                    {status ? (
+                                      status
+                                    ) : (
+                                      <span className="text-[10px] font-normal text-muted-foreground">
+                                        Terjadwal
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
 
-                        <p className="text-[10.5px] text-muted-foreground pt-1">
-                          Total Pertemuan Tercatat: <b>{att?.totalSesi || 0} Sesi</b> latihan.
-                        </p>
+                        <div className="grid grid-cols-4 gap-2 text-center pt-1 border-t">
+                          <div className="p-1 rounded bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
+                            <div className="font-black text-xs">{att?.hadir || 0}</div>
+                            <div className="text-[9px] uppercase font-bold">Hadir</div>
+                          </div>
+                          <div className="p-1 rounded bg-blue-50 text-blue-900 dark:bg-blue-950/40 dark:text-blue-200">
+                            <div className="font-black text-xs">{att?.izin || 0}</div>
+                            <div className="text-[9px] uppercase font-bold">Izin</div>
+                          </div>
+                          <div className="p-1 rounded bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                            <div className="font-black text-xs">{att?.sakit || 0}</div>
+                            <div className="text-[9px] uppercase font-bold">Sakit</div>
+                          </div>
+                          <div className="p-1 rounded bg-rose-50 text-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
+                            <div className="font-black text-xs">{att?.alpa || 0}</div>
+                            <div className="text-[9px] uppercase font-bold">Alpa</div>
+                          </div>
+                        </div>
                       </div>
 
                       {/* KOLOM 2: PEMBAYARAN IURAN EKSKUL */}

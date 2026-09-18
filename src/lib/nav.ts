@@ -64,6 +64,8 @@ export type NavKey =
   | "pendaftaran-ekskul"
   | "ekskul-saya"
   | "rekap-ekskul"
+  | "perpustakaan"
+  | "maktabah"
   | "profil";
 
 export type NavCategory =
@@ -348,6 +350,21 @@ export const NAV_ITEMS: Record<NavKey, NavItem> = {
     category: "rekap",
   },
 
+  perpustakaan: {
+    key: "perpustakaan",
+    to: "/perpustakaan",
+    label: "Presensi Perpustakaan",
+    icon: BookOpen,
+    category: "presensi",
+  },
+  maktabah: {
+    key: "maktabah",
+    to: "/maktabah",
+    label: "Maktabah & Literasi",
+    icon: BookOpen,
+    category: "kesantrian",
+  },
+
   profil: { key: "profil", to: "/profil", label: "Profil Saya", icon: UserCog, category: "akun" },
 };
 
@@ -382,6 +399,7 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "manajemen-mapel",
     "manajemen-ekskul",
     ...REKAP_ALL,
+    "perpustakaan",
     "scan-presensi",
     "presensi-insidental",
     "pengaturan-sesi",
@@ -468,7 +486,6 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "scan-presensi",
     "presensi-insidental",
     "absensi-diri",
-    "catat-pelanggaran",
     "perizinan",
     "kalender",
     "jadwal-pelajaran",
@@ -497,7 +514,6 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "presensi-insidental",
     "absensi-diri",
     "input-mutabaah",
-    "catat-pelanggaran",
     "perizinan",
     "input-nilai-tahfiz",
     "kalender",
@@ -509,7 +525,6 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "presensi-insidental",
     "absensi-diri",
     "input-mutabaah",
-    "catat-pelanggaran",
     "perizinan",
     "input-nilai-tahfiz",
     "kalender",
@@ -521,7 +536,6 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "presensi-insidental",
     "absensi-diri",
     "input-mutabaah",
-    "catat-pelanggaran",
     "perizinan",
     "kalender",
     "jadwal-pelajaran",
@@ -535,7 +549,6 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "scan-presensi",
     "presensi-insidental",
     "absensi-diri",
-    "catat-pelanggaran",
     "kegiatan-ekskul",
     "kalender",
     "jadwal-pelajaran",
@@ -555,10 +568,11 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "profil",
   ],
   kepala_rt_sarpras: ["dashboard", "presensi-insidental", "absensi-diri", "kalender", "profil"],
-  tendik: ["dashboard", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "profil"],
+  tendik: ["dashboard", "perpustakaan", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "profil"],
   santri: [
     "dashboard",
     "absensi-diri",
+    "maktabah",
     "mutabaah-saya",
     "pelanggaran-saya",
     "perizinan",

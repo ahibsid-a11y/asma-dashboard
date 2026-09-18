@@ -50,9 +50,37 @@ async function getCurrentUserContext(ctx: Ctx) {
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!me) throw new Error("Pengguna tidak ditemukan");
-  const canManage = isMemberAdmin(me.account_type);
-  const isMusyrif = me.account_type === "musyrif_asrama";
-  return { me, canManage, isMusyrif };
+  const canManage = isMemberAdmin(me.account_type) || me.account_type === "kabid_kesantrian";
+  const isMusyrif = me.account_type === "musyrif_asrama" || me.account_type === "musyrif_halaqoh";
+
+  // Ambil kamar yang ditugaskan kepada musyrif dari tabel dorms dan profiles
+  const assignedDorms: string[] = [];
+  if (me.dorm) assignedDorms.push(me.dorm);
+
+  try {
+    const { data: dormRows } = await ctx.supabase
+      .from("dorms")
+      .select("name")
+      .eq("musyrif_id", ctx.userId);
+    for (const d of dormRows ?? []) {
+      if (d.name && !assignedDorms.includes(d.name)) {
+        assignedDorms.push(d.name);
+      }
+    }
+  } catch {}
+
+  // Sinkronisasi otomatis ke profil musyrif jika profil belum memiliki nama kamar
+  if (!me.dorm && assignedDorms.length > 0) {
+    me.dorm = assignedDorms[0];
+    try {
+      await ctx.supabase
+        .from("profiles")
+        .update({ dorm: assignedDorms[0] })
+        .eq("id", ctx.userId);
+    } catch {}
+  }
+
+  return { me, canManage, isMusyrif, assignedDorms };
 }
 
 /** Pastikan daftar kegiatan mutaba'ah terisi di database */
@@ -106,17 +134,18 @@ export const getMutabaahActivities = createServerFn({ method: "GET" })
     return ensureActivities(supabaseAdmin);
   });
 
-/** 2. Tambah, ubah, atau hapus kegiatan mutaba'ah (khusus admin) */
+/** 2. Tambah, ubah, hapus, atau urutkan kegiatan mutaba'ah (khusus admin / kepala kesantrian) */
 export const manageMutabaahActivity = createServerFn({ method: "POST" })
   .validator((data: unknown) =>
     z
       .object({
-        action: z.enum(["create", "update", "delete", "toggle"]),
+        action: z.enum(["create", "update", "delete", "toggle", "reorder"]),
         id: z.string().optional(),
         title: z.string().trim().min(2, "Nama kegiatan minimal 2 karakter").optional(),
         category: z.string().trim().optional().default("Ibadah"),
         order_index: z.number().optional(),
         is_active: z.boolean().optional(),
+        ordered_ids: z.array(z.string()).optional(),
       })
       .parse(data),
   )
@@ -124,10 +153,19 @@ export const manageMutabaahActivity = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     const ctx = context as Ctx;
     const { canManage } = await getCurrentUserContext(ctx);
-    if (!canManage) throw new Error("Hanya admin yang dapat mengelola daftar kegiatan");
+    if (!canManage) throw new Error("Hanya admin dan kepala kesantrian yang dapat mengelola daftar kegiatan");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const table = (supabaseAdmin as any).from("mutabaah_activities");
+
+    if (data.action === "reorder" && data.ordered_ids && data.ordered_ids.length > 0) {
+      // Perbarui order_index untuk seluruh id yang dikirim
+      const updates = data.ordered_ids.map((actId, index) =>
+        table.update({ order_index: index + 1 }).eq("id", actId)
+      );
+      await Promise.all(updates);
+      return { ok: true };
+    }
 
     if (data.action === "create") {
       const { data: existing } = await table
@@ -195,7 +233,7 @@ export const getMutabaahSheet = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context, data }) => {
     const ctx = context as Ctx;
-    const { me, canManage, isMusyrif } = await getCurrentUserContext(ctx);
+    const { me, canManage, isMusyrif, assignedDorms } = await getCurrentUserContext(ctx);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // Dapatkan seluruh daftar asrama yang tersedia
@@ -207,8 +245,16 @@ export const getMutabaahSheet = createServerFn({ method: "GET" })
 
     // Tentukan asrama/kamar target
     let selectedDorm = data.dorm || null;
-    if (isMusyrif && me.dorm) {
-      selectedDorm = me.dorm; // Musyrif dikunci hanya untuk asramanya sendiri
+    if (isMusyrif) {
+      if (assignedDorms.length > 0) {
+        if (selectedDorm && assignedDorms.includes(selectedDorm)) {
+          // Musyrif memilih kamar binaannya yang valid
+        } else {
+          selectedDorm = assignedDorms[0];
+        }
+      } else if (me.dorm) {
+        selectedDorm = me.dorm;
+      }
     } else if (!selectedDorm && availableDorms.length > 0) {
       selectedDorm = availableDorms[0] ?? null;
     }
@@ -229,7 +275,9 @@ export const getMutabaahSheet = createServerFn({ method: "GET" })
 
     // Ambil kegiatan aktif
     const allActivities = await ensureActivities(supabaseAdmin);
-    const activities = allActivities.filter((a) => a.is_active);
+    const activities = allActivities
+      .filter((a) => a.is_active)
+      .sort((a, b) => a.order_index - b.order_index);
 
     // Ambil records untuk tanggal dan santri tersebut
     const studentIds = (students ?? []).map((s: any) => s.id);
@@ -252,11 +300,14 @@ export const getMutabaahSheet = createServerFn({ method: "GET" })
       }
     }
 
+    // Jika musyrif, daftar kamar yang bisa dipilih adalah kamar yang dia asuh
+    const dormOptions = isMusyrif && assignedDorms.length > 0 ? assignedDorms : availableDorms;
+
     return {
       date: data.date,
       selectedDorm,
-      availableDorms,
-      canChangeDorm: canManage,
+      availableDorms: dormOptions,
+      canChangeDorm: canManage || (isMusyrif && assignedDorms.length > 1),
       canManageActivities: canManage,
       students: students ?? [],
       activities,
@@ -284,7 +335,7 @@ export const saveMutabaahChecklist = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context, data }) => {
     const ctx = context as Ctx;
-    const { me, canManage, isMusyrif } = await getCurrentUserContext(ctx);
+    const { canManage, isMusyrif, assignedDorms } = await getCurrentUserContext(ctx);
     if (!canManage && !isMusyrif) {
       throw new Error("Anda tidak memiliki wewenang untuk mengisi mutaba'ah");
     }
@@ -292,16 +343,16 @@ export const saveMutabaahChecklist = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // Jika musyrif, pastikan santri yang di-update berada di asrama musyrif tersebut
-    if (isMusyrif && me.dorm) {
+    if (isMusyrif && assignedDorms.length > 0) {
       const studentIds = [...new Set(data.updates.map((u) => u.student_id))];
       const { data: checkedStudents } = await supabaseAdmin
         .from("profiles")
         .select("id,dorm")
         .in("id", studentIds);
 
-      const invalid = (checkedStudents ?? []).some((s: any) => s.dorm !== me.dorm);
+      const invalid = (checkedStudents ?? []).some((s: any) => !s.dorm || !assignedDorms.includes(s.dorm));
       if (invalid) {
-        throw new Error("Anda hanya dapat mengisi mutaba'ah untuk santri di kamar Anda");
+        throw new Error("Anda hanya dapat mengisi mutaba'ah untuk santri di kamar binaan Anda");
       }
     }
 

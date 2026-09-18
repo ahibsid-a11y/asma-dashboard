@@ -23,7 +23,23 @@ import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
 import {
   enrollStudentFn,
@@ -56,6 +72,8 @@ function PendaftaranEkskulPage() {
   const enrollFn = useServerFn(enrollStudentFn);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedEkskulToEnroll, setSelectedEkskulToEnroll] = useState<any | null>(null);
+  const [selectedSession, setSelectedSession] = useState<string>("Sesi 1 (Juli / 4 Pertemuan)");
 
   const studentId = profile?.id || "";
 
@@ -82,17 +100,19 @@ function PendaftaranEkskulPage() {
 
   // Mutation Daftar
   const enrollMutation = useMutation({
-    mutationFn: (ekskulId: string) =>
+    mutationFn: (data: { ekskulId: string; sessionLabel: string }) =>
       enrollFn({
         data: {
-          ekskulId,
+          ekskulId: data.ekskulId,
           studentId,
+          sessionLabel: data.sessionLabel,
           semester: "1",
           academicYear: "2026/2027",
         },
       }),
     onSuccess: () => {
-      toast.success("Alhamdulillah, pendaftaran ekstrakurikuler berhasil!");
+      toast.success("Alhamdulillah, pendaftaran ekstrakurikuler berhasil diajukan!");
+      setSelectedEkskulToEnroll(null);
       queryClient.invalidateQueries({ queryKey: ["student-ekskul-portal"] });
       queryClient.invalidateQueries({ queryKey: ["master-ekskuls"] });
     },
@@ -223,15 +243,13 @@ function PendaftaranEkskulPage() {
                     ) : (
                       <Button
                         className="w-full text-xs font-bold gap-1.5"
-                        onClick={() => enrollMutation.mutate(ekskul.id)}
-                        disabled={isPending}
+                        onClick={() => {
+                          setSelectedEkskulToEnroll(ekskul);
+                          setSelectedSession("Sesi 1 (Juli / 4 Pertemuan)");
+                        }}
                       >
-                        {isPending ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <UserPlus className="h-3.5 w-3.5" />
-                        )}
-                        Daftar Program Ini
+                        <UserPlus className="h-3.5 w-3.5" />
+                        Daftar & Pilih Sesi
                       </Button>
                     )}
                   </div>
@@ -240,6 +258,102 @@ function PendaftaranEkskulPage() {
             );
           })}
         </div>
+
+        {/* DIALOG PILIH SESI PENDAFTARAN */}
+        <Dialog
+          open={Boolean(selectedEkskulToEnroll)}
+          onOpenChange={(open) => !open && setSelectedEkskulToEnroll(null)}
+        >
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-base font-bold flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-primary" />
+                Pilih Sesi & Periode Latihan
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Pendaftaran untuk: <b className="text-foreground">{selectedEkskulToEnroll?.name}</b>. Setiap sesi mencakup 4 pertemuan latihan.
+              </DialogDescription>
+            </DialogHeader>
+
+            {selectedEkskulToEnroll && (
+              <div className="space-y-4 py-2 text-xs">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Pilih Sesi / Bulan:</Label>
+                  <Select value={selectedSession} onValueChange={setSelectedSession}>
+                    <SelectTrigger className="h-9 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Sesi 1 (Juli / 4 Pertemuan)">Sesi 1 (Juli / 4 Pertemuan)</SelectItem>
+                      <SelectItem value="Sesi 2 (Agustus / 4 Pertemuan)">Sesi 2 (Agustus / 4 Pertemuan)</SelectItem>
+                      <SelectItem value="Sesi 3 (September / 4 Pertemuan)">Sesi 3 (September / 4 Pertemuan)</SelectItem>
+                      <SelectItem value="Sesi 4 (Oktober / 4 Pertemuan)">Sesi 4 (Oktober / 4 Pertemuan)</SelectItem>
+                      <SelectItem value="Sesi 5 (November / 4 Pertemuan)">Sesi 5 (November / 4 Pertemuan)</SelectItem>
+                      <SelectItem value="Sesi 6 (Desember / 4 Pertemuan)">Sesi 6 (Desember / 4 Pertemuan)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="p-3 rounded-lg border bg-muted/20 space-y-1.5">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Jadwal Rutin:</span>
+                    <span className="font-semibold">{selectedEkskulToEnroll.schedule_day}, {selectedEkskulToEnroll.schedule_time}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Lokasi:</span>
+                    <span className="font-semibold">{selectedEkskulToEnroll.location}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Kapasitas Sesi:</span>
+                    <span className="font-semibold text-emerald-600">Maks. {selectedEkskulToEnroll.quota || 30} Santri</span>
+                  </div>
+                  <div className="flex justify-between pt-1 border-t">
+                    <span className="text-muted-foreground font-medium">Iuran Sesi:</span>
+                    <span className="font-bold text-sm text-foreground">
+                      {selectedEkskulToEnroll.fee > 0
+                        ? `Rp ${selectedEkskulToEnroll.fee.toLocaleString("id-ID")}`
+                        : "Gratis (Wajib)"}
+                    </span>
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-muted-foreground">
+                  * Setelah mendaftar, keikutsertaan Anda akan disetujui (approve) oleh pembina/admin setelah pembayaran iuran diselesaikan.
+                </p>
+              </div>
+            )}
+
+            <DialogFooter className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs"
+                onClick={() => setSelectedEkskulToEnroll(null)}
+              >
+                Batal
+              </Button>
+              <Button
+                size="sm"
+                className="text-xs font-bold gap-1.5"
+                disabled={enrollMutation.isPending}
+                onClick={() => {
+                  if (!selectedEkskulToEnroll) return;
+                  enrollMutation.mutate({
+                    ekskulId: selectedEkskulToEnroll.id,
+                    sessionLabel: selectedSession,
+                  });
+                }}
+              >
+                {enrollMutation.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <UserPlus className="h-3.5 w-3.5" />
+                )}
+                Konfirmasi Pendaftaran
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppShell>
   );

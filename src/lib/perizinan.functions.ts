@@ -299,13 +299,13 @@ export const getPermitInputContext = createServerFn({ method: "GET" })
       .order("name", { ascending: true });
     const dorms = (dormList ?? []).map((d: any) => d.name);
 
-    // Evaluasi peran approval
-    const isKurikulumApprover =
-      me.account_type === "waka_kurikulum" || me.account_type === "super_admin";
+    // Evaluasi peran approval (Wali Kelas menggantikan Waka Kurikulum)
+    const isWaliKelasApprover =
+      me.account_type === "wali_kelas" || isMemberAdmin(me.account_type);
     const isKesantrianApprover =
-      me.account_type === "kabid_kesantrian" || me.account_type === "super_admin";
+      me.account_type === "kabid_kesantrian" || isMemberAdmin(me.account_type);
     const isUksApprover =
-      me.account_type === "tendik" || me.account_type === "super_admin";
+      me.account_type === "tendik" || isMemberAdmin(me.account_type);
     const isKepsekApprover =
       me.account_type === "kepala_sekolah" ||
       me.account_type === "mudir" ||
@@ -318,7 +318,8 @@ export const getPermitInputContext = createServerFn({ method: "GET" })
       categories,
       dorms,
       approverRoles: {
-        canApproveKurikulum: isKurikulumApprover,
+        canApproveKurikulum: isWaliKelasApprover,
+        canApproveWaliKelas: isWaliKelasApprover,
         canApproveKesantrian: isKesantrianApprover,
         canApproveUks: isUksApprover,
         canApproveKepsek: isKepsekApprover,
@@ -359,13 +360,17 @@ export const submitPermit = createServerFn({ method: "POST" })
       throw new Error("Tanggal kembali tidak boleh mendahului tanggal berangkat");
     }
 
+    // Apabila izin sakit, WAJIB memerlukan approval pihak UKS
+    const isSakit = data.category_name.toLowerCase().includes("sakit");
+    const requiresUks = Boolean(data.requires_uks || isSakit);
+
     const { data: created, error } = await (supabaseAdmin as any)
       .from("student_permits")
       .insert({
         student_id: data.student_id,
         category_id: data.category_id || null,
         category_name: data.category_name,
-        requires_uks: data.requires_uks,
+        requires_uks: requiresUks,
         start_date: data.start_date,
         start_time: data.start_time,
         end_date: data.end_date,
@@ -473,7 +478,7 @@ export const approveOrRejectPermit = createServerFn({ method: "POST" })
       updates["approved_kepsek_by"] = me.id;
       updates["approved_kepsek_at"] = nowIso;
       updates["notes_kepsek"] = data.notes || "Disetujui pimpinan";
-    } else if (data.approval_type === "kurikulum") {
+    } else if (data.approval_type === "kurikulum" || (data.approval_type as string) === "wali_kelas") {
       updates["approved_kurikulum"] = true;
       updates["approved_kurikulum_by"] = me.id;
       updates["approved_kurikulum_at"] = nowIso;
@@ -499,7 +504,10 @@ export const approveOrRejectPermit = createServerFn({ method: "POST" })
     const kurikulumDone = updates["approved_kurikulum"] ?? permit.approved_kurikulum;
     const kesantrianDone = updates["approved_kesantrian"] ?? permit.approved_kesantrian;
     const kepsekDone = updates["approved_kepsek"] ?? permit.approved_kepsek;
-    const uksDone = permit.requires_uks
+
+    // Apabila izin sakit atau requires_uks, UKS wajib approve sebelum berstatus 'Disetujui'
+    const isSakit = (permit.category_name || "").toLowerCase().includes("sakit") || permit.requires_uks;
+    const uksDone = isSakit
       ? (updates["approved_uks"] ?? permit.approved_uks)
       : true;
 
@@ -904,5 +912,51 @@ export const getMyPermits = createServerFn({ method: "GET" })
     return {
       student: me,
       permits: (permits ?? []) as StudentPermit[],
+    };
+  });
+
+/** 9. Ambil jumlah notifikasi antrean approval untuk peran yang sedang login */
+export const getPendingPermitApprovalsCountFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const ctx = context as Ctx;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: me } = await (supabaseAdmin as any)
+      .from("profiles")
+      .select("id,account_type,class")
+      .eq("id", ctx.userId)
+      .maybeSingle();
+
+    if (!me || me.account_type === "santri") {
+      return { count: 0, totalPending: 0 };
+    }
+
+    const { data: pendingPermits } = await (supabaseAdmin as any)
+      .from("student_permits")
+      .select("id,student_id,category_name,requires_uks,approved_kurikulum,approved_kesantrian,approved_uks,approved_kepsek,status")
+      .eq("status", "Menunggu Persetujuan");
+
+    const list = pendingPermits || [];
+    let myActionNeeded = 0;
+    const role = me.account_type;
+    const isSuper = isMemberAdmin(role);
+
+    for (const p of list) {
+      const isSakit = (p.category_name || "").toLowerCase().includes("sakit") || p.requires_uks;
+      if ((role === "wali_kelas" || isSuper) && !p.approved_kurikulum) {
+        myActionNeeded++;
+      } else if ((role === "kabid_kesantrian" || isSuper) && !p.approved_kesantrian) {
+        myActionNeeded++;
+      } else if ((role === "tendik" || isSuper) && isSakit && !p.approved_uks) {
+        myActionNeeded++;
+      } else if ((role === "kepala_sekolah" || role === "mudir" || isSuper) && !p.approved_kepsek) {
+        myActionNeeded++;
+      }
+    }
+
+    return {
+      count: myActionNeeded,
+      totalPending: list.length,
     };
   });

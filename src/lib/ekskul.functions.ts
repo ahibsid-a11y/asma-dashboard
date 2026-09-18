@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
+  approveStudentEnrollment,
   createBillingForStudent,
   createSessionAndAttendance,
   deleteEkskulItem,
@@ -143,6 +144,7 @@ export const enrollStudentFn = createServerFn({ method: "POST" })
       .object({
         ekskulId: z.string(),
         studentId: z.string(),
+        sessionLabel: z.string().optional(),
         semester: z.string().default("1"),
         academicYear: z.string().default("2026/2027"),
       })
@@ -153,11 +155,30 @@ export const enrollStudentFn = createServerFn({ method: "POST" })
     const enrollment = enrollStudentToEkskul({
       ekskul_id: data.ekskulId,
       student_id: data.studentId,
+      session_label: data.sessionLabel,
       semester: data.semester,
       academic_year: data.academicYear,
     });
 
     return { success: true, enrollment };
+  });
+
+export const approveStudentEnrollmentFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) =>
+    z
+      .object({
+        enrollmentId: z.string(),
+      })
+      .parse(data)
+  )
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ data, context }) => {
+    const approverName = context.profile?.display_name || context.profile?.name || "Admin Ekstrakurikuler";
+    const approved = approveStudentEnrollment(data.enrollmentId, approverName);
+    if (!approved) {
+      throw new Error("Pendaftaran tidak ditemukan");
+    }
+    return { success: true, enrollment: approved, message: "Keikutsertaan santri berhasil disetujui!" };
   });
 
 export const unenrollStudentFn = createServerFn({ method: "POST" })
@@ -628,21 +649,23 @@ export const getEkskulRecapDataFn = createServerFn({ method: "POST" })
     // 1. Profil santri
     const { data: students } = await (supabaseAdmin as any)
       .from("profiles")
-      .select("id, full_name, name, display_name, nis_nip, class_name")
-      .eq("account_type", "santri")
-      .order("full_name");
+      .select("id, full_name, name, display_name, nis_nip, class")
+      .eq("account_type", "santri");
 
     const studentsMap = new Map((students || []).map((s: any) => [s.id, s]));
 
     // 2. Rekap per Ekskul
     const ekskulStats = store.ekskuls.map((ekskul) => {
-      const enrollments = store.enrollments.filter(
+      const allEnrollments = store.enrollments.filter(
         (enr) =>
           enr.ekskul_id === ekskul.id &&
           enr.semester === data.semester &&
           enr.academic_year === data.academicYear &&
-          enr.status === "aktif"
+          enr.status !== "keluar"
       );
+
+      const activeEnrollments = allEnrollments.filter((enr) => enr.status === "aktif");
+      const pendingEnrollments = allEnrollments.filter((enr) => enr.status === "menunggu_konfirmasi");
 
       const sessions = store.sessions.filter(
         (s) =>
@@ -664,11 +687,37 @@ export const getEkskulRecapDataFn = createServerFn({ method: "POST" })
           g.academic_year === data.academicYear
       );
 
+      const members = allEnrollments.map((enr) => {
+        const s = studentsMap.get(enr.student_id);
+        const payment = payments.find((p) => p.enrollment_id === enr.id);
+        return {
+          enrollmentId: enr.id,
+          studentId: enr.student_id,
+          name: s?.name || s?.display_name || s?.full_name || "Santri",
+          className: s?.class || "-",
+          nis: s?.nis_nip || "-",
+          sessionLabel: enr.session_label || "Sesi 1 (4 Pertemuan)",
+          enrollmentStatus: enr.status,
+          enrolledAt: enr.enrolled_at,
+          payment: payment
+            ? {
+                id: payment.id,
+                amount: payment.amount,
+                status: payment.status,
+                periodLabel: payment.period_label,
+                paymentDate: payment.payment_date,
+              }
+            : null,
+        };
+      });
+
       return {
         ekskul,
-        totalMembers: enrollments.length,
+        totalMembers: activeEnrollments.length,
+        totalPending: pendingEnrollments.length,
         totalSessions: sessions.length,
         totalGrades: grades.length,
+        members,
         finance: {
           totalBilled,
           totalPaid,

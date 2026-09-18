@@ -27,7 +27,9 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
-import { getMyTahfizData } from "@/lib/tahfiz.functions";
+import { TahfizReportDialog } from "@/components/tahfiz-report-dialog";
+import { getMyTahfizData, getStudentTahfizExamsFn } from "@/lib/tahfiz.functions";
+import type { TahfizExam } from "@/lib/tahfiz.exams.server";
 
 export const Route = createFileRoute("/_authenticated/nilai-tahfiz-saya")({
   head: () => ({
@@ -55,11 +57,25 @@ function NilaiTahfizSayaPage() {
   const fetchMyData = useServerFn(getMyTahfizData);
 
   const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [selectedExamForPrint, setSelectedExamForPrint] = useState<TahfizExam | null>(null);
+
+  const fetchStudentExams = useServerFn(getStudentTahfizExamsFn);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["my-tahfiz-data", profile?.id],
     queryFn: () => fetchMyData(),
   });
+
+  const examsQuery = useQuery({
+    queryKey: ["my-tahfiz-exams", profile?.id],
+    queryFn: () => {
+      if (!profile?.id) return { exams: [] };
+      return fetchStudentExams({ data: { studentId: profile.id } });
+    },
+    enabled: Boolean(profile?.id),
+  });
+
+  const examsList = examsQuery.data?.exams || [];
 
   const student = data?.student || profile;
   const history = data?.history;
@@ -288,15 +304,18 @@ function NilaiTahfizSayaPage() {
 
               <CardContent className="p-4">
                 <Tabs defaultValue="hafalan" className="w-full">
-                  <TabsList className="grid w-full grid-cols-3">
+                  <TabsList className="grid w-full grid-cols-4">
                     <TabsTrigger value="hafalan" className="text-xs font-semibold">
                       ✨ Tahfiz 3 Pilar ({hafalanList.length})
                     </TabsTrigger>
                     <TabsTrigger value="tilawah" className="text-xs font-semibold">
-                      📜 Tilawah Al-Qur'an ({tilawahList.length})
+                      📜 Tilawah ({tilawahList.length})
                     </TabsTrigger>
                     <TabsTrigger value="iqro" className="text-xs font-semibold">
-                      📖 Iqro Metode Itqon ({iqroList.length})
+                      📖 Iqro ({iqroList.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="ujian" className="text-xs font-semibold text-primary">
+                      🎓 Ujian Tahfiz ({examsList.length})
                     </TabsTrigger>
                   </TabsList>
 
@@ -461,6 +480,65 @@ function NilaiTahfizSayaPage() {
                       </div>
                     )}
                   </TabsContent>
+
+                  {/* TAB UJIAN TAHFIZ & CETAK RAPOR */}
+                  <TabsContent value="ujian" className="mt-4 space-y-4">
+                    {examsList.length === 0 ? (
+                      <div className="p-8 text-center text-xs text-muted-foreground border rounded-lg border-dashed">
+                        <GraduationCap className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                        <h4 className="font-bold text-sm text-foreground">Belum Ada Ujian Tahfiz Resmi</h4>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Hasil ujian tasmi' atau ujian tahfiz semester akan muncul di sini setelah dinilai oleh musyrif/penguji.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto border rounded-lg">
+                        <table className="w-full text-xs text-left border-collapse">
+                          <thead>
+                            <tr className="border-b bg-muted/40 text-muted-foreground font-bold">
+                              <th className="p-3">Tanggal</th>
+                              <th className="p-3">Judul Ujian</th>
+                              <th className="p-3">Juz yang Diuji</th>
+                              <th className="p-3 text-center">Skor Tajwid</th>
+                              <th className="p-3 text-center">Skor Kelancaran</th>
+                              <th className="p-3 text-center">Nilai Akhir</th>
+                              <th className="p-3">Predikat</th>
+                              <th className="p-3 text-center">Aksi</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {examsList.map((ex: any) => (
+                              <tr key={ex.id} className="border-b hover:bg-muted/10 transition-colors">
+                                <td className="p-3 text-muted-foreground">{ex.date}</td>
+                                <td className="p-3 font-bold text-foreground">{ex.exam_title}</td>
+                                <td className="p-3 font-medium">{ex.target_juz}</td>
+                                <td className="p-3 text-center font-mono">{ex.tajwid_avg}</td>
+                                <td className="p-3 text-center font-mono">{ex.hafalan_avg}</td>
+                                <td className="p-3 text-center font-mono font-black text-emerald-600 text-sm">
+                                  {ex.final_score}
+                                </td>
+                                <td className="p-3">
+                                  <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 text-[10px] font-bold">
+                                    {ex.predicate}
+                                  </Badge>
+                                </td>
+                                <td className="p-3 text-center">
+                                  <Button
+                                    size="sm"
+                                    className="h-7 text-[10.5px] font-bold bg-primary hover:bg-primary/90 text-primary-foreground gap-1"
+                                    onClick={() => setSelectedExamForPrint(ex)}
+                                  >
+                                    <BookMarked className="h-3.5 w-3.5" />
+                                    Cetak Rapor Tahfiz
+                                  </Button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </TabsContent>
                 </Tabs>
               </CardContent>
             </Card>
@@ -581,6 +659,13 @@ function NilaiTahfizSayaPage() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* MODAL CETAK RAPOR TAHFIZ */}
+        <TahfizReportDialog
+          isOpen={Boolean(selectedExamForPrint)}
+          onClose={() => setSelectedExamForPrint(null)}
+          exam={selectedExamForPrint}
+        />
       </div>
     </AppShell>
   );

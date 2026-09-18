@@ -413,6 +413,74 @@ function SignatureBlock({
   );
 }
 
+function KesantrianSignatureBlock({
+  musyrif,
+  signatures,
+}: {
+  musyrif: { name: string; niy: string };
+  signatures: {
+    headOfKesantrianName?: string;
+    headOfKesantrianNiy?: string;
+    headmasterName: string;
+    headmasterNiy: string;
+  };
+}) {
+  const today = new Date();
+  const months = [
+    "Januari",
+    "Februari",
+    "Maret",
+    "April",
+    "Mei",
+    "Juni",
+    "Juli",
+    "Agustus",
+    "September",
+    "Oktober",
+    "November",
+    "Desember",
+  ];
+  const dateStr = `Cilegon, ${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear()}`;
+
+  const headKesantrian =
+    signatures.headOfKesantrianName && signatures.headOfKesantrianName !== "Kepala Kesantrian"
+      ? signatures.headOfKesantrianName
+      : "Ust. H. Ahmad Fauzan, Lc";
+  const headKesantrianNiy = signatures.headOfKesantrianNiy || "-";
+
+  return (
+    <div className="pt-4 text-xs md:text-sm print-section print-avoid-break report-signature-block">
+      <div className="text-right mb-4">
+        <span>{dateStr}</span>
+      </div>
+      <div className="grid grid-cols-3 gap-4 text-center">
+        <div>
+          <p className="font-medium text-slate-600 dark:text-slate-400 print:text-black">Mengetahui,</p>
+          <p className="font-medium text-slate-700 dark:text-slate-300 print:text-black">Orang Tua / Wali Siswa</p>
+          <div className="h-20" />
+          <p className="font-bold uppercase underline">( ........................................ )</p>
+        </div>
+
+        <div>
+          <p className="font-medium text-slate-600 dark:text-slate-400 print:text-black">Musyrif Asrama</p>
+          <p className="font-medium text-slate-700 dark:text-slate-300 print:text-black">&nbsp;</p>
+          <div className="h-20" />
+          <p className="font-bold uppercase underline">{musyrif?.name || "Musyrif Asrama"}</p>
+          <p className="text-[10px] text-slate-500 print:text-black">NIY. {musyrif?.niy || "-"}</p>
+        </div>
+
+        <div>
+          <p className="font-medium text-slate-600 dark:text-slate-400 print:text-black">Kepala Kesantrian</p>
+          <p className="font-medium text-slate-700 dark:text-slate-300 print:text-black">SMPIT Putra Al-Hanif</p>
+          <div className="h-20" />
+          <p className="font-bold uppercase underline">{headKesantrian}</p>
+          <p className="text-[10px] text-slate-500 print:text-black">NIY. {headKesantrianNiy}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ──────────────────────────────────────────────────────────────
 // Shared: Grades Table
 // ──────────────────────────────────────────────────────────────
@@ -776,15 +844,10 @@ function RaporKesantrian({ data }: { data: any }) {
         </div>
       </div>
 
-      {/* Tanda Tangan — include Musyrif */}
-      <SignatureBlock
+      {/* Tanda Tangan: Wali Siswa, Musyrif Asrama, Kepala Kesantrian */}
+      <KesantrianSignatureBlock
+        musyrif={data.musyrif}
         signatures={data.signatures}
-        studentClass={data.student.class || "-"}
-        extra={{
-          label: "Musyrif Asrama",
-          name: data.musyrif.name,
-          niy: data.musyrif.niy,
-        }}
       />
     </div>
   );

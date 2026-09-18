@@ -41,19 +41,47 @@ export const getKokurClassDataFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // Ambil murid di kelas tersebut
+    // Ambil daftar kelas yang tersedia dari database
+    const { data: classRows } = await (supabaseAdmin as any)
+      .from("classes")
+      .select("name")
+      .order("grade", { ascending: true })
+      .order("name", { ascending: true });
+
+    let availableClasses = (classRows || []).map((c: any) => c.name);
+    if (availableClasses.length === 0) {
+      const { data: distinctClasses } = await (supabaseAdmin as any)
+        .from("profiles")
+        .select("class")
+        .eq("account_type", "santri")
+        .not("class", "is", null);
+      availableClasses = Array.from(
+        new Set((distinctClasses || []).map((d: any) => d.class).filter(Boolean))
+      ).sort();
+    }
+    if (availableClasses.length === 0) {
+      availableClasses = ["7A", "7B", "8A", "8B", "9A", "9B"];
+    }
+
+    const targetClass = data.className || availableClasses[0] || "7A";
+
+    // Ambil murid di kelas tersebut dengan kolom yang sesuai di tabel profiles
     const { data: students, error: studentsErr } = await (supabaseAdmin as any)
       .from("profiles")
-      .select("id, full_name, nis_nip, class_name")
+      .select("id, name, display_name, nis_nip, class, dorm")
       .eq("account_type", "santri")
-      .eq("class_name", data.className)
-      .order("full_name");
+      .eq("class", targetClass)
+      .order("name", { ascending: true });
 
     if (studentsErr) {
       console.error("Error fetching students:", studentsErr);
     }
 
-    const studentList = students || [];
+    const studentList = (students || []).map((s: any) => ({
+      ...s,
+      full_name: s.name || s.display_name || "Santri",
+      class_name: s.class || "-",
+    }));
     const store = loadKokurStore();
 
     // Map setiap santri dengan record nilai jika ada
@@ -69,6 +97,8 @@ export const getKokurClassDataFn = createServerFn({ method: "POST" })
     return {
       themes: store.themes || DEFAULT_KOKUR_THEMES,
       students: result,
+      availableClasses,
+      selectedClass: targetClass,
     };
   });
 

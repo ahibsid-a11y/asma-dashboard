@@ -44,15 +44,20 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
+import { TahfizReportDialog } from "@/components/tahfiz-report-dialog";
 import {
   deleteTahfizEntry,
+  deleteTahfizExamFn,
   getMusyrifHalaqohContext,
   getStudentTahfizDetail,
+  getStudentTahfizExamsFn,
   saveIqroEntry,
+  saveTahfizExamFn,
   saveTahfizHafalanEntry,
   saveTilawahEntry,
   updateStudentLevelFn,
 } from "@/lib/tahfiz.functions";
+import { calculatePredicate, type TahfizExam } from "@/lib/tahfiz.exams.server";
 import type { IqroStage } from "@/lib/quran-data";
 import type { TahfizHafalanType, TahfizLevel } from "@/lib/tahfiz.storage.server";
 
@@ -93,6 +98,9 @@ function InputNilaiTahfizPage() {
   const saveTahfiz = useServerFn(saveTahfizHafalanEntry);
   const deleteRecord = useServerFn(deleteTahfizEntry);
   const updateLevel = useServerFn(updateStudentLevelFn);
+  const saveExam = useServerFn(saveTahfizExamFn);
+  const fetchStudentExams = useServerFn(getStudentTahfizExamsFn);
+  const deleteExam = useServerFn(deleteTahfizExamFn);
 
   const [selectedHalaqoh, setSelectedHalaqoh] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -131,6 +139,20 @@ function InputNilaiTahfizPage() {
   const [tahfizAyatEnd, setTahfizAyatEnd] = useState<number>(10);
   const [tahfizNilai, setTahfizNilai] = useState<number>(90);
   const [tahfizCatatan, setTahfizCatatan] = useState<string>("");
+
+  // Form states: Ujian Tahfiz
+  const [examTitle, setExamTitle] = useState<string>("Ujian Tasmi' Akhir Semester");
+  const [examJuz, setExamJuz] = useState<string>("Juz 30 (Juz 'Amma)");
+  const [examinerName, setExaminerName] = useState<string>("Penguji Tahfidz");
+  const [examNotes, setExamNotes] = useState<string>("");
+  const [examQuestions, setExamQuestions] = useState<
+    { surah_ayat: string; tajwid_score: number; hafalan_score: number; notes: string }[]
+  >([
+    { surah_ayat: "QS. An-Naba' : 1 - 20", tajwid_score: 85, hafalan_score: 90, notes: "Makhraj & tajwid baik" },
+    { surah_ayat: "QS. An-Nazi'at : 1 - 25", tajwid_score: 80, hafalan_score: 85, notes: "Kelancaran sangat baik" },
+    { surah_ayat: "QS. 'Abasa : 1 - 22", tajwid_score: 85, hafalan_score: 85, notes: "Mad & ghunnah tepat" },
+  ]);
+  const [selectedExamForPrint, setSelectedExamForPrint] = useState<TahfizExam | null>(null);
 
   // Context Query
   const contextQuery = useQuery({
@@ -253,6 +275,49 @@ function InputNilaiTahfizPage() {
       toast.error(`Gagal memperbarui tingkatan: ${err.message}`);
     },
   });
+
+  // Ujian Tahfiz Query & Mutations
+  const studentExamsQuery = useQuery({
+    queryKey: ["student-tahfiz-exams", activeStudent?.id],
+    queryFn: () => {
+      if (!activeStudent?.id) return { exams: [] };
+      return fetchStudentExams({ data: { studentId: activeStudent.id } });
+    },
+    enabled: Boolean(activeStudent?.id),
+  });
+
+  const saveExamMutation = useMutation({
+    mutationFn: (payload: any) => saveExam({ data: payload }),
+    onSuccess: (res) => {
+      toast.success("Alhamdulillah, hasil Ujian Tahfiz berhasil disimpan!");
+      queryClient.invalidateQueries({ queryKey: ["student-tahfiz-exams", activeStudent?.id] });
+      setSelectedExamForPrint(res.exam as any);
+    },
+    onError: (err: any) => {
+      toast.error(`Gagal menyimpan ujian tahfiz: ${err.message}`);
+    },
+  });
+
+  const deleteExamMutation = useMutation({
+    mutationFn: (examId: string) => deleteExam({ data: { examId } }),
+    onSuccess: () => {
+      toast.success("Data ujian berhasil dihapus");
+      queryClient.invalidateQueries({ queryKey: ["student-tahfiz-exams", activeStudent?.id] });
+    },
+    onError: (err: any) => {
+      toast.error(`Gagal menghapus ujian: ${err.message}`);
+    },
+  });
+
+  // Live Score Calculator
+  const liveTajwidAvg = Math.round(
+    examQuestions.reduce((sum, q) => sum + (Number(q.tajwid_score) || 0), 0) / (examQuestions.length || 1)
+  );
+  const liveHafalanAvg = Math.round(
+    examQuestions.reduce((sum, q) => sum + (Number(q.hafalan_score) || 0), 0) / (examQuestions.length || 1)
+  );
+  const liveFinalScore = Math.round((liveTajwidAvg + liveHafalanAvg) / 2);
+  const livePredicate = calculatePredicate(liveFinalScore);
 
   // Quick stats
   const halaqohStudents = useMemo(() => {
@@ -578,15 +643,18 @@ function InputNilaiTahfizPage() {
                       onValueChange={setActiveTab}
                       className="w-full"
                     >
-                      <TabsList className="grid w-full grid-cols-3">
+                      <TabsList className="grid w-full grid-cols-4">
                         <TabsTrigger value="iqro" className="text-xs font-semibold">
-                          📖 1. Iqro (Metode Itqon)
+                          📖 1. Iqro (Itqon)
                         </TabsTrigger>
                         <TabsTrigger value="tilawah" className="text-xs font-semibold">
-                          📜 2. Tilawah Qur'an
+                          📜 2. Tilawah
                         </TabsTrigger>
                         <TabsTrigger value="tahfiz" className="text-xs font-semibold">
-                          ✨ 3. Tahfiz (3 Pilar)
+                          ✨ 3. Tahfiz
+                        </TabsTrigger>
+                        <TabsTrigger value="ujian" className="text-xs font-semibold text-primary">
+                          🎓 4. Ujian & Rapor
                         </TabsTrigger>
                       </TabsList>
 
@@ -994,6 +1062,311 @@ function InputNilaiTahfizPage() {
                           </div>
                         </form>
                       </TabsContent>
+
+                      {/* TAB 4: UJIAN TAHFIZ & CETAK RAPOR */}
+                      <TabsContent value="ujian" className="mt-4 space-y-6">
+                        <form
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            if (!activeStudent) return;
+                            saveExamMutation.mutate({
+                              student_id: activeStudent.id,
+                              student_name: activeStudent.name,
+                              nis_nip: activeStudent.nis_nip || "-",
+                              class_name: activeStudent.class || "-",
+                              halaqoh_name: activeStudent.halaqoh || activeHalaqohName || "Halaqoh Al-Qur'an",
+                              musyrif_name: profile?.display_name || profile?.name || "Musyrif Halaqoh",
+                              examiner_name: examinerName.trim() || "Penguji Tahfidz",
+                              exam_title: examTitle.trim(),
+                              target_juz: examJuz.trim(),
+                              date: inputDate,
+                              semester: "1",
+                              academic_year: "2026/2027",
+                              questions: examQuestions,
+                              notes: examNotes,
+                            });
+                          }}
+                          className="space-y-4"
+                        >
+                          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-foreground">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold flex items-center gap-1.5 text-primary">
+                                <GraduationCap className="h-4 w-4" />
+                                Penilaian Ujian Tahfiz Santri: {activeStudent.name}
+                              </span>
+                              <Badge variant="outline" className="text-[10px] bg-background">
+                                Standar Penilaian: Tajwid (0-100) & Kelancaran Hafalan (0-100)
+                              </Badge>
+                            </div>
+                          </div>
+
+                          {/* Pengaturan Ujian */}
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                            <div className="space-y-1">
+                              <Label className="text-xs font-medium">Judul Ujian / Tasmi'</Label>
+                              <Input
+                                value={examTitle}
+                                onChange={(e) => setExamTitle(e.target.value)}
+                                placeholder="Misal: Ujian Tasmi' Juz 30"
+                                className="h-8 text-xs"
+                                required
+                              />
+                            </div>
+
+                            <div className="space-y-1">
+                              <Label className="text-xs font-medium">Target Juz yang Diuji</Label>
+                              <Input
+                                value={examJuz}
+                                onChange={(e) => setExamJuz(e.target.value)}
+                                placeholder="Misal: Juz 30 / Juz 29"
+                                className="h-8 text-xs"
+                                required
+                              />
+                            </div>
+
+                            <div className="space-y-1">
+                              <Label className="text-xs font-medium">Nama Penguji</Label>
+                              <Input
+                                value={examinerName}
+                                onChange={(e) => setExaminerName(e.target.value)}
+                                placeholder="Ust. Penguji Tahfidz"
+                                className="h-8 text-xs"
+                                required
+                              />
+                            </div>
+                          </div>
+
+                          {/* Tabel Soal-Soal Ujian */}
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-xs font-bold text-foreground">
+                                Rincian Soal Ujian (Potongan Ayat, Nilai Tajwid, & Kelancaran):
+                              </Label>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs font-bold gap-1 text-primary border-primary/40"
+                                onClick={() =>
+                                  setExamQuestions((prev) => [
+                                    ...prev,
+                                    {
+                                      surah_ayat: `QS. Al-Qur'an (Soal ${prev.length + 1})`,
+                                      tajwid_score: 85,
+                                      hafalan_score: 85,
+                                      notes: "",
+                                    },
+                                  ])
+                                }
+                              >
+                                + Tambah Soal
+                              </Button>
+                            </div>
+
+                            <div className="space-y-2.5">
+                              {examQuestions.map((q, idx) => (
+                                <div
+                                  key={idx}
+                                  className="grid grid-cols-12 gap-2 p-2.5 rounded-lg border bg-muted/20 items-center text-xs"
+                                >
+                                  <div className="col-span-1 text-center font-bold text-muted-foreground">
+                                    #{idx + 1}
+                                  </div>
+                                  <div className="col-span-4">
+                                    <Input
+                                      value={q.surah_ayat}
+                                      onChange={(e) => {
+                                        const next = [...examQuestions];
+                                        next[idx]!.surah_ayat = e.target.value;
+                                        setExamQuestions(next);
+                                      }}
+                                      placeholder="Nama Surat & Ayat..."
+                                      className="h-8 text-xs font-medium"
+                                      required
+                                    />
+                                  </div>
+                                  <div className="col-span-2">
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-[10px] text-muted-foreground">Tajwid:</span>
+                                      <Input
+                                        type="number"
+                                        min={0}
+                                        max={100}
+                                        value={q.tajwid_score}
+                                        onChange={(e) => {
+                                          const next = [...examQuestions];
+                                          next[idx]!.tajwid_score = Number(e.target.value);
+                                          setExamQuestions(next);
+                                        }}
+                                        className="h-8 text-xs font-bold text-center"
+                                        required
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="col-span-2">
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-[10px] text-muted-foreground">Hafalan:</span>
+                                      <Input
+                                        type="number"
+                                        min={0}
+                                        max={100}
+                                        value={q.hafalan_score}
+                                        onChange={(e) => {
+                                          const next = [...examQuestions];
+                                          next[idx]!.hafalan_score = Number(e.target.value);
+                                          setExamQuestions(next);
+                                        }}
+                                        className="h-8 text-xs font-bold text-center"
+                                        required
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="col-span-2">
+                                    <Input
+                                      value={q.notes}
+                                      onChange={(e) => {
+                                        const next = [...examQuestions];
+                                        next[idx]!.notes = e.target.value;
+                                        setExamQuestions(next);
+                                      }}
+                                      placeholder="Catatan..."
+                                      className="h-8 text-[11px]"
+                                    />
+                                  </div>
+                                  <div className="col-span-1 text-center">
+                                    {examQuestions.length > 1 && (
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                                        onClick={() =>
+                                          setExamQuestions((prev) => prev.filter((_, i) => i !== idx))
+                                        }
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Catatan Penguji & Ringkasan Nilai Akhir */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                            <div className="space-y-1">
+                              <Label className="text-xs font-medium">Catatan & Motivasi Penguji:</Label>
+                              <Textarea
+                                value={examNotes}
+                                onChange={(e) => setExamNotes(e.target.value)}
+                                placeholder="Misal: Tingkatkan kelancaran mad thobi'i dan murojaah sabqy harian..."
+                                className="text-xs min-h-[70px]"
+                              />
+                            </div>
+
+                            <div className="p-3 rounded-lg border bg-emerald-500/10 border-emerald-500/30 flex flex-col justify-between text-xs">
+                              <div className="flex justify-between items-center">
+                                <span className="text-muted-foreground font-medium">Rata-rata Tajwid:</span>
+                                <b className="font-mono text-foreground">{liveTajwidAvg} / 100</b>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-muted-foreground font-medium">Rata-rata Hafalan:</span>
+                                <b className="font-mono text-foreground">{liveHafalanAvg} / 100</b>
+                              </div>
+                              <div className="flex justify-between items-center pt-1 border-t border-emerald-500/20">
+                                <span className="font-extrabold text-foreground">NILAI AKHIR:</span>
+                                <span className="text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                                  {liveFinalScore}
+                                </span>
+                              </div>
+                              <div className="text-right">
+                                <Badge className="bg-emerald-600 text-white font-bold text-[10px]">
+                                  {livePredicate}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex justify-end pt-2">
+                            <Button
+                              type="submit"
+                              disabled={saveExamMutation.isPending}
+                              className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold gap-1.5"
+                            >
+                              {saveExamMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <CheckCircle2 className="h-4 w-4" />
+                              )}
+                              Simpan Penilaian Ujian
+                            </Button>
+                          </div>
+                        </form>
+
+                        {/* RIWAYAT UJIAN TAHFIZ SANTRI & TOMBOL CETAK */}
+                        <div className="pt-4 border-t space-y-3">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                            Riwayat Ujian Tahfidz & Cetak Rapor: {activeStudent.name}
+                          </h4>
+
+                          {studentExamsQuery.isLoading ? (
+                            <div className="p-4 text-center text-xs text-muted-foreground">
+                              Memuat riwayat ujian...
+                            </div>
+                          ) : (studentExamsQuery.data?.exams || []).length === 0 ? (
+                            <div className="p-6 text-center text-xs text-muted-foreground border rounded-lg border-dashed">
+                              Belum ada catatan ujian tahfiz resmi untuk santri ini.
+                            </div>
+                          ) : (
+                            <div className="overflow-x-auto border rounded-lg">
+                              <table className="w-full text-xs text-left border-collapse">
+                                <thead>
+                                  <tr className="border-b bg-muted/40 text-muted-foreground font-bold">
+                                    <th className="p-2.5">Tanggal</th>
+                                    <th className="p-2.5">Judul Ujian</th>
+                                    <th className="p-2.5">Juz</th>
+                                    <th className="p-2.5 text-center">Skor Tajwid</th>
+                                    <th className="p-2.5 text-center">Skor Hafalan</th>
+                                    <th className="p-2.5 text-center">Nilai Akhir</th>
+                                    <th className="p-2.5">Predikat</th>
+                                    <th className="p-2.5 text-center">Aksi</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {studentExamsQuery.data?.exams.map((ex: any) => (
+                                    <tr key={ex.id} className="border-b hover:bg-muted/10">
+                                      <td className="p-2.5 text-muted-foreground">{ex.date}</td>
+                                      <td className="p-2.5 font-bold text-foreground">{ex.exam_title}</td>
+                                      <td className="p-2.5 font-medium">{ex.target_juz}</td>
+                                      <td className="p-2.5 text-center font-mono">{ex.tajwid_avg}</td>
+                                      <td className="p-2.5 text-center font-mono">{ex.hafalan_avg}</td>
+                                      <td className="p-2.5 text-center font-mono font-black text-emerald-600">
+                                        {ex.final_score}
+                                      </td>
+                                      <td className="p-2.5">
+                                        <Badge variant="outline" className="text-[10px]">
+                                          {ex.predicate}
+                                        </Badge>
+                                      </td>
+                                      <td className="p-2.5 text-center">
+                                        <Button
+                                          size="sm"
+                                          className="h-7 text-[10.5px] font-bold bg-primary hover:bg-primary/90 text-primary-foreground gap-1"
+                                          onClick={() => setSelectedExamForPrint(ex)}
+                                        >
+                                          <BookMarked className="h-3.5 w-3.5" />
+                                          Cetak Rapor Tahfiz
+                                        </Button>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      </TabsContent>
                     </Tabs>
                   </CardContent>
                 </Card>
@@ -1291,6 +1664,13 @@ function InputNilaiTahfizPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* MODAL CETAK RAPOR TAHFIZ */}
+        <TahfizReportDialog
+          isOpen={Boolean(selectedExamForPrint)}
+          onClose={() => setSelectedExamForPrint(null)}
+          exam={selectedExamForPrint}
+        />
       </div>
     </AppShell>
   );

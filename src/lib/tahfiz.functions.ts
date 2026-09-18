@@ -447,3 +447,108 @@ export const getTahfizRecap = createServerFn({ method: "POST" })
       rows: filteredRows,
     };
   });
+
+// ──────────────────────────────────────────────────────────────
+// 6. UJIAN TAHFIZ & PENILAIAN PER SOAL (RAPOR TAHFIZ)
+// ──────────────────────────────────────────────────────────────
+
+export const saveTahfizExamFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) =>
+    z
+      .object({
+        id: z.string().optional(),
+        student_id: z.string(),
+        student_name: z.string(),
+        nis_nip: z.string().default("-"),
+        class_name: z.string().default("-"),
+        halaqoh_name: z.string().default("-"),
+        musyrif_name: z.string().default("-"),
+        examiner_name: z.string().default("Penguji Tahfiz"),
+        exam_title: z.string().default("Ujian Tasmi' Tahfiz"),
+        target_juz: z.string().default("Juz 30"),
+        date: z.string(),
+        semester: z.string().default("1"),
+        academic_year: z.string().default("2026/2027"),
+        questions: z.array(
+          z.object({
+            question_number: z.number(),
+            surah_ayat: z.string(),
+            tajwid_score: z.number().min(0).max(100),
+            hafalan_score: z.number().min(0).max(100),
+            notes: z.string().optional(),
+          })
+        ),
+        notes: z.string().optional(),
+      })
+      .parse(data)
+  )
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ data }) => {
+    const { saveOrUpdateTahfizExam } = await import("./tahfiz.exams.server");
+    const exam = saveOrUpdateTahfizExam(data);
+    return { success: true, exam, message: "Ujian Tahfiz berhasil disimpan!" };
+  });
+
+export const getTahfizExamsListFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) =>
+    z
+      .object({
+        semester: z.string().optional(),
+        academicYear: z.string().optional(),
+        studentId: z.string().optional(),
+        halaqoh: z.string().optional(),
+      })
+      .parse(data)
+  )
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ data }) => {
+    const { loadTahfizExamsStore } = await import("./tahfiz.exams.server");
+    const store = loadTahfizExamsStore();
+    let exams = store.exams;
+
+    if (data.studentId) {
+      exams = exams.filter((e) => e.student_id === data.studentId);
+    }
+    if (data.semester && data.semester !== "all") {
+      exams = exams.filter((e) => e.semester === data.semester);
+    }
+    if (data.academicYear && data.academicYear !== "all") {
+      exams = exams.filter((e) => e.academic_year === data.academicYear);
+    }
+    if (data.halaqoh && data.halaqoh !== "all") {
+      exams = exams.filter((e) => e.halaqoh_name === data.halaqoh);
+    }
+
+    return { exams };
+  });
+
+export const deleteTahfizExamFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) =>
+    z
+      .object({
+        examId: z.string(),
+      })
+      .parse(data)
+  )
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ data }) => {
+    const { deleteTahfizExam } = await import("./tahfiz.exams.server");
+    const deleted = deleteTahfizExam(data.examId);
+    return { success: deleted, message: "Data ujian berhasil dihapus" };
+  });
+
+export const getStudentTahfizExamsFn = createServerFn({ method: "POST" })
+  .validator((data: unknown) =>
+    z
+      .object({
+        studentId: z.string(),
+      })
+      .parse(data)
+  )
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ data }) => {
+    const { loadTahfizExamsStore } = await import("./tahfiz.exams.server");
+    const store = loadTahfizExamsStore();
+    const exams = store.exams.filter((e) => e.student_id === data.studentId);
+    return { exams };
+  });

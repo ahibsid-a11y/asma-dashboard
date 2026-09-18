@@ -35,8 +35,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useCurrentProfile } from "@/hooks/use-current-profile";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  approveStudentEnrollmentFn,
   getEkskulPaymentsFn,
   getEkskulRecapDataFn,
   getMasterEkskulListFn,
@@ -66,11 +73,13 @@ function RekapEkskulPage() {
   const fetchRecap = useServerFn(getEkskulRecapDataFn);
   const fetchPayments = useServerFn(getEkskulPaymentsFn);
   const updatePaymentStatus = useServerFn(updateEkskulPaymentStatusFn);
+  const approveEnrollmentFn = useServerFn(approveStudentEnrollmentFn);
 
   const [selectedSemester, setSelectedSemester] = useState<string>("1");
   const [selectedYear, setSelectedYear] = useState<string>("2026/2027");
   const [paymentFilterStatus, setPaymentFilterStatus] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedEkskulForMembers, setSelectedEkskulForMembers] = useState<any | null>(null);
 
   // 1. Ambil Rekap Utama
   const recapQuery = useQuery({
@@ -118,6 +127,40 @@ function RekapEkskulPage() {
     },
     onError: (err: any) => {
       toast.error(err.message || "Gagal mengubah status pembayaran");
+    },
+  });
+
+  // Mutation Approve Keikutsertaan Santri
+  const approveEnrollmentMutation = useMutation({
+    mutationFn: (enrollmentId: string) =>
+      approveEnrollmentFn({
+        data: { enrollmentId },
+      }),
+    onSuccess: () => {
+      toast.success("Keikutsertaan santri berhasil disetujui & pembayaran ditandai lunas!");
+      queryClient.invalidateQueries({ queryKey: ["ekskul-recap-main"] });
+      queryClient.invalidateQueries({ queryKey: ["ekskul-payments-recap"] });
+      // Update selectedEkskulForMembers bila sedang terbuka
+      if (selectedEkskulForMembers) {
+        setSelectedEkskulForMembers((prev: any) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            members: prev.members.map((m: any) =>
+              m.enrollmentId === approveEnrollmentMutation.variables
+                ? {
+                    ...m,
+                    enrollmentStatus: "aktif",
+                    payment: m.payment ? { ...m.payment, status: "lunas" } : null,
+                  }
+                : m
+            ),
+          };
+        });
+      }
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Gagal menyetujui keikutsertaan");
     },
   });
 
@@ -287,12 +330,14 @@ function RekapEkskulPage() {
                         <th className="p-3 text-center">Santri Dinilai</th>
                         <th className="p-3 text-right">Kas Masuk (Lunas)</th>
                         <th className="p-3 text-right">Tunggakan</th>
+                        <th className="p-3 text-center">Rekap Santri & Approval</th>
                       </tr>
                     </thead>
                     <tbody>
                       {ekskulStats.map((item: any, idx: number) => {
                         const e = item.ekskul;
                         const isWajib = e.category === "wajib";
+                        const pendingCount = item.totalPending || 0;
 
                         return (
                           <tr
@@ -334,6 +379,22 @@ function RekapEkskulPage() {
                               {isWajib || item.finance.unpaid === 0
                                 ? "-"
                                 : `Rp ${item.finance.unpaid.toLocaleString("id-ID")}`}
+                            </td>
+                            <td className="p-3 text-center">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-[11px] font-bold gap-1.5 border-primary/40 hover:bg-primary/10 text-primary"
+                                onClick={() => setSelectedEkskulForMembers(item)}
+                              >
+                                <Users className="h-3.5 w-3.5" />
+                                Rekap Santri ({item.members?.length || 0})
+                                {pendingCount > 0 && (
+                                  <Badge className="ml-1 h-4 px-1 text-[9px] bg-amber-500 text-white font-extrabold animate-pulse">
+                                    {pendingCount} Pending
+                                  </Badge>
+                                )}
+                              </Button>
                             </td>
                           </tr>
                         );
@@ -489,6 +550,153 @@ function RekapEkskulPage() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* DIALOG DAFTAR SANTRI & APPROVE KEIKUTSERTAAN */}
+        <Dialog
+          open={Boolean(selectedEkskulForMembers)}
+          onOpenChange={(open) => !open && setSelectedEkskulForMembers(null)}
+        >
+          <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-base font-bold flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                Rekap Peserta & Keikutsertaan: {selectedEkskulForMembers?.ekskul?.name}
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Daftar lengkap santri terdaftar, sesi pilihan, rincian tagihan kas, dan persetujuan (approval) keikutsertaan.
+              </DialogDescription>
+            </DialogHeader>
+
+            {selectedEkskulForMembers && (
+              <div className="space-y-4 pt-2">
+                {/* Ringkasan Singkat Ekskul */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-muted/20 p-3 rounded-lg border text-xs">
+                  <div>
+                    <span className="text-muted-foreground block text-[10.5px]">Pelatih / Pembina:</span>
+                    <b className="text-foreground">{selectedEkskulForMembers.ekskul?.coach_name}</b>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[10.5px]">Total Terdaftar:</span>
+                    <b className="text-foreground">{selectedEkskulForMembers.members?.length || 0} Santri</b>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[10.5px]">Menunggu Approval:</span>
+                    <b className="text-amber-600 font-extrabold">
+                      {selectedEkskulForMembers.members?.filter((m: any) => m.enrollmentStatus === "menunggu_konfirmasi").length || 0} Santri
+                    </b>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block text-[10.5px]">Kas Masuk:</span>
+                    <b className="text-emerald-600 font-extrabold">
+                      Rp {(selectedEkskulForMembers.finance?.totalPaid || 0).toLocaleString("id-ID")}
+                    </b>
+                  </div>
+                </div>
+
+                {/* Tabel Peserta */}
+                {(!selectedEkskulForMembers.members || selectedEkskulForMembers.members.length === 0) ? (
+                  <div className="p-8 text-center text-xs text-muted-foreground">
+                    Belum ada santri yang terdaftar di program ekstrakurikuler ini.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto border rounded-lg">
+                    <table className="w-full text-xs text-left border-collapse">
+                      <thead>
+                        <tr className="border-b bg-muted/40 text-muted-foreground font-bold">
+                          <th className="p-2.5">No</th>
+                          <th className="p-2.5">Nama Santri</th>
+                          <th className="p-2.5">Kelas</th>
+                          <th className="p-2.5">Sesi / Bulan</th>
+                          <th className="p-2.5 text-right">Tagihan</th>
+                          <th className="p-2.5 text-center">Status Bayar</th>
+                          <th className="p-2.5 text-center">Keikutsertaan</th>
+                          <th className="p-2.5 text-center">Aksi</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedEkskulForMembers.members.map((m: any, idx: number) => {
+                          const isAktif = m.enrollmentStatus === "aktif";
+                          const isLunas = m.payment?.status === "lunas" || selectedEkskulForMembers.ekskul?.category === "wajib";
+                          const isPendingApprove =
+                            approveEnrollmentMutation.isPending &&
+                            approveEnrollmentMutation.variables === m.enrollmentId;
+
+                          return (
+                            <tr key={m.enrollmentId} className="border-b hover:bg-muted/10">
+                              <td className="p-2.5 text-muted-foreground font-bold">{idx + 1}</td>
+                              <td className="p-2.5">
+                                <span className="font-bold text-foreground block">{m.name}</span>
+                                <span className="text-[10px] text-muted-foreground">NIS: {m.nis}</span>
+                              </td>
+                              <td className="p-2.5 font-medium">{m.className}</td>
+                              <td className="p-2.5 font-medium text-foreground">
+                                <Badge variant="secondary" className="text-[10px] font-normal">
+                                  {m.sessionLabel || "Sesi 1"}
+                                </Badge>
+                              </td>
+                              <td className="p-2.5 text-right font-bold">
+                                {m.payment ? (
+                                  <span>Rp {m.payment.amount.toLocaleString("id-ID")}</span>
+                                ) : selectedEkskulForMembers.ekskul?.category === "wajib" ? (
+                                  <span className="text-slate-500 font-normal">Gratis</span>
+                                ) : (
+                                  <span className="text-muted-foreground">-</span>
+                                )}
+                              </td>
+                              <td className="p-2.5 text-center">
+                                <Badge
+                                  className={`text-[9.5px] font-bold ${
+                                    isLunas
+                                      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+                                      : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200"
+                                  }`}
+                                >
+                                  {isLunas ? "Lunas" : "Belum Bayar"}
+                                </Badge>
+                              </td>
+                              <td className="p-2.5 text-center">
+                                <Badge
+                                  className={`text-[9.5px] font-bold ${
+                                    isAktif
+                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200"
+                                      : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 animate-pulse"
+                                  }`}
+                                >
+                                  {isAktif ? "Aktif" : "Menunggu Approval"}
+                                </Badge>
+                              </td>
+                              <td className="p-2.5 text-center">
+                                {isAktif ? (
+                                  <span className="text-[11px] font-bold text-emerald-600 flex items-center justify-center gap-1">
+                                    <CheckCircle2 className="h-3.5 w-3.5" /> Disetujui
+                                  </span>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    className="h-7 text-[10.5px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
+                                    disabled={isPendingApprove}
+                                    onClick={() => approveEnrollmentMutation.mutate(m.enrollmentId)}
+                                  >
+                                    {isPendingApprove ? (
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    ) : (
+                                      <UserCheck className="h-3.5 w-3.5" />
+                                    )}
+                                    Approve Keikutsertaan
+                                  </Button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </AppShell>
   );

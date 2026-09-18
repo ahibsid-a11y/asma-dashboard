@@ -402,8 +402,9 @@ export const recordViolation = createServerFn({ method: "POST" })
       .eq("id", ctx.userId)
       .maybeSingle();
 
-    if (!me || me.account_type === "santri") {
-      throw new Error("Anda tidak memiliki wewenang untuk mencatat pelanggaran");
+    const canRecord = isMemberAdmin(me?.account_type) || me?.account_type === "kabid_kesantrian";
+    if (!me || !canRecord) {
+      throw new Error("Hanya admin dan kepala kesantrian yang berhak mencatat pelanggaran santri");
     }
 
     const nowIso = new Date().toISOString();
@@ -490,8 +491,9 @@ export const deleteViolationRecord = createServerFn({ method: "POST" })
       .eq("id", ctx.userId)
       .maybeSingle();
 
-    if (!me || me.account_type === "santri") {
-      throw new Error("Tidak memiliki wewenang untuk menghapus pelanggaran");
+    const canManage = isMemberAdmin(me?.account_type) || me?.account_type === "kabid_kesantrian";
+    if (!me || !canManage) {
+      throw new Error("Hanya admin dan kepala kesantrian yang berhak menghapus pelanggaran");
     }
 
     const { data: record, error: recError } = await (supabaseAdmin as any)

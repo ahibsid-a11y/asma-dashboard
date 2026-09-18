@@ -157,6 +157,17 @@ function InputKokurPage() {
 
   const themes = classDataQuery.data?.themes || [];
   const studentList = classDataQuery.data?.students || [];
+  const availableClasses: string[] = classDataQuery.data?.availableClasses || [
+    "7A",
+    "7B",
+    "8A",
+    "8B",
+    "9A",
+    "9B",
+    "10",
+    "11",
+    "12",
+  ];
 
   // Mutation: Simpan Nilai Santri
   const saveMutation = useMutation({
@@ -337,7 +348,7 @@ function InputKokurPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {["7A", "7B", "8A", "8B", "9A", "9B", "10", "11", "12"].map((c) => (
+                    {availableClasses.map((c) => (
                       <SelectItem key={c} value={c}>
                         Kelas {c}
                       </SelectItem>
@@ -417,10 +428,10 @@ function InputKokurPage() {
                           </span>
                           <div>
                             <h4 className="text-sm font-bold text-foreground">
-                              {s.full_name}
+                              {s.full_name || s.name || s.display_name}
                             </h4>
                             <p className="text-xs text-muted-foreground">
-                              NIS: {s.nis_nip || "-"} • Kelas {s.class_name}
+                              NIS: {s.nis_nip || "-"} • Kelas {s.class_name || s.class || "-"}
                             </p>
                           </div>
                         </div>

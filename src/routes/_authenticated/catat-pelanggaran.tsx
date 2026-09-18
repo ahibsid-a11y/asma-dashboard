@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
+import { isMemberAdmin } from "@/lib/roles";
 import {
   deleteViolationRecord,
   getViolationInputContext,
@@ -310,6 +311,25 @@ function CatatPelanggaranPage() {
         return "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-900";
     }
   };
+
+  const canAccess =
+    isMemberAdmin(profile?.account_type) || profile?.account_type === "kabid_kesantrian";
+
+  if (!profileQuery.isLoading && profile && !canAccess) {
+    return (
+      <AppShell accountType={profile?.account_type ?? null}>
+        <div className="flex flex-col items-center justify-center p-12 text-center max-w-lg mx-auto space-y-4">
+          <div className="h-16 w-16 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-600 flex items-center justify-center">
+            <ShieldAlert className="h-8 w-8" />
+          </div>
+          <h2 className="text-xl font-bold text-foreground">Akses Khusus Admin</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Pencatatan pelanggaran santri hanya dapat diakses dan diinput oleh Admin dan Kepala Kesantrian SMPIT Putra Al-Hanif.
+          </p>
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell accountType={profile?.account_type ?? null}>

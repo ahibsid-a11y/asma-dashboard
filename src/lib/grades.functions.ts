@@ -1132,11 +1132,35 @@ async function resolveSignatures(supabaseAdmin: any, className: string | null) {
       headmasterName = ks[0].name || "Kepala Sekolah";
       headmasterNiy = ks[0].nis_nip || "-";
     }
+
+    // Get Kepala Kesantrian
+    let headOfKesantrianName = "Ust. H. Ahmad Fauzan, Lc";
+    let headOfKesantrianNiy = "-";
+    const { data: kk } = await (supabaseAdmin as any)
+      .from("profiles")
+      .select("name,nis_nip")
+      .eq("account_type", "kabid_kesantrian")
+      .eq("status", "Aktif")
+      .limit(1);
+
+    if (kk && kk[0]) {
+      headOfKesantrianName = kk[0].name || headOfKesantrianName;
+      headOfKesantrianNiy = kk[0].nis_nip || "-";
+    }
+
+    return { homeroomTeacherName, homeroomTeacherNiy, headmasterName, headmasterNiy, headOfKesantrianName, headOfKesantrianNiy };
   } catch {
     // ignore
   }
 
-  return { homeroomTeacherName, homeroomTeacherNiy, headmasterName, headmasterNiy };
+  return {
+    homeroomTeacherName,
+    homeroomTeacherNiy,
+    headmasterName,
+    headmasterNiy,
+    headOfKesantrianName: "Ust. H. Ahmad Fauzan, Lc",
+    headOfKesantrianNiy: "-",
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

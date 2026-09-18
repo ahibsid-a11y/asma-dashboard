@@ -29,6 +29,7 @@ export interface EkskulEnrollment {
   student_id: string;
   semester: string;
   academic_year: string;
+  session_label?: string | undefined; // Misal "Sesi 1 (4 Pertemuan / Juli)"
   enrolled_at: string;
   status: "aktif" | "menunggu_konfirmasi" | "selesai" | "keluar";
 }
@@ -52,6 +53,8 @@ export interface EkskulPayment {
 export interface EkskulSession {
   id: string;
   ekskul_id: string;
+  session_number?: number | undefined; // Pertemuan 1, 2, 3, 4
+  session_label?: string | undefined; // Sesi 1, Sesi 2
   date: string; // YYYY-MM-DD
   topic: string;
   academic_year: string;
@@ -325,6 +328,7 @@ export function enrollStudentToEkskul(data: {
   student_id: string;
   semester: string;
   academic_year: string;
+  session_label?: string | undefined;
 }): EkskulEnrollment {
   const store = loadEkskulStore();
   const existing = store.enrollments.find(
@@ -334,9 +338,14 @@ export function enrollStudentToEkskul(data: {
       e.semester === data.semester &&
       e.academic_year === data.academic_year
   );
+  const ekskul = store.ekskuls.find((e) => e.id === data.ekskul_id);
+  const isPilihan = ekskul?.category === "pilihan";
+  const sessionLabel = data.session_label || "Sesi 1 (4 Pertemuan)";
+
   if (existing) {
     if (existing.status === "keluar") {
-      existing.status = "aktif";
+      existing.status = isPilihan && ekskul && ekskul.fee > 0 ? "menunggu_konfirmasi" : "aktif";
+      existing.session_label = sessionLabel;
       saveEkskulStore(store);
     }
     return existing;
@@ -348,18 +357,18 @@ export function enrollStudentToEkskul(data: {
     student_id: data.student_id,
     semester: data.semester,
     academic_year: data.academic_year,
+    session_label: sessionLabel,
     enrolled_at: new Date().toISOString(),
-    status: "aktif",
+    status: isPilihan && ekskul && ekskul.fee > 0 ? "menunggu_konfirmasi" : "aktif",
   };
   store.enrollments.push(enrollment);
 
   // Jika ekskul berbayar, otomatis buat tagihan awal jika belum ada
-  const ekskul = store.ekskuls.find((e) => e.id === data.ekskul_id);
-  if (ekskul && ekskul.category === "pilihan" && ekskul.fee > 0) {
+  if (ekskul && isPilihan && ekskul.fee > 0) {
     const periodLabel =
       ekskul.fee_period === "per_semester"
         ? `Semester ${data.semester}`
-        : "Tagihan Awal Masuk";
+        : sessionLabel;
     const payment: EkskulPayment = {
       id: `pay-${crypto.randomUUID().slice(0, 8)}`,
       enrollment_id: enrollment.id,
@@ -375,6 +384,25 @@ export function enrollStudentToEkskul(data: {
 
   saveEkskulStore(store);
   return enrollment;
+}
+
+export function approveStudentEnrollment(enrollmentId: string, approvedBy?: string): EkskulEnrollment | null {
+  const store = loadEkskulStore();
+  const enr = store.enrollments.find((e) => e.id === enrollmentId);
+  if (!enr) return null;
+  enr.status = "aktif";
+
+  // Tandai juga pembayaran terkait jika belum lunas
+  const payment = store.payments.find((p) => p.enrollment_id === enrollmentId);
+  if (payment) {
+    payment.status = "lunas";
+    payment.payment_date = new Date().toISOString().split("T")[0];
+    payment.verified_by = approvedBy || "Admin / Pembina";
+    payment.updated_at = new Date().toISOString();
+  }
+
+  saveEkskulStore(store);
+  return enr;
 }
 
 export function unenrollStudentFromEkskul(enrollmentId: string): boolean {
@@ -404,6 +432,11 @@ export function recordPaymentUpdate(data: {
   if (data.status === "lunas") {
     payment.payment_date = new Date().toISOString().split("T")[0];
     payment.receipt_no = `REC-EKSKUL-${Date.now().toString().slice(-6)}`;
+    // Otomatis aktifkan enrollment siswa saat lunas
+    if (payment.enrollment_id) {
+      const enr = store.enrollments.find((e) => e.id === payment.enrollment_id);
+      if (enr) enr.status = "aktif";
+    }
   } else {
     delete payment.payment_date;
     delete payment.receipt_no;

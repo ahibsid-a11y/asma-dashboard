@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { LogOut, Menu } from "lucide-react";
+import { Bell, LogOut, Menu } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -149,16 +149,37 @@ export function AppShell({
             <p className="text-xs font-bold text-primary">SIM-AHIBS</p>
             <p className="text-sm font-bold text-foreground">SMPIT Putra Al-Hanif Cilegon</p>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label="Keluar"
-            className="md:hidden"
-            onClick={handleSignOut}
-          >
-            <LogOut />
-          </Button>
+          <div className="ml-auto flex items-center gap-2">
+            {accountType && accountType !== "santri" && (
+              <Link
+                to="/perizinan"
+                className="relative flex items-center justify-center rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                title="Antrean & Notifikasi Perizinan"
+              >
+                <Bell className="size-5" />
+                <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-amber-500 ring-2 ring-card animate-pulse" />
+              </Link>
+            )}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Keluar"
+              className="md:hidden"
+              onClick={handleSignOut}
+            >
+              <LogOut />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="hidden md:flex gap-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+              onClick={handleSignOut}
+            >
+              <LogOut className="size-4" /> Keluar
+            </Button>
+          </div>
         </header>
 
         <main className="min-h-[calc(100vh-4rem)] p-4 md:p-8">{children}</main>

@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import {
+  ArrowDown,
+  ArrowUp,
   Calendar as CalendarIcon,
   CheckCheck,
   ChevronLeft,
@@ -123,8 +125,13 @@ function InputMutabaahPage() {
 
   // Mutasi kelola kegiatan
   const activityMutation = useMutation({
-    mutationFn: (payload: { action: "create" | "update" | "delete" | "toggle"; id?: string; title?: string; category?: string }) =>
-      manageActivity({ data: payload }),
+    mutationFn: (payload: {
+      action: "create" | "update" | "delete" | "toggle" | "reorder";
+      id?: string;
+      title?: string;
+      category?: string;
+      ordered_ids?: string[];
+    }) => manageActivity({ data: payload }),
     onSuccess: () => {
       toast.success("Daftar kegiatan diperbarui");
       setNewActivityTitle("");
@@ -134,6 +141,20 @@ function InputMutabaahPage() {
       toast.error(err.message || "Gagal mengelola kegiatan");
     },
   });
+
+  // Urutkan kegiatan (naik / turun)
+  const handleMoveActivity = (index: number, direction: "up" | "down") => {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= activities.length) return;
+    const newOrder = [...activities];
+    const [moved] = newOrder.splice(index, 1);
+    if (!moved) return;
+    newOrder.splice(targetIndex, 0, moved);
+    activityMutation.mutate({
+      action: "reorder",
+      ordered_ids: newOrder.map((a) => a.id),
+    });
+  };
 
   // Navigasi tanggal
   const stepDate = (offset: number) => {
@@ -645,19 +666,42 @@ function InputMutabaahPage() {
                         </div>
                       </div>
 
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-7 text-destructive hover:bg-destructive/10"
-                        title="Nonaktifkan kegiatan"
-                        onClick={() => {
-                          if (confirm(`Hapus/nonaktifkan kegiatan "${act.title}"? Riwayat lama tetap tersimpan.`)) {
-                            activityMutation.mutate({ action: "delete", id: act.id });
-                          }
-                        }}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-7 text-muted-foreground hover:bg-accent/10 hover:text-accent disabled:opacity-30"
+                          title="Pindah ke atas"
+                          disabled={index === 0 || activityMutation.isPending}
+                          onClick={() => handleMoveActivity(index, "up")}
+                        >
+                          <ArrowUp className="size-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-7 text-muted-foreground hover:bg-accent/10 hover:text-accent disabled:opacity-30"
+                          title="Pindah ke bawah"
+                          disabled={index === activities.length - 1 || activityMutation.isPending}
+                          onClick={() => handleMoveActivity(index, "down")}
+                        >
+                          <ArrowDown className="size-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-7 text-destructive hover:bg-destructive/10"
+                          title="Nonaktifkan kegiatan"
+                          disabled={activityMutation.isPending}
+                          onClick={() => {
+                            if (confirm(`Hapus/nonaktifkan kegiatan "${act.title}"? Riwayat lama tetap tersimpan.`)) {
+                              activityMutation.mutate({ action: "delete", id: act.id });
+                            }
+                          }}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>

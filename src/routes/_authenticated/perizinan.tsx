@@ -73,6 +73,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
 import {
   approveOrRejectPermit,
+  getPendingPermitApprovalsCountFn,
   getPermitInputContext,
   getPermitSummary,
   managePermitCategory,
@@ -115,6 +116,7 @@ function PerizinanPage() {
   const gateCheckFn = useServerFn(recordGateCheck);
   const fetchSummary = useServerFn(getPermitSummary);
   const manageCategoryFn = useServerFn(managePermitCategory);
+  const fetchPendingApprovals = useServerFn(getPendingPermitApprovalsCountFn);
 
   const todayStr = useMemo(() => toDateStr(new Date()), []);
 
@@ -204,12 +206,19 @@ function PerizinanPage() {
       fetchSummary({
         data: {
           period: rekapPeriod,
-          status: rekapStatus !== "semua" ? rekapStatus : undefined,
-          category: rekapCategory !== "semua" ? rekapCategory : undefined,
-          dorm: rekapDorm !== "semua" ? rekapDorm : undefined,
-          search: rekapSearch.trim() || undefined,
+          status: rekapStatus === "semua" ? undefined : rekapStatus,
+          categoryName: rekapCategory === "semua" ? undefined : rekapCategory,
+          dorm: rekapDorm === "semua" ? undefined : rekapDorm,
+          search: rekapSearch || undefined,
         },
       }),
+  });
+
+  // Query notifikasi antrean persetujuan untuk role aktif
+  const pendingApprovalsQuery = useQuery({
+    queryKey: ["pending-permit-approvals"],
+    queryFn: () => fetchPendingApprovals(),
+    refetchInterval: 30000,
   });
 
   const data = summaryQuery.data;
@@ -472,6 +481,36 @@ function PerizinanPage() {
             </Button>
           </div>
         </div>
+
+        {/* Notifikasi Khusus Tim Approver */}
+        {(pendingApprovalsQuery.data?.count ?? 0) > 0 && (
+          <div className="flex items-center justify-between gap-3 p-3.5 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/40 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs shadow-xs">
+            <div className="flex items-center gap-2.5">
+              <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-amber-200 dark:bg-amber-900 text-amber-800 dark:text-amber-200 font-bold">
+                ⚠️
+              </span>
+              <div>
+                <p className="font-bold">
+                  Ada {pendingApprovalsQuery.data?.count} pengajuan izin santri yang menunggu persetujuan Anda!
+                </p>
+                <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-0.5">
+                  Mohon periksa dan berikan tanda tangan persetujuan pada tab Antrean Persetujuan di bawah ini.
+                </p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-amber-400 bg-white dark:bg-amber-900 text-amber-900 dark:text-amber-100 h-8 text-xs font-bold"
+              onClick={() => {
+                const el = document.getElementById("approval-queue-tab");
+                if (el) el.click();
+              }}
+            >
+              Lihat Antrean
+            </Button>
+          </div>
+        )}
 
         {/* Live Status Cards */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -896,10 +935,10 @@ function PerizinanPage() {
                             Status Matriks Persetujuan:
                           </p>
                           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 text-xs">
-                            {/* Kurikulum */}
+                            {/* Wali Kelas */}
                             <div className={`p-2 rounded border flex flex-col justify-between ${p.approved_kurikulum ? "bg-emerald-50 border-emerald-200 text-emerald-900 dark:bg-emerald-950/40 dark:border-emerald-900 dark:text-emerald-200" : "bg-muted/30 border-dashed"}`}>
                               <span className="text-[10px] font-semibold flex items-center gap-1">
-                                <GraduationCap className="h-3 w-3" /> Waka Kurikulum
+                                <GraduationCap className="h-3 w-3" /> Wali Kelas
                               </span>
                               <span className="text-[11px] mt-1 font-medium">
                                 {p.approved_kurikulum ? "✔️ Disetujui" : "⏳ Menunggu"}
@@ -964,14 +1003,14 @@ function PerizinanPage() {
 
                         {/* Action Buttons Sesuai Peran Pejabat */}
                         <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t">
-                          {/* Waka Kurikulum Action */}
-                          {approverRoles?.canApproveKurikulum && !p.approved_kurikulum && (
+                          {/* Wali Kelas Action */}
+                          {(approverRoles?.canApproveWaliKelas || approverRoles?.canApproveKurikulum) && !p.approved_kurikulum && (
                             <Button
                               size="sm"
                               className="h-8 text-xs gap-1 bg-blue-600 hover:bg-blue-700 text-white"
                               onClick={() => openDecisionModal(p, "approve", "kurikulum")}
                             >
-                              <GraduationCap className="h-3.5 w-3.5" /> Setujui (Kurikulum)
+                              <GraduationCap className="h-3.5 w-3.5" /> Setujui (Wali Kelas)
                             </Button>
                           )}
 
@@ -1366,8 +1405,8 @@ function PerizinanPage() {
                             <td className="p-3">{getStatusBadge(p.status)}</td>
                             <td className="p-3 text-[11px]">
                               <div className="flex items-center gap-1.5 flex-wrap">
-                                <span title="Kurikulum" className={p.approved_kurikulum ? "text-emerald-600 font-bold" : "text-muted-foreground"}>
-                                  [Kur: {p.approved_kurikulum ? "✔️" : "⏳"}]
+                                <span title="Wali Kelas" className={p.approved_kurikulum ? "text-emerald-600 font-bold" : "text-muted-foreground"}>
+                                  [Wali: {p.approved_kurikulum ? "✔️" : "⏳"}]
                                 </span>
                                 <span title="Kesantrian" className={p.approved_kesantrian ? "text-emerald-600 font-bold" : "text-muted-foreground"}>
                                   [Santri: {p.approved_kesantrian ? "✔️" : "⏳"}]
@@ -1580,7 +1619,7 @@ function PerizinanPage() {
               {/* Tanda Tangan Multi-Approval */}
               <div className="grid grid-cols-3 gap-2 text-[10px] text-center pt-3 border-t">
                 <div>
-                  <p className="text-gray-500">Waka Kurikulum</p>
+                  <p className="text-gray-500">Wali Kelas</p>
                   <p className="font-bold mt-1">
                     {permitForEPass.approved_kurikulum ? "✔️ Disetujui" : "⏳ Menunggu"}
                   </p>

@@ -88,6 +88,9 @@ export const saveGroup = createServerFn({ method: "POST" })
       if (oldName && oldName !== data.name) {
         await supabaseAdmin.from("profiles").update({ [column]: data.name } as any).eq(column, oldName);
       }
+      if (data.kind === "dorm" && data.leaderId) {
+        await supabaseAdmin.from("profiles").update({ dorm: data.name }).eq("id", data.leaderId);
+      }
       return { id: data.id };
     }
 
@@ -101,7 +104,11 @@ export const saveGroup = createServerFn({ method: "POST" })
         error.message.includes("duplicate") ? "Nama ini sudah terdaftar" : error.message,
       );
     }
-    return { id: (created as any)?.id as string };
+    const createdId = (created as any)?.id as string;
+    if (data.kind === "dorm" && data.leaderId) {
+      await supabaseAdmin.from("profiles").update({ dorm: data.name }).eq("id", data.leaderId);
+    }
+    return { id: createdId };
   });
 
 export const deleteGroup = createServerFn({ method: "POST" })
