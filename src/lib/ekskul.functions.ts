@@ -174,7 +174,8 @@ export const approveStudentEnrollmentFn = createServerFn({ method: "POST" })
   )
   .middleware([requireSupabaseAuth])
   .handler(async ({ data, context }) => {
-    const approverName = context.profile?.display_name || context.profile?.name || "Admin Ekstrakurikuler";
+    const ctx = context as any;
+    const approverName = ctx.profile?.display_name || ctx.profile?.name || "Admin Ekstrakurikuler";
     const approved = await approveStudentEnrollment(data.enrollmentId, approverName);
     if (!approved) {
       throw new Error("Pendaftaran tidak ditemukan");
@@ -677,7 +678,7 @@ export const getEkskulRecapDataFn = createServerFn({ method: "POST" })
       );
 
       const members = allEnrollments.map((enr) => {
-        const s = studentsMap.get(enr.student_id);
+        const s = studentsMap.get(enr.student_id) as any;
         const payment = payments.find((p) => p.enrollment_id === enr.id);
         return {
           enrollmentId: enr.id,

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useMemo } from "react";
 import {
+  BookMarked,
   BookOpen,
   Calendar as CalendarIcon,
   CheckCircle2,
@@ -1075,7 +1076,7 @@ function InputNilaiTahfizPage() {
                               nis_nip: activeStudent.nis_nip || "-",
                               class_name: activeStudent.class || "-",
                               halaqoh_name: activeStudent.halaqoh || activeHalaqohName || "Halaqoh Al-Qur'an",
-                              musyrif_name: profile?.display_name || profile?.name || "Musyrif Halaqoh",
+                              musyrif_name: (profile as any)?.display_name || profile?.name || "Musyrif Halaqoh",
                               examiner_name: examinerName.trim() || "Penguji Tahfidz",
                               exam_title: examTitle.trim(),
                               target_juz: examJuz.trim(),

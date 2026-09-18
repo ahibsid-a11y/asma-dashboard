@@ -485,7 +485,7 @@ export const saveTahfizExamFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     const { saveOrUpdateTahfizExam } = await import("./tahfiz.exams.server");
-    const exam = saveOrUpdateTahfizExam(data);
+    const exam = saveOrUpdateTahfizExam(data as any);
     return { success: true, exam, message: "Ujian Tahfiz berhasil disimpan!" };
   });
 

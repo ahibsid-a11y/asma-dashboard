@@ -16,12 +16,12 @@ import {
   Loader2,
   Search,
   Sparkles,
-  TrendingUp,
   UserCheck,
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { useCurrentProfile } from "@/hooks/use-current-profile";
 import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

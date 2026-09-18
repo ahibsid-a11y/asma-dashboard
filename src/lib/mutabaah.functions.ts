@@ -250,7 +250,7 @@ export const getMutabaahSheet = createServerFn({ method: "GET" })
         if (selectedDorm && assignedDorms.includes(selectedDorm)) {
           // Musyrif memilih kamar binaannya yang valid
         } else {
-          selectedDorm = assignedDorms[0];
+          selectedDorm = assignedDorms[0] ?? null;
         }
       } else if (me.dorm) {
         selectedDorm = me.dorm;

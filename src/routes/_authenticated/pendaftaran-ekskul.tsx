@@ -159,7 +159,7 @@ function PendaftaranEkskulPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredEkskuls.map((ekskul) => {
             const isEnrolled = myEnrolledIds.has(ekskul.id) || ekskul.category === "wajib";
-            const isPending = enrollMutation.isPending && enrollMutation.variables === ekskul.id;
+            const isPending = enrollMutation.isPending && (enrollMutation.variables as any)?.ekskulId === ekskul.id;
 
             return (
               <Card key={ekskul.id} className="border-border shadow-xs flex flex-col justify-between overflow-hidden">

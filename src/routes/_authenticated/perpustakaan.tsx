@@ -117,6 +117,7 @@ function PerpustakaanPage() {
   });
 
   const todayData = todayQuery.data || {
+    date: new Date().toISOString().split("T")[0],
     visits: [],
     activeVisitorsCount: 0,
     totalTodayCount: 0,
