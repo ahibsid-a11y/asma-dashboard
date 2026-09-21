@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { OrgManager } from "@/components/org-manager";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
-import { isMemberAdmin } from "@/lib/roles";
+import { isOrgAdmin } from "@/lib/roles";
 
 export const Route = createFileRoute("/_authenticated/manajemen-asrama")({
   head: () => ({
@@ -32,7 +32,7 @@ function DormPage() {
 
   return (
     <AppShell accountType={accountType}>
-      {isMemberAdmin(accountType) ? (
+      {isOrgAdmin(accountType) ? (
         <OrgManager
           kind="dorm"
           title="Manajemen Asrama"

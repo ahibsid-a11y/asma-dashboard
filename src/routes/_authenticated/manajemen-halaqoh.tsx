@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { OrgManager } from "@/components/org-manager";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
-import { isMemberAdmin } from "@/lib/roles";
+import { isOrgAdmin } from "@/lib/roles";
 
 export const Route = createFileRoute("/_authenticated/manajemen-halaqoh")({
   head: () => ({
@@ -23,16 +23,16 @@ export const Route = createFileRoute("/_authenticated/manajemen-halaqoh")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: HalaqohPage,
+  component: ManajemenHalaqohPage,
 });
 
-function HalaqohPage() {
+function ManajemenHalaqohPage() {
   const profileQuery = useCurrentProfile();
   const accountType = profileQuery.data?.account_type ?? null;
 
   return (
     <AppShell accountType={accountType}>
-      {isMemberAdmin(accountType) ? (
+      {isOrgAdmin(accountType) ? (
         <OrgManager
           kind="halaqoh"
           title="Manajemen Halaqoh"

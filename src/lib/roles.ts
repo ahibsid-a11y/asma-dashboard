@@ -34,12 +34,18 @@ export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
   santri: "Santri",
 };
 
-export const MEMBER_ADMIN_TYPES: AccountType[] = [
+export const ORG_ADMIN_TYPES: AccountType[] = [
   "super_admin",
   "mudir",
   "kepala_sekolah",
   "kepala_tu",
 ];
+
+export function isOrgAdmin(accountType?: string | null) {
+  return ORG_ADMIN_TYPES.includes(accountType as AccountType);
+}
+
+export const MEMBER_ADMIN_TYPES: AccountType[] = ["super_admin"];
 
 export function isMemberAdmin(accountType?: string | null) {
   return MEMBER_ADMIN_TYPES.includes(accountType as AccountType);

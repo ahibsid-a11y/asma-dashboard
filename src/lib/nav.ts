@@ -420,7 +420,6 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "dashboard",
     "manajemen-ekskul",
     "kegiatan-ekskul",
-    "anggota",
     "manajemen-kelas",
     "manajemen-asrama",
     "manajemen-halaqoh",
@@ -445,7 +444,6 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "dashboard",
     "manajemen-ekskul",
     "kegiatan-ekskul",
-    "anggota",
     "manajemen-kelas",
     "manajemen-asrama",
     "manajemen-halaqoh",
@@ -468,7 +466,6 @@ const MENUS: Record<AccountType, NavKey[]> = {
   ],
   kepala_tu: [
     "dashboard",
-    "anggota",
     "manajemen-kelas",
     "manajemen-asrama",
     "manajemen-halaqoh",
@@ -594,13 +591,42 @@ const MENUS: Record<AccountType, NavKey[]> = {
   ],
 };
 
-export function navItemsFor(accountType?: string | null): NavItem[] {
-  const keys = MENUS[accountType as AccountType] ?? ["dashboard", "profil"];
-  return keys.map((key) => NAV_ITEMS[key]);
+export function navItemsFor(
+  accountType?: string | null,
+  positions?: string[] | null,
+): NavItem[] {
+  const roles: AccountType[] = (
+    positions && positions.length > 0
+      ? positions
+      : accountType
+        ? [accountType]
+        : []
+  ).filter((r): r is AccountType => r in MENUS);
+
+  if (roles.length === 0) {
+    return [NAV_ITEMS["dashboard"], NAV_ITEMS["profil"]];
+  }
+
+  const keySet = new Set<NavKey>();
+  for (const r of roles) {
+    const keys = MENUS[r] ?? [];
+    for (const k of keys) {
+      keySet.add(k);
+    }
+  }
+  keySet.add("dashboard");
+  keySet.add("profil");
+
+  return Array.from(keySet)
+    .filter((k) => NAV_ITEMS[k] !== undefined)
+    .map((k) => NAV_ITEMS[k]);
 }
 
-export function navGroupsFor(accountType?: string | null): NavGroup[] {
-  const items = navItemsFor(accountType);
+export function navGroupsFor(
+  accountType?: string | null,
+  positions?: string[] | null,
+): NavGroup[] {
+  const items = navItemsFor(accountType, positions);
   return CATEGORY_ORDER.map((category) => ({
     category,
     label: CATEGORY_LABELS[category],

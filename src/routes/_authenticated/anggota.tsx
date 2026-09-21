@@ -270,7 +270,7 @@ function MembersPage() {
         <p className="mt-6 text-sm text-muted-foreground">Memuat…</p>
       ) : !allowed ? (
         <p className="mt-6 rounded-xl border border-border bg-card p-6 text-sm font-medium text-muted-foreground">
-          Halaman ini hanya dapat diakses oleh Super Admin, Mudir, Kepala Sekolah, dan Kepala Tata Usaha.
+          Halaman Manajemen Anggota hanya dapat diakses oleh Super Admin.
         </p>
       ) : (
         <>

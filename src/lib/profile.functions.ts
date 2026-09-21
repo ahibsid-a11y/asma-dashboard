@@ -2,6 +2,15 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import {
+  ACCOUNT_TYPES,
+  CATEGORY_DEFAULT_ACCOUNT_TYPE,
+  CATEGORY_POSITIONS,
+  MEMBER_CATEGORIES,
+  categoryOf,
+  type AccountType,
+  type MemberCategory,
+} from "./roles";
 
 const blankToUndefined = (v: unknown) =>
   v === null || (typeof v === "string" && v.trim() === "") ? undefined : v;
@@ -16,6 +25,9 @@ const profileSchema = z.object({
   password: z.preprocess(blankToUndefined, z.string().min(1).optional()),
   phone: optionalText(30),
   gender: z.preprocess(blankToUndefined, z.enum(["L", "P"]).optional()),
+  category: z.preprocess(blankToUndefined, z.enum(MEMBER_CATEGORIES).optional()),
+  positions: z.array(z.enum(ACCOUNT_TYPES)).optional(),
+  account_type: z.preprocess(blankToUndefined, z.enum(ACCOUNT_TYPES).optional()),
   class: optionalText(80),
   dorm: optionalText(120),
   halaqoh: optionalText(120),
@@ -43,15 +55,33 @@ export const getMyProfile = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const ctx = context as Ctx;
-    const { data, error } = await ctx.supabase
-      .from("profiles")
-      .select(
-        "id,name,display_name,email,phone,gender,status,account_type,class,dorm,halaqoh,nis_nip,rfid_card,avatar,created_at",
-      )
-      .eq("id", ctx.userId)
-      .maybeSingle();
+    const [{ data, error }, { data: posData }] = await Promise.all([
+      ctx.supabase
+        .from("profiles")
+        .select(
+          "id,name,display_name,email,phone,gender,status,account_type,category,class,dorm,halaqoh,nis_nip,rfid_card,avatar,created_at",
+        )
+        .eq("id", ctx.userId)
+        .maybeSingle(),
+      ctx.supabase
+        .from("profile_positions")
+        .select("position")
+        .eq("user_id", ctx.userId),
+    ]);
     if (error) throw new Error(error.message);
-    return data;
+    if (!data) return null;
+    const positions = (posData ?? []).map((p: any) => p.position as AccountType);
+    const category = (data.category as MemberCategory) ?? categoryOf(data.account_type);
+    return {
+      ...data,
+      category,
+      positions:
+        positions.length > 0
+          ? positions
+          : data.account_type
+            ? [data.account_type as AccountType]
+            : [],
+    };
   });
 
 export const updateMyProfile = createServerFn({ method: "POST" })
@@ -73,6 +103,51 @@ export const updateMyProfile = createServerFn({ method: "POST" })
     };
     if (data.display_name !== undefined) {
       updatePayload["display_name"] = empty(data.display_name);
+    }
+
+    const { data: curProfile } = await (ctx.supabase as any)
+      .from("profiles")
+      .select("account_type,category")
+      .eq("id", ctx.userId)
+      .maybeSingle();
+
+    const isSantri =
+      curProfile?.account_type === "santri" || curProfile?.category === "siswa";
+
+    if (!isSantri && (data.category || data.positions || data.account_type)) {
+      const category: MemberCategory =
+        data.category ??
+        curProfile?.category ??
+        categoryOf(curProfile?.account_type);
+      const allowed = CATEGORY_POSITIONS[category] || [];
+      const positions = (
+        data.positions ?? (data.account_type ? [data.account_type] : [])
+      ).filter((p) => allowed.includes(p as AccountType));
+      const primary =
+        positions[0] ??
+        data.account_type ??
+        CATEGORY_DEFAULT_ACCOUNT_TYPE[category];
+
+      updatePayload["category"] = category;
+      updatePayload["account_type"] = primary;
+
+      const { supabaseAdmin } = await import(
+        "@/integrations/supabase/client.server"
+      );
+      await supabaseAdmin
+        .from("profile_positions")
+        .delete()
+        .eq("user_id", ctx.userId);
+      if (positions.length > 0) {
+        const rows = positions.map((p) => ({
+          user_id: ctx.userId,
+          position: p,
+        }));
+        await supabaseAdmin.from("profile_positions").upsert(rows, {
+          onConflict: "user_id,position",
+          ignoreDuplicates: true,
+        });
+      }
     }
 
     const { error } = await (ctx.supabase

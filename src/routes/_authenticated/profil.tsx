@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -19,7 +20,15 @@ import {
 } from "@/components/ui/select";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
 import { getMyProfile, updateMyProfile } from "@/lib/profile.functions";
-import { ACCOUNT_TYPE_LABELS, type AccountType } from "@/lib/roles";
+import {
+  ACCOUNT_TYPE_LABELS,
+  CATEGORY_POSITIONS,
+  MEMBER_CATEGORIES,
+  MEMBER_CATEGORY_LABELS,
+  categoryOf,
+  type AccountType,
+  type MemberCategory,
+} from "@/lib/roles";
 
 export const Route = createFileRoute("/_authenticated/profil")({
   head: () => ({
@@ -49,6 +58,8 @@ type ProfileRow = {
   gender: "L" | "P" | null;
   status: "Aktif" | "Nonaktif";
   account_type: AccountType | null;
+  category?: MemberCategory | null;
+  positions?: AccountType[];
   class: string | null;
   dorm: string | null;
   halaqoh: string | null;
@@ -63,6 +74,9 @@ type FormState = {
   password: string;
   phone: string;
   gender: "" | "L" | "P";
+  category: MemberCategory;
+  positions: AccountType[];
+  account_type: AccountType;
   class: string;
   dorm: string;
   halaqoh: string;
@@ -77,6 +91,9 @@ const emptyForm: FormState = {
   password: "",
   phone: "",
   gender: "",
+  category: "guru",
+  positions: [],
+  account_type: "guru_mapel",
   class: "",
   dorm: "",
   halaqoh: "",
@@ -103,12 +120,19 @@ function ProfilePage() {
 
   useEffect(() => {
     if (!data) return;
+    const cat = data.category ?? categoryOf(data.account_type);
+    const validPositions = (data.positions ?? []).filter((p) =>
+      CATEGORY_POSITIONS[cat]?.includes(p),
+    );
     setForm({
       name: data.name ?? "",
       email: data.email ?? "",
       password: "",
       phone: data.phone ?? "",
       gender: data.gender ?? "",
+      category: cat,
+      positions: validPositions,
+      account_type: (data.account_type as AccountType) ?? "santri",
       class: data.class ?? "",
       dorm: data.dorm ?? "",
       halaqoh: data.halaqoh ?? "",
@@ -118,11 +142,29 @@ function ProfilePage() {
     });
   }, [data]);
 
+  function togglePosition(position: AccountType) {
+    setForm((f) => {
+      const nextPositions = f.positions.includes(position)
+        ? f.positions.filter((p) => p !== position)
+        : [...f.positions, position];
+      return {
+        ...f,
+        positions: nextPositions,
+        account_type: nextPositions[0] ?? f.account_type,
+      };
+    });
+  }
+
   const mutation = useMutation({
     mutationFn: (values: FormState) => {
       const payload: Record<string, unknown> = { ...values };
       if (!values.password) delete payload["password"];
       if (!values.gender) delete payload["gender"];
+      if (data?.account_type === "santri") {
+        delete payload["category"];
+        delete payload["positions"];
+        delete payload["account_type"];
+      }
       return saveProfile({ data: payload });
     },
     onSuccess: async () => {
@@ -136,7 +178,7 @@ function ProfilePage() {
     onError: (error: Error) => toast.error(error.message),
   });
 
-  const isSantri = data?.account_type === "santri";
+  const isSantri = (data?.account_type ?? form.account_type) === "santri";
 
   return (
     <AppShell accountType={currentProfile.data?.account_type ?? null}>
@@ -167,14 +209,30 @@ function ProfilePage() {
               </div>
             )}
             <p className="mt-4 text-lg font-extrabold text-foreground">{form.name || "-"}</p>
-            <p className="text-sm text-muted-foreground">
-              {data.account_type ? ACCOUNT_TYPE_LABELS[data.account_type] : "-"}
+            <p className="text-sm font-semibold text-primary">
+              {MEMBER_CATEGORY_LABELS[data.category ?? categoryOf(data.account_type)] || "-"}
             </p>
+            {data.account_type !== "santri" && (
+              <div className="mt-2 flex flex-wrap justify-center gap-1">
+                {(data.positions && data.positions.length > 0
+                  ? data.positions
+                  : data.account_type
+                    ? [data.account_type]
+                    : []
+                ).map((p) => (
+                  <Badge key={p} variant="outline" className="text-xs">
+                    {ACCOUNT_TYPE_LABELS[p]}
+                  </Badge>
+                ))}
+              </div>
+            )}
             <Badge className="mt-3" variant={data.status === "Aktif" ? "default" : "secondary"}>
               {data.status}
             </Badge>
             <p className="mt-4 text-xs text-muted-foreground">
-              Jenis akun dan status hanya dapat diubah oleh admin.
+              {isSantri
+                ? "Status akun santri dikelola oleh admin."
+                : "Jabatan mempengaruhi akses menu dan fitur yang tersedia untuk akun Anda."}
             </p>
           </aside>
 
@@ -185,6 +243,65 @@ function ProfilePage() {
               mutation.mutate(form);
             }}
           >
+            {!isSantri ? (
+              <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="category">Jenis Akun</Label>
+                  <Select
+                    value={form.category}
+                    onValueChange={(v) => {
+                      const newCat = v as MemberCategory;
+                      setForm((f) => ({
+                        ...f,
+                        category: newCat,
+                        positions: [],
+                        account_type: CATEGORY_POSITIONS[newCat]?.[0] ?? f.account_type,
+                      }));
+                    }}
+                  >
+                    <SelectTrigger id="category">
+                      <SelectValue placeholder="Pilih Jenis Akun" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MEMBER_CATEGORIES.filter((c) => c !== "siswa").map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {MEMBER_CATEGORY_LABELS[c]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {CATEGORY_POSITIONS[form.category] && CATEGORY_POSITIONS[form.category].length > 0 && (
+                  <div className="grid gap-2">
+                    <Label>Jabatan (Pilih peran/tanggung jawab Anda)</Label>
+                    <div className="grid gap-2 rounded-lg border border-border bg-card p-3 sm:grid-cols-2">
+                      {CATEGORY_POSITIONS[form.category].map((p) => (
+                        <label
+                          key={p}
+                          className="flex items-center gap-2 text-sm font-medium cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={form.positions.includes(p)}
+                            onCheckedChange={() => togglePosition(p)}
+                          />
+                          <span>{ACCOUNT_TYPE_LABELS[p]}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Jabatan ini akan langsung mengaktifkan fitur dan hak akses terkait di aplikasi (misal: Wali Kelas mengaktifkan fitur perizinan).
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="grid gap-2">
+                <Label>Jenis Akun</Label>
+                <Input value="Santri / Siswa" disabled className="bg-muted text-muted-foreground" />
+              </div>
+            )}
+
             <div className="grid gap-2">
               <Label htmlFor="name">Nama Lengkap</Label>
               <Input

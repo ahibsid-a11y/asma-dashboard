@@ -34,7 +34,7 @@ function Dashboard() {
   const roleLabel = profile?.account_type
     ? ACCOUNT_TYPE_LABELS[profile.account_type as AccountType]
     : null;
-  const groups = navGroupsFor(profile?.account_type)
+  const groups = navGroupsFor(profile?.account_type, (profile as any)?.positions)
     .map((group) => ({ ...group, items: group.items.filter((item) => item.key !== "dashboard") }))
     .filter((group) => group.items.length > 0);
   const featureCount = groups.reduce((total, group) => total + group.items.length, 0);

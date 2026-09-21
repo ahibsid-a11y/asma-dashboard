@@ -299,14 +299,41 @@ export const getPermitInputContext = createServerFn({ method: "GET" })
       .order("name", { ascending: true });
     const dorms = (dormList ?? []).map((d: any) => d.name);
 
-    // Evaluasi peran approval (Wali Kelas menggantikan Waka Kurikulum)
+    // Ambil semua posisi/jabatan yang dimiliki user
+    const { data: posRows } = await (supabaseAdmin as any)
+      .from("profile_positions")
+      .select("position")
+      .eq("user_id", me.id);
+    const userPositions: string[] = (posRows ?? []).map((p: any) => p.position);
+    if (me.account_type && !userPositions.includes(me.account_type)) {
+      userPositions.push(me.account_type);
+    }
+
+    const isMusyrif =
+      (me.account_type === "musyrif_asrama" || me.account_type === "musyrif_halaqoh") &&
+      !userPositions.includes("wali_kelas") &&
+      !userPositions.includes("super_admin") &&
+      !userPositions.includes("kabid_kesantrian");
+
+    const isSuper = userPositions.includes("super_admin") || isMemberAdmin(me.account_type);
+
+    // Evaluasi peran approval (Wali Kelas memberikan akses izin)
     const isWaliKelasApprover =
-      me.account_type === "wali_kelas" || isMemberAdmin(me.account_type);
+      userPositions.includes("wali_kelas") ||
+      me.account_type === "wali_kelas" ||
+      isSuper;
     const isKesantrianApprover =
-      me.account_type === "kabid_kesantrian" || isMemberAdmin(me.account_type);
+      userPositions.includes("kabid_kesantrian") ||
+      me.account_type === "kabid_kesantrian" ||
+      isSuper;
     const isUksApprover =
-      me.account_type === "tendik" || isMemberAdmin(me.account_type);
+      userPositions.includes("tendik") ||
+      me.account_type === "tendik" ||
+      isSuper;
     const isKepsekApprover =
+      userPositions.includes("kepala_sekolah") ||
+      userPositions.includes("mudir") ||
+      userPositions.includes("super_admin") ||
       me.account_type === "kepala_sekolah" ||
       me.account_type === "mudir" ||
       me.account_type === "super_admin";
@@ -314,17 +341,18 @@ export const getPermitInputContext = createServerFn({ method: "GET" })
     return {
       me,
       isSantri,
+      isMusyrif,
       students: students ?? [],
       categories,
       dorms,
       approverRoles: {
-        canApproveKurikulum: isWaliKelasApprover,
-        canApproveWaliKelas: isWaliKelasApprover,
-        canApproveKesantrian: isKesantrianApprover,
-        canApproveUks: isUksApprover,
-        canApproveKepsek: isKepsekApprover,
-        canPerformGateCheck: !isSantri,
-        canManageCategories: isMemberAdmin(me.account_type),
+        canApproveKurikulum: isMusyrif ? false : isWaliKelasApprover,
+        canApproveWaliKelas: isMusyrif ? false : isWaliKelasApprover,
+        canApproveKesantrian: isMusyrif ? false : isKesantrianApprover,
+        canApproveUks: isMusyrif ? false : isUksApprover,
+        canApproveKepsek: isMusyrif ? false : isKepsekApprover,
+        canPerformGateCheck: isMusyrif ? false : !isSantri,
+        canManageCategories: isSuper,
       },
     };
   });
@@ -416,6 +444,24 @@ export const approveOrRejectPermit = createServerFn({ method: "POST" })
 
     if (!me || me.account_type === "santri") {
       throw new Error("Santri tidak memiliki wewenang menyetujui izin");
+    }
+
+    const { data: posRows } = await (supabaseAdmin as any)
+      .from("profile_positions")
+      .select("position")
+      .eq("user_id", me.id);
+    const userPositions: string[] = (posRows ?? []).map((p: any) => p.position);
+    if (me.account_type && !userPositions.includes(me.account_type)) {
+      userPositions.push(me.account_type);
+    }
+    const isOnlyMusyrif =
+      (me.account_type === "musyrif_asrama" || me.account_type === "musyrif_halaqoh") &&
+      !userPositions.includes("wali_kelas") &&
+      !userPositions.includes("super_admin") &&
+      !userPositions.includes("kabid_kesantrian");
+
+    if (isOnlyMusyrif) {
+      throw new Error("Akun musyrif hanya dapat melihat data santri yang izin");
     }
 
     const { data: permit, error: fetchErr } = await (supabaseAdmin as any)
@@ -552,6 +598,24 @@ export const recordGateCheck = createServerFn({ method: "POST" })
 
     if (!me || me.account_type === "santri") {
       throw new Error("Santri tidak dapat mencatat check-in/check-out gerbang");
+    }
+
+    const { data: posRows } = await (supabaseAdmin as any)
+      .from("profile_positions")
+      .select("position")
+      .eq("user_id", me.id);
+    const userPositions: string[] = (posRows ?? []).map((p: any) => p.position);
+    if (me.account_type && !userPositions.includes(me.account_type)) {
+      userPositions.push(me.account_type);
+    }
+    const isOnlyMusyrif =
+      (me.account_type === "musyrif_asrama" || me.account_type === "musyrif_halaqoh") &&
+      !userPositions.includes("wali_kelas") &&
+      !userPositions.includes("super_admin") &&
+      !userPositions.includes("kabid_kesantrian");
+
+    if (isOnlyMusyrif) {
+      throw new Error("Akun musyrif hanya dapat melihat data santri yang izin");
     }
 
     const { data: permit, error: fetchErr } = await (supabaseAdmin as any)

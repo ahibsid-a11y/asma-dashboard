@@ -72,8 +72,21 @@ async function assertAdmin(context: Ctx) {
     .eq("id", context.userId)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  if (!data || !MEMBER_ADMIN_TYPES.includes(data.account_type)) {
-    throw new Error("Anda tidak memiliki akses ke Manajemen Anggota");
+  if (!data) throw new Error("Profil tidak ditemukan");
+
+  const isSuper =
+    data.account_type === "super_admin" ||
+    (
+      await context.supabase
+        .from("profile_positions")
+        .select("position")
+        .eq("user_id", context.userId)
+        .eq("position", "super_admin")
+        .maybeSingle()
+    ).data !== null;
+
+  if (!isSuper) {
+    throw new Error("Hanya Super Admin yang memiliki akses ke Manajemen Anggota");
   }
 }
 

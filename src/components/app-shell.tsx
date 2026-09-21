@@ -13,6 +13,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentProfile } from "@/hooks/use-current-profile";
 import { navGroupsFor } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
@@ -48,7 +49,10 @@ export function AppShell({
 }) {
   const navigate = useNavigate();
 
-  const groups = navGroupsFor(accountType);
+  const currentProfile = useCurrentProfile();
+  const effectiveAccountType = accountType ?? currentProfile.data?.account_type ?? null;
+  const effectivePositions = (currentProfile.data as any)?.positions ?? null;
+  const groups = navGroupsFor(effectiveAccountType, effectivePositions);
 
 
   async function handleSignOut() {

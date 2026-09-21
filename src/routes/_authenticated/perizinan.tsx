@@ -172,6 +172,13 @@ function PerizinanPage() {
   const dorms = contextQuery.data?.dorms ?? [];
   const approverRoles = contextQuery.data?.approverRoles;
   const isSantri = contextQuery.data?.isSantri ?? false;
+  const isMusyrif =
+    Boolean((contextQuery.data as any)?.isMusyrif) ||
+    ((profile?.account_type === "musyrif_asrama" ||
+      profile?.account_type === "musyrif_halaqoh") &&
+      !((profile as any)?.positions ?? []).includes("wali_kelas") &&
+      !((profile as any)?.positions ?? []).includes("super_admin") &&
+      !((profile as any)?.positions ?? []).includes("kabid_kesantrian"));
 
   // Selected category object
   const selectedCategoryObj = useMemo(() => {
@@ -483,7 +490,7 @@ function PerizinanPage() {
         </div>
 
         {/* Notifikasi Khusus Tim Approver */}
-        {(pendingApprovalsQuery.data?.count ?? 0) > 0 && (
+        {!isMusyrif && (pendingApprovalsQuery.data?.count ?? 0) > 0 && (
           <div className="flex items-center justify-between gap-3 p-3.5 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/40 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs shadow-xs">
             <div className="flex items-center gap-2.5">
               <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-amber-200 dark:bg-amber-900 text-amber-800 dark:text-amber-200 font-bold">
@@ -581,14 +588,16 @@ function PerizinanPage() {
         </div>
 
         {/* Main Tabs Container */}
-        <Tabs defaultValue={isSantri ? "ajukan" : pendingPermits.length > 0 ? "approval" : "rekap"} className="space-y-4">
+        <Tabs defaultValue={isMusyrif ? "rekap" : isSantri ? "ajukan" : pendingPermits.length > 0 ? "approval" : "rekap"} className="space-y-4">
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:w-auto lg:inline-flex">
-            <TabsTrigger value="ajukan" className="text-xs gap-1.5">
-              <Plus className="h-3.5 w-3.5" />
-              Ajukan Izin Baru
-            </TabsTrigger>
-            {!isSantri && (
-              <TabsTrigger value="approval" className="text-xs gap-1.5 relative">
+            {!isMusyrif && (
+              <TabsTrigger value="ajukan" className="text-xs gap-1.5">
+                <Plus className="h-3.5 w-3.5" />
+                Ajukan Izin Baru
+              </TabsTrigger>
+            )}
+            {!isSantri && !isMusyrif && (
+              <TabsTrigger value="approval" className="text-xs gap-1.5 relative" id="approval-queue-tab">
                 <FileCheck className="h-3.5 w-3.5" />
                 Persetujuan Pimpinan
                 {pendingPermits.length > 0 && (
@@ -598,7 +607,7 @@ function PerizinanPage() {
                 )}
               </TabsTrigger>
             )}
-            {!isSantri && (
+            {!isSantri && !isMusyrif && (
               <TabsTrigger value="gate" className="text-xs gap-1.5">
                 <DoorClosed className="h-3.5 w-3.5" />
                 Pos Gerbang ({gatePermits.length})
@@ -606,12 +615,13 @@ function PerizinanPage() {
             )}
             <TabsTrigger value="rekap" className="text-xs gap-1.5">
               <BarChart3 className="h-3.5 w-3.5" />
-              Rekapitulasi Izin
+              {isMusyrif ? "Data Santri Izin" : "Rekapitulasi Izin"}
             </TabsTrigger>
           </TabsList>
 
           {/* TAB 1: FORM PENGAJUAN IZIN */}
-          <TabsContent value="ajukan" className="space-y-4 m-0">
+          {!isMusyrif && (
+            <TabsContent value="ajukan" className="space-y-4 m-0">
             <Card className="border-border shadow-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -854,9 +864,10 @@ function PerizinanPage() {
               </CardContent>
             </Card>
           </TabsContent>
+          )}
 
           {/* TAB 2: ANTREAN PERSETUJUAN (APPROVAL MATRIX) */}
-          {!isSantri && (
+          {!isSantri && !isMusyrif && (
             <TabsContent value="approval" className="space-y-4 m-0">
               <Card className="border-border shadow-sm">
                 <CardHeader className="pb-3">
@@ -1078,7 +1089,7 @@ function PerizinanPage() {
           )}
 
           {/* TAB 3: POS GERBANG & MONITORING LIVE */}
-          {!isSantri && (
+          {!isSantri && !isMusyrif && (
             <TabsContent value="gate" className="space-y-4 m-0">
               <Card className="border-border shadow-sm">
                 <CardHeader className="pb-3">
