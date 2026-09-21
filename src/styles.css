@@ -206,7 +206,7 @@
   }
 
   div[role="dialog"],
-  .report-dialog-content {
+  body .report-dialog-content {
     position: static !important;
     display: block !important;
     width: 100% !important;
