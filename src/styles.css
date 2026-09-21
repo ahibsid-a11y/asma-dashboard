@@ -163,7 +163,7 @@
 @media print {
   @page {
     size: 215mm 330mm portrait; /* Format F4 / Folio (215 x 330 mm) */
-    margin: 10mm 12mm 12mm 12mm;
+    margin: 12mm;
   }
 
   body {
@@ -171,17 +171,27 @@
     color: #000000 !important;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
+    margin: 0 !important;
   }
 
   /* Sembunyikan konten web belakang jika modal rapor sedang dibuka / dicetak */
-  body:has(div[role="dialog"]) #root,
-  body.printing-report-active #root,
+  body.report-dialog-open > *:not(.report-dialog-content),
+  body.printing-report-active > *:not(.report-dialog-content),
   .no-print,
   [data-radix-portal] > div[data-state]:not([role="dialog"]),
   div[data-state][class*="bg-black/"],
   header,
   nav,
   aside {
+    display: none !important;
+  }
+
+  body.report-dialog-open > .report-dialog-content,
+  body.printing-report-active > .report-dialog-content {
+    display: block !important;
+  }
+
+  [data-slot="dialog-overlay"] {
     display: none !important;
   }
 
@@ -195,7 +205,8 @@
     overflow: visible !important;
   }
 
-  div[role="dialog"] {
+  div[role="dialog"],
+  body .report-dialog-content {
     position: static !important;
     display: block !important;
     width: 100% !important;
@@ -213,6 +224,23 @@
     margin: 0 !important;
     overflow: visible !important;
     background: transparent !important;
+  }
+
+  body .report-dialog-content {
+    position: static !important;
+    display: block !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    --tw-translate-x: 0px !important;
+    --tw-translate-y: 0px !important;
+    translate: 0 0 !important;
+    transform: none !important;
+    inset: auto !important;
+    animation: none !important;
+    transition: none !important;
   }
 
   /* Reset scroll container di dalam dialog */
@@ -239,6 +267,27 @@
     color: #000000 !important;
   }
 
+  .report-preview,
+  .report-preview-canvas {
+    display: block !important;
+    width: auto !important;
+    min-width: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+  }
+
+  .report-document {
+    width: 191mm !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 9pt !important;
+    line-height: 1.2 !important;
+  }
+
   /* Cegah pemotongan di tengah-tengah baris tabel / kartu / tanda tangan */
   table {
     border-collapse: collapse !important;
@@ -249,15 +298,45 @@
     display: table-header-group !important;
   }
 
-  tr,
-  td,
-  th {
+  tr {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
   }
 
+  td,
+  th {
+    overflow-wrap: break-word !important;
+  }
+
+  .report-table {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+    table-layout: fixed !important;
+  }
+
+  .report-table thead {
+    display: table-header-group !important;
+  }
+
+  .report-grade-section {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  .report-grade-section > div:first-child {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+
   .print-section,
+  .report-signature-block,
+  .signature-container {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+
   .print-avoid-break,
+  .report-biodata,
   .report-signature-block,
   .signature-container {
     break-inside: avoid !important;

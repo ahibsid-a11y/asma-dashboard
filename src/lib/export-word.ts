@@ -45,6 +45,47 @@ async function convertImagesToBase64(container: HTMLElement): Promise<void> {
   );
 }
 
+function prepareWordLayout(container: HTMLElement): void {
+  container.classList.add("word-report");
+
+  const letterhead = container.querySelector<HTMLElement>(".report-letterhead-row");
+  if (letterhead) {
+    const children = Array.from(letterhead.children);
+    const table = document.createElement("table");
+    table.className = "word-letterhead";
+    const row = table.insertRow();
+    children.forEach((child, index) => {
+      const cell = row.insertCell();
+      cell.className = index === 1 ? "word-letterhead-center" : "word-letterhead-logo";
+      cell.appendChild(child);
+    });
+    letterhead.replaceWith(table);
+  }
+
+  const biodata = container.querySelector<HTMLElement>(".report-biodata");
+  if (biodata) {
+    const items = Array.from(biodata.children);
+    const table = document.createElement("table");
+    table.className = "word-biodata";
+    for (let index = 0; index < items.length; index += 2) {
+      const row = table.insertRow();
+      for (let column = 0; column < 2; column += 1) {
+        const cell = row.insertCell();
+        const item = items[index + column];
+        if (item) cell.appendChild(item);
+      }
+    }
+    biodata.replaceWith(table);
+  }
+
+  container.querySelectorAll("thead tr").forEach((row) => {
+    (row as HTMLElement).style.pageBreakAfter = "avoid";
+  });
+  container.querySelectorAll("tbody tr").forEach((row) => {
+    (row as HTMLElement).style.pageBreakInside = "avoid";
+  });
+}
+
 export interface ExportWordOptions {
   fileName?: string;
   title?: string;
@@ -70,6 +111,7 @@ export async function exportReportToWord(
 
   // Konversi semua logo/gambar ke Base64
   await convertImagesToBase64(clone);
+  prepareWordLayout(clone);
 
   // Sesuaikan style elemen untuk kompatibilitas Microsoft Word / WPS
   const tables = clone.querySelectorAll("table");
@@ -79,7 +121,7 @@ export async function exportReportToWord(
     t.setAttribute("cellpadding", "4");
     t.style.borderCollapse = "collapse";
     t.style.width = "100%";
-    t.style.marginBottom = "10pt";
+    t.style.marginBottom = "8pt";
     t.style.borderColor = "#000000";
   });
 
@@ -91,8 +133,8 @@ export async function exportReportToWord(
 
   const paperConfig =
     options.paperSize === "A4"
-      ? { width: "210mm", height: "297mm", margin: "15mm 20mm 15mm 20mm" }
-      : { width: "215mm", height: "330mm", margin: "12mm 15mm 12mm 15mm" }; // F4 Folio
+      ? { width: "210mm", height: "297mm", margin: "15mm" }
+      : { width: "215mm", height: "330mm", margin: "12mm" }; // F4 Folio
 
   const title = options.title || "Rapor Santri";
   const fileName = (options.fileName || "Rapor_Santri").endsWith(".doc")
@@ -128,29 +170,70 @@ export async function exportReportToWord(
     }
     body {
       font-family: Arial, 'Segoe UI', Tahoma, sans-serif;
-      font-size: 10pt;
-      line-height: 1.25;
+      font-size: 9pt;
+      line-height: 1.2;
       color: #000000;
       background: #ffffff;
     }
     h1, h2, h3, h4, p {
-      margin: 0 0 4pt 0;
+      margin: 0 0 3pt 0;
     }
     table {
       border-collapse: collapse;
       width: 100%;
-      margin-bottom: 8pt;
+      margin-bottom: 7pt;
+      table-layout: fixed;
     }
     th, td {
       border: 1px solid #000000;
-      padding: 4pt 5pt;
-      font-size: 9pt;
+      padding: 3pt 4pt;
+      font-size: 8pt;
       color: #000000;
+      vertical-align: top;
+      overflow-wrap: break-word;
     }
     th {
       background-color: #f1f5f9;
       font-weight: bold;
     }
+    thead { display: table-header-group; }
+    tbody { display: table-row-group; }
+    tr { page-break-inside: avoid; }
+    .word-report {
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      border: 0;
+    }
+    .word-letterhead,
+    .word-biodata {
+      width: 100%;
+      border: 0;
+      table-layout: fixed;
+    }
+    .word-letterhead td,
+    .word-biodata td {
+      border: 0;
+      background: #ffffff;
+    }
+    .word-letterhead-logo { width: 16%; text-align: center; vertical-align: middle; }
+    .word-letterhead-logo img { width: 52pt; height: 52pt; object-fit: contain; }
+    .word-letterhead-center { width: 68%; text-align: center; vertical-align: middle; }
+    .word-letterhead-center h1 { font-size: 14pt; line-height: 1.05; }
+    .word-letterhead-center h2 { font-size: 11pt; line-height: 1.05; }
+    .word-letterhead-center h3 { font-size: 8pt; }
+    .word-letterhead-center p { font-size: 7pt; }
+    .word-biodata { margin: 0 0 10pt 0; }
+    .word-biodata td { width: 50%; padding: 1.5pt 5pt; font-size: 8pt; }
+    .word-biodata td > div { white-space: nowrap; }
+    .report-letterhead,
+    .report-biodata,
+    .report-signatures,
+    .print-avoid-break { page-break-inside: avoid; }
+    .report-grade-section { page-break-inside: auto; }
+    .report-grade-section > div:first-child { page-break-after: avoid; }
+    .report-signatures { page-break-before: auto; }
+    img { max-width: 100%; }
     .text-center { text-align: center; }
     .text-right { text-align: right; }
     .text-left { text-align: left; }
