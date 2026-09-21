@@ -158,9 +158,9 @@ export function StudentReportCardDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[92vh] flex flex-col p-0 overflow-hidden bg-background">
+      <DialogContent className="h-[100dvh] w-screen max-w-none rounded-none border-0 p-0 flex flex-col overflow-hidden bg-background sm:h-[94vh] sm:w-[96vw] sm:max-w-6xl sm:rounded-lg sm:border">
         {/* Top Control Bar - Hidden on Print */}
-        <div className="no-print flex items-center justify-between px-6 py-3.5 border-b bg-muted/40 shrink-0">
+        <div className="no-print flex flex-col gap-3 border-b bg-muted/40 px-4 py-3 shrink-0 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-3.5">
           <div className="flex items-center gap-2.5">
             <FileText className="w-5 h-5 text-primary" />
             <div>
@@ -172,13 +172,13 @@ export function StudentReportCardDialog({
               </DialogDescription>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
             <Button
               size="sm"
               variant="outline"
               onClick={handleDownloadWord}
               disabled={isDownloadingWord}
-              className="gap-1.5 font-medium shadow-xs border-primary/30 hover:bg-primary/5 text-foreground"
+              className="min-w-0 gap-1.5 px-2 font-medium shadow-xs border-primary/30 hover:bg-primary/5 text-foreground sm:px-3"
               title="Unduh format Word (F4/Folio) untuk diedit di MS Word atau WPS"
             >
               {isDownloadingWord ? (
@@ -186,21 +186,21 @@ export function StudentReportCardDialog({
               ) : (
                 <FileDown className="w-4 h-4 text-blue-600" />
               )}
-              Download Word (.doc)
+               <span className="truncate">Word (.doc)</span>
             </Button>
             <Button
               size="sm"
               variant="outline"
               onClick={handlePrint}
-              className="gap-1.5 font-medium shadow-xs"
+              className="min-w-0 gap-1.5 px-2 font-medium shadow-xs sm:px-3"
             >
               <Printer className="w-4 h-4 text-primary" />
-              Cetak / Simpan PDF
+              <span className="truncate">Cetak / PDF</span>
             </Button>
             <Button
               size="sm"
               variant="ghost"
-              className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+              className="absolute right-3 top-3 h-8 w-8 p-0 text-muted-foreground hover:text-foreground sm:static"
               onClick={() => onOpenChange(false)}
             >
               <X className="w-4 h-4" />
@@ -209,9 +209,9 @@ export function StudentReportCardDialog({
         </div>
 
         {/* Tab Selector - Hidden on Print */}
-        <div className="no-print px-6 pt-3 pb-0 shrink-0">
+        <div className="no-print overflow-x-auto px-4 pt-3 pb-0 shrink-0 sm:px-6">
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ReportType)}>
-            <TabsList className="w-full grid grid-cols-3">
+            <TabsList className="grid min-w-[520px] w-full grid-cols-3">
               <TabsTrigger value="pondok" className="gap-1.5 text-xs md:text-sm">
                 <BookOpen className="w-4 h-4" />
                 Rapor Pondok
@@ -229,7 +229,8 @@ export function StudentReportCardDialog({
         </div>
 
         {/* Report Content */}
-        <div className="flex-1 overflow-y-auto p-6 md:p-10 bg-slate-50 dark:bg-slate-950/40">
+        <div className="report-preview flex-1 overflow-auto bg-slate-50 p-3 dark:bg-slate-950/40 sm:p-6 md:p-10">
+          <div className="report-preview-canvas min-w-[720px]">
           {activeTab === "pondok" && (
             <ReportContent
               isLoading={pondokQuery.isLoading}
@@ -257,6 +258,7 @@ export function StudentReportCardDialog({
               {kesantrianQuery.data && <RaporKesantrian data={kesantrianQuery.data} />}
             </ReportContent>
           )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -321,8 +323,8 @@ function KopSurat({
   const rightLogo = school.logo || "/logo-alhanif.png";
 
   return (
-    <div className="print-section print-avoid-break">
-      <div className="flex items-center justify-between gap-4 pb-3 border-b-2 border-slate-900 print:border-black">
+    <div className="report-letterhead print-section print-avoid-break">
+      <div className="report-letterhead-row flex items-center justify-between gap-4 pb-3 border-b-2 border-slate-900 print:border-black">
         <img
           src={leftLogo}
           alt={isDinas ? "Logo Dindik Kota Cilegon" : "Logo AHIBS"}
@@ -372,7 +374,7 @@ function KopSurat({
 function BiodataGrid({ student, semester, academicYear }: { student: any; semester: string; academicYear: string }) {
   const semLabel = semester === "1" ? "1 (Ganjil)" : "2 (Genap)";
   return (
-    <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-xs md:text-sm mb-6 bg-slate-50/70 dark:bg-slate-900/40 print:bg-transparent p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 print:border-none print:p-0 print-section print-avoid-break">
+    <div className="report-biodata grid grid-cols-2 gap-x-8 gap-y-1.5 text-xs md:text-sm mb-6 bg-slate-50/70 dark:bg-slate-900/40 print:bg-transparent p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 print:border-none print:p-0 print-section print-avoid-break">
       <div className="flex">
         <span className="w-32 font-semibold text-slate-600 dark:text-slate-400 print:text-black">Nama Santri</span>
         <span className="font-bold text-slate-900 dark:text-white print:text-black uppercase">
@@ -457,7 +459,7 @@ function SignatureBlock({
   const cols = extra ? "grid-cols-4" : "grid-cols-3";
 
   return (
-    <div className="pt-4 text-xs md:text-sm print-section print-avoid-break report-signature-block">
+    <div className="report-signatures pt-4 text-xs md:text-sm print-section print-avoid-break report-signature-block">
       <div className="text-right mb-4">
         <span>{dateStr}</span>
       </div>
@@ -535,7 +537,7 @@ function KesantrianSignatureBlock({
   const headKesantrianNiy = signatures.headOfKesantrianNiy || "-";
 
   return (
-    <div className="pt-4 text-xs md:text-sm print-section print-avoid-break report-signature-block">
+    <div className="report-signatures pt-4 text-xs md:text-sm print-section print-avoid-break report-signature-block">
       <div className="text-right mb-4">
         <span>{dateStr}</span>
       </div>
@@ -581,7 +583,7 @@ function ReportGradesTable({ items, showTp = true }: { items: any[]; showTp?: bo
   }
 
   return (
-    <table className="w-full text-[11px] md:text-xs border-collapse border border-slate-300 dark:border-slate-700 print:border-black print-section print-avoid-break">
+    <table className="report-table w-full text-[11px] md:text-xs border-collapse border border-slate-300 dark:border-slate-700 print:border-black">
       <thead>
         <tr className="bg-slate-100 dark:bg-slate-800 print:bg-slate-200 text-slate-900 dark:text-white print:text-black text-center font-bold">
           <th className="border border-slate-300 dark:border-slate-700 print:border-black px-2 py-1.5 w-8">No</th>
@@ -653,7 +655,7 @@ function RaporPondok({ data }: { data: any }) {
   return (
     <div
       id="report-card-pondok"
-      className="max-w-[850px] mx-auto bg-white text-slate-900 dark:bg-card dark:text-card-foreground p-8 md:p-12 rounded-xl shadow-md print:shadow-none print:p-0 print:m-0 print:max-w-none print:bg-white print:text-black border border-border/80 print:border-none"
+      className="report-document mx-auto w-[190mm] bg-white text-slate-900 dark:bg-card dark:text-card-foreground p-[12mm] rounded-lg shadow-md print:shadow-none print:p-0 print:m-0 print:bg-white print:text-black border border-border/80 print:border-none"
     >
       <KopSurat school={data.school} subtitle="Laporan Capaian Hasil Belajar Santri" />
       <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 print:text-slate-600 text-center -mt-4 mb-6">
@@ -663,7 +665,7 @@ function RaporPondok({ data }: { data: any }) {
       <BiodataGrid student={data.student} semester={data.semester} academicYear={data.academic_year} />
 
       {/* Kelompok A: Umum */}
-      <div className="mb-6 print-section print-avoid-break">
+      <div className="report-grade-section mb-6 print-section">
         <div className="flex items-center gap-2 mb-2">
           <span className="font-bold text-xs uppercase px-2 py-0.5 bg-blue-100 text-blue-900 dark:bg-blue-950 dark:text-blue-200 print:bg-slate-200 print:text-black rounded">
             Kelompok A
@@ -676,7 +678,7 @@ function RaporPondok({ data }: { data: any }) {
       </div>
 
       {/* Kelompok B: Diniyyah */}
-      <div className="mb-6 print-section print-avoid-break">
+      <div className="report-grade-section mb-6 print-section">
         <div className="flex items-center gap-2 mb-2">
           <span className="font-bold text-xs uppercase px-2 py-0.5 bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200 print:bg-slate-200 print:text-black rounded">
             Kelompok B
@@ -689,7 +691,7 @@ function RaporPondok({ data }: { data: any }) {
       </div>
 
       {/* Kelompok C: Bahasa Arab */}
-      <div className="mb-6 print-section print-avoid-break">
+      <div className="report-grade-section mb-6 print-section">
         <div className="flex items-center gap-2 mb-2">
           <span className="font-bold text-xs uppercase px-2 py-0.5 bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200 print:bg-slate-200 print:text-black rounded">
             Kelompok C
@@ -729,7 +731,7 @@ function RaporDinas({ data }: { data: any }) {
   return (
     <div
       id="report-card-dinas"
-      className="max-w-[850px] mx-auto bg-white text-slate-900 dark:bg-card dark:text-card-foreground p-8 md:p-12 rounded-xl shadow-md print:shadow-none print:p-0 print:m-0 print:max-w-none print:bg-white print:text-black border border-border/80 print:border-none"
+      className="report-document mx-auto w-[190mm] bg-white text-slate-900 dark:bg-card dark:text-card-foreground p-[12mm] rounded-lg shadow-md print:shadow-none print:p-0 print:m-0 print:bg-white print:text-black border border-border/80 print:border-none"
     >
       <KopSurat school={data.school} subtitle="Laporan Hasil Belajar Peserta Didik" isDinas={true} />
       <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 print:text-slate-600 text-center -mt-4 mb-6">
@@ -739,7 +741,7 @@ function RaporDinas({ data }: { data: any }) {
       <BiodataGrid student={data.student} semester={data.semester} academicYear={data.academic_year} />
 
       {/* Mata Pelajaran */}
-      <div className="mb-6 print-section print-avoid-break">
+      <div className="report-grade-section mb-6 print-section">
         <div className="flex items-center gap-2 mb-2">
           <span className="font-bold text-xs uppercase px-2 py-0.5 bg-blue-100 text-blue-900 dark:bg-blue-950 dark:text-blue-200 print:bg-slate-200 print:text-black rounded">A</span>
           <h4 className="text-xs md:text-sm font-bold uppercase tracking-wide">Mata Pelajaran</h4>
@@ -848,7 +850,7 @@ function RaporKesantrian({ data }: { data: any }) {
   return (
     <div
       id="report-card-kesantrian"
-      className="max-w-[850px] mx-auto bg-white text-slate-900 dark:bg-card dark:text-card-foreground p-8 md:p-12 rounded-xl shadow-md print:shadow-none print:p-0 print:m-0 print:max-w-none print:bg-white print:text-black border border-border/80 print:border-none"
+      className="report-document mx-auto w-[190mm] bg-white text-slate-900 dark:bg-card dark:text-card-foreground p-[12mm] rounded-lg shadow-md print:shadow-none print:p-0 print:m-0 print:bg-white print:text-black border border-border/80 print:border-none"
     >
       <KopSurat school={data.school} subtitle="Laporan Capaian Kesantrian & Adab" />
       <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 print:text-slate-600 text-center -mt-4 mb-6">
