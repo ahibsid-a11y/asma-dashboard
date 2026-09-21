@@ -234,43 +234,55 @@ function ReportContent({
 // Shared: KOP Surat
 // ──────────────────────────────────────────────────────────────
 
-function KopSurat({ school, subtitle }: { school: any; subtitle: string }) {
+function KopSurat({
+  school,
+  subtitle,
+  isDinas = false,
+}: {
+  school: any;
+  subtitle: string;
+  isDinas?: boolean;
+}) {
+  const leftLogo = isDinas ? "/logo-dindik-cilegon.png" : school.logo || "/logo-alhanif.png";
+  const rightLogo = school.logo || "/logo-alhanif.png";
+
   return (
     <div className="print-section print-avoid-break">
-      <div className="flex items-center justify-between gap-4 pb-4 border-b-2 border-slate-900 print:border-black">
+      <div className="flex items-center justify-between gap-4 pb-3 border-b-2 border-slate-900 print:border-black">
         <img
-          src={school.logo || "/logo-alhanif.png"}
-          alt="Logo AHIBS"
+          src={leftLogo}
+          alt={isDinas ? "Logo Dindik Kota Cilegon" : "Logo AHIBS"}
           className="w-20 h-20 object-contain shrink-0"
           onError={(e) => {
             (e.target as HTMLElement).style.display = "none";
           }}
         />
         <div className="flex-1 text-center">
-          <h3 className="text-xs md:text-sm font-semibold tracking-wider text-slate-600 dark:text-slate-400 print:text-slate-600 uppercase">
-            {school.foundation}
+          <h3 className="text-xs md:text-sm font-bold tracking-wider text-slate-700 dark:text-slate-300 print:text-slate-800 uppercase">
+            {school.foundation || "Yayasan Al-Hanif Al-Atsariyah Cilegon"}
           </h3>
           <h1 className="text-lg md:text-xl font-black text-slate-900 dark:text-white print:text-black tracking-tight leading-tight">
-            {school.fullName}
+            {school.fullName || "AL-HANIF ISLAMIC BOARDING SCHOOL (AHIBS)"}
           </h1>
           <h2 className="text-base md:text-lg font-bold text-primary print:text-black leading-tight">
-            {school.name}
+            {school.name || "SMPIT Putra Al-Hanif"}
           </h2>
-          <p className="text-[11px] md:text-xs text-slate-600 dark:text-slate-400 print:text-slate-600 mt-0.5">
-            NPSN: {school.npsn} • Terakreditasi {school.accreditation} • {school.address}
+          <p className="text-[11px] md:text-xs text-slate-600 dark:text-slate-400 print:text-slate-600 mt-1 leading-snug">
+            NPSN: {school.npsn || "70045436"} • Terakreditasi {school.accreditation || "B"} • {school.address || "Jl. Pejaten, Link. Pejaten. Kel. Cikerai, Kec. Cibeber, Kota Cilegon, Banten 42422"}
           </p>
         </div>
-        <div className="w-20 hidden md:flex items-center justify-center shrink-0">
-          <div className="w-16 h-16 rounded-full border-2 border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-center text-center p-1">
-            <span className="text-[9px] font-bold text-slate-400 uppercase leading-tight">
-              SMPIT AHIBS
-            </span>
-          </div>
-        </div>
+        <img
+          src={rightLogo}
+          alt="Logo AHIBS"
+          className="w-20 h-20 object-contain shrink-0"
+          onError={(e) => {
+            (e.target as HTMLElement).style.display = "none";
+          }}
+        />
       </div>
-      <div className="h-0.5 bg-slate-900 print:bg-black mt-0.5 mb-6" />
+      <div className="h-0.5 bg-slate-900 print:bg-black mt-0.5 mb-5" />
 
-      <div className="text-center mb-6">
+      <div className="text-center mb-5">
         <h3 className="text-base md:text-lg font-black uppercase tracking-wide underline underline-offset-4">
           {subtitle}
         </h3>
@@ -645,7 +657,7 @@ function RaporDinas({ data }: { data: any }) {
       id="report-card-dinas"
       className="max-w-[850px] mx-auto bg-white text-slate-900 dark:bg-card dark:text-card-foreground p-8 md:p-12 rounded-xl shadow-md print:shadow-none print:p-0 print:m-0 print:max-w-none print:bg-white print:text-black border border-border/80 print:border-none"
     >
-      <KopSurat school={data.school} subtitle="Laporan Hasil Belajar Peserta Didik" />
+      <KopSurat school={data.school} subtitle="Laporan Hasil Belajar Peserta Didik" isDinas={true} />
       <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 print:text-slate-600 text-center -mt-4 mb-6">
         Kurikulum Merdeka — Semester {data.semester === "1" ? "I (Ganjil)" : "II (Genap)"} — Tahun Pelajaran {data.academic_year}
       </p>

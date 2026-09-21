@@ -96,7 +96,7 @@ export function CurriculumCpTpAtpPrintDialog({ open, onOpenChange, data }: Print
               />
               <div className="flex-1 text-center">
                 <h3 className="text-xs md:text-sm font-semibold tracking-wider text-slate-600 dark:text-slate-400 print:text-slate-600 uppercase">
-                  Yayasan Al-Hanif Cilegon
+                  Yayasan Al-Hanif Al-Atsariyah Cilegon
                 </h3>
                 <h1 className="text-lg md:text-xl font-black text-slate-900 dark:text-white print:text-black tracking-tight leading-tight">
                   AL-HANIF ISLAMIC BOARDING SCHOOL (AHIBS)
@@ -105,7 +105,7 @@ export function CurriculumCpTpAtpPrintDialog({ open, onOpenChange, data }: Print
                   SMPIT PUTRA AL-HANIF CILEGON
                 </h2>
                 <p className="text-[11px] md:text-xs text-slate-600 dark:text-slate-400 print:text-slate-600 mt-0.5">
-                  NPSN: 69989823 • Terakreditasi A • Jl. Al-Hanif, Cibeber, Kota Cilegon, Banten
+                  NPSN: 70045436 • Terakreditasi B • Jl. Pejaten, Link. Pejaten. Kel. Cikerai, Kec. Cibeber, Kota Cilegon, Banten 42422
                 </p>
               </div>
               <div className="w-20 hidden md:flex items-center justify-center shrink-0">
@@ -448,7 +448,7 @@ export function CurriculumProtaPromesPrintDialog({ open, onOpenChange, data }: P
               />
               <div className="flex-1 text-center">
                 <h3 className="text-xs md:text-sm font-semibold tracking-wider text-slate-600 dark:text-slate-400 print:text-slate-600 uppercase">
-                  Yayasan Al-Hanif Cilegon
+                  Yayasan Al-Hanif Al-Atsariyah Cilegon
                 </h3>
                 <h1 className="text-lg md:text-xl font-black text-slate-900 dark:text-white print:text-black tracking-tight leading-tight">
                   AL-HANIF ISLAMIC BOARDING SCHOOL (AHIBS)
@@ -457,7 +457,7 @@ export function CurriculumProtaPromesPrintDialog({ open, onOpenChange, data }: P
                   SMPIT PUTRA AL-HANIF CILEGON
                 </h2>
                 <p className="text-[11px] md:text-xs text-slate-600 dark:text-slate-400 print:text-slate-600 mt-0.5">
-                  NPSN: 69989823 • Terakreditasi A • Jl. Al-Hanif, Cibeber, Kota Cilegon, Banten
+                  NPSN: 70045436 • Terakreditasi B • Jl. Pejaten, Link. Pejaten. Kel. Cikerai, Kec. Cibeber, Kota Cilegon, Banten 42422
                 </p>
               </div>
               <div className="w-20 hidden md:flex items-center justify-center shrink-0">

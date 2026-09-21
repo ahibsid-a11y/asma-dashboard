@@ -454,7 +454,7 @@ function RekapPerangkatAjarPage() {
                 <img src="/logo-alhanif.png" alt="Logo" className="w-16 h-16 object-contain" />
                 <div className="flex-1 text-center">
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-600 print:text-slate-600">
-                    Yayasan Al-Hanif Cilegon
+                    Yayasan Al-Hanif Al-Atsariyah Cilegon
                   </h3>
                   <h1 className="text-lg font-black tracking-tight leading-tight">
                     AL-HANIF ISLAMIC BOARDING SCHOOL (AHIBS)
@@ -463,7 +463,7 @@ function RekapPerangkatAjarPage() {
                     SMPIT PUTRA AL-HANIF CILEGON
                   </h2>
                   <p className="text-[10px] text-slate-600 mt-0.5">
-                    NPSN: 69989823 • Terakreditasi A • Jl. Al-Hanif, Cibeber, Kota Cilegon, Banten
+                    NPSN: 70045436 • Terakreditasi B • Jl. Pejaten, Link. Pejaten. Kel. Cikerai, Kec. Cibeber, Kota Cilegon, Banten 42422
                   </p>
                 </div>
                 <div className="w-16" />

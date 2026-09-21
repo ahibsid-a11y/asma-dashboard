@@ -53,31 +53,33 @@ export function TahfizReportDialog({ isOpen, onClose, exam }: TahfizReportDialog
           id="tahfiz-report-print"
         >
           {/* KOP SURAT AL-HANIF */}
-          <div className="flex items-center justify-between border-b-2 border-slate-900 pb-4 mb-6 text-center">
-            <div className="flex items-center gap-4 text-left">
-              <div className="h-16 w-16 rounded-full bg-emerald-800 text-white flex items-center justify-center font-sans font-black text-2xl border-2 border-emerald-950">
-                AH
-              </div>
-              <div>
-                <h2 className="text-lg font-black uppercase tracking-wider text-slate-900 font-sans">
-                  PESANTREN ISLAM TERPADU AL-HANIF
-                </h2>
-                <h3 className="text-sm font-bold text-emerald-800 uppercase font-sans">
-                  SMPIT PUTRA AL-HANIF CILEGON
-                </h3>
-                <p className="text-[11px] text-slate-600 font-sans leading-tight">
-                  Lembaga Pendidikan Al-Qur'an & Sains Sunnah Berbasis Karakter Islami
-                  <br />
-                  Jl. Perumnas No. 01, Cibeber, Kota Cilegon, Banten | Telp: (0254) 387654
-                </p>
-              </div>
+          <div className="flex items-center justify-between border-b-2 border-slate-900 pb-3 mb-5 text-center print-section print-avoid-break">
+            <img
+              src="/logo-alhanif.png"
+              alt="Logo AHIBS"
+              className="w-20 h-20 object-contain shrink-0"
+            />
+            <div className="flex-1 text-center px-2">
+              <h3 className="text-xs md:text-sm font-bold tracking-wider text-slate-700 font-sans uppercase">
+                YAYASAN AL-HANIF AL-ATSARIYAH CILEGON
+              </h3>
+              <h1 className="text-lg md:text-xl font-black text-slate-900 font-sans tracking-tight leading-tight">
+                AL-HANIF ISLAMIC BOARDING SCHOOL (AHIBS)
+              </h1>
+              <h2 className="text-base md:text-lg font-bold text-emerald-800 font-sans leading-tight">
+                SMPIT PUTRA AL-HANIF
+              </h2>
+              <p className="text-[11px] md:text-xs text-slate-600 font-sans mt-1 leading-snug">
+                NPSN: 70045436 • Terakreditasi B • Jl. Pejaten, Link. Pejaten. Kel. Cikerai, Kec. Cibeber, Kota Cilegon, Banten 42422
+              </p>
             </div>
-            <div className="hidden sm:block text-right font-sans text-xs">
-              <span className="px-2 py-1 bg-emerald-50 border border-emerald-300 text-emerald-900 font-bold rounded">
-                BIDANG TAHFIDZ AL-QUR'AN
-              </span>
-            </div>
+            <img
+              src="/logo-alhanif.png"
+              alt="Logo AHIBS"
+              className="w-20 h-20 object-contain shrink-0"
+            />
           </div>
+          <div className="h-0.5 bg-slate-900 print:bg-black -mt-4 mb-5" />
 
           {/* JUDUL RAPOR */}
           <div className="text-center my-5">

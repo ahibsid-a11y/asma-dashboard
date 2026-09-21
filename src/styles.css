@@ -163,7 +163,7 @@
 @media print {
   @page {
     size: 215mm 330mm portrait; /* Format F4 / Folio (215 x 330 mm) */
-    margin: 12mm 15mm 15mm 15mm;
+    margin: 10mm 12mm 12mm 12mm;
   }
 
   body {
@@ -193,21 +193,40 @@
     background: transparent !important;
   }
 
-  #official-report-card {
+  #official-report-card,
+  #report-card-pondok,
+  #report-card-dinas,
+  #report-card-kesantrian,
+  #tahfiz-report-print {
     box-shadow: none !important;
     border: none !important;
     padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
+    background: #ffffff !important;
   }
 
-  /* Cegah pemotongan di tengah-tengah section / tabel / tanda tangan */
+  /* Cegah pemotongan di tengah-tengah baris tabel / kartu / tanda tangan */
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tr,
+  td,
+  th {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
   .print-section,
   .print-avoid-break,
   .report-signature-block,
-  table,
-  tbody tr,
   .signature-container {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
