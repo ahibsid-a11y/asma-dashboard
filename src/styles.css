@@ -239,6 +239,8 @@
     translate: 0 0 !important;
     transform: none !important;
     inset: auto !important;
+    animation: none !important;
+    transition: none !important;
   }
 
   /* Reset scroll container di dalam dialog */
