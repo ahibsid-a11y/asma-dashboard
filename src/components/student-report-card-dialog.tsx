@@ -12,7 +12,7 @@ import {
   School,
   X,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -94,12 +94,17 @@ export function StudentReportCardDialog({
     enabled: open && Boolean(studentId) && activeTab === "kesantrian",
   });
 
+  useEffect(() => {
+    if (!open) return;
+    document.body.classList.add("report-dialog-open");
+    return () => {
+      document.body.classList.remove("report-dialog-open", "printing-report-active");
+    };
+  }, [open]);
+
   const handlePrint = () => {
     document.body.classList.add("printing-report-active");
     window.print();
-    setTimeout(() => {
-      document.body.classList.remove("printing-report-active");
-    }, 1000);
   };
 
   const handleDownloadWord = async () => {

@@ -175,7 +175,7 @@
   }
 
   /* Sembunyikan konten web belakang jika modal rapor sedang dibuka / dicetak */
-  body:has(div[role="dialog"]) #root,
+  body.report-dialog-open #root,
   body.printing-report-active #root,
   .no-print,
   [data-radix-portal] > div[data-state]:not([role="dialog"]),
@@ -183,6 +183,15 @@
   header,
   nav,
   aside {
+    display: none !important;
+  }
+
+  body.report-dialog-open > [data-radix-portal],
+  body.printing-report-active > [data-radix-portal] {
+    display: block !important;
+  }
+
+  [data-slot="dialog-overlay"] {
     display: none !important;
   }
 
