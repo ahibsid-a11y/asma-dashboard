@@ -163,7 +163,7 @@ export function StudentReportCardDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="report-dialog-content h-[100dvh] w-screen max-w-none rounded-none border-0 p-0 flex flex-col overflow-hidden bg-background print:translate-x-0 print:translate-y-0 sm:h-[94vh] sm:w-[96vw] sm:max-w-6xl sm:rounded-lg sm:border">
+      <DialogContent className="report-dialog-content h-[100dvh] w-screen max-w-none rounded-none border-0 p-0 flex flex-col overflow-hidden bg-background print:!translate-x-0 print:!translate-y-0 sm:h-[94vh] sm:w-[96vw] sm:max-w-6xl sm:rounded-lg sm:border">
         {/* Top Control Bar - Hidden on Print */}
         <div className="no-print flex flex-col gap-3 border-b bg-muted/40 px-4 py-3 shrink-0 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-3.5">
           <div className="flex items-center gap-2.5">
