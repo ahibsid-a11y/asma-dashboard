@@ -175,8 +175,8 @@
   }
 
   /* Sembunyikan konten web belakang jika modal rapor sedang dibuka / dicetak */
-  body.report-dialog-open #root,
-  body.printing-report-active #root,
+  body.report-dialog-open > *:not(.report-dialog-content),
+  body.printing-report-active > *:not(.report-dialog-content),
   .no-print,
   [data-radix-portal] > div[data-state]:not([role="dialog"]),
   div[data-state][class*="bg-black/"],
@@ -186,8 +186,8 @@
     display: none !important;
   }
 
-  body.report-dialog-open > [data-radix-portal],
-  body.printing-report-active > [data-radix-portal] {
+  body.report-dialog-open > .report-dialog-content,
+  body.printing-report-active > .report-dialog-content {
     display: block !important;
   }
 
