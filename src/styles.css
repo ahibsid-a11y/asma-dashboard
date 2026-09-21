@@ -173,23 +173,54 @@
     -webkit-print-color-adjust: exact;
   }
 
+  /* Sembunyikan konten web belakang jika modal rapor sedang dibuka / dicetak */
+  body:has(div[role="dialog"]) #root,
+  body.printing-report-active #root,
   .no-print,
-  [data-slot="dialog-overlay"],
+  [data-radix-portal] > div[data-state]:not([role="dialog"]),
+  div[data-state][class*="bg-black/"],
   header,
   nav,
   aside {
     display: none !important;
   }
 
-  [data-slot="dialog-content"] {
+  /* Netralkan Radix Portal & Dialog Content agar tidak fixed dan tidak terpotong */
+  div[data-radix-portal] {
     position: static !important;
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  div[role="dialog"] {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
     max-width: 100% !important;
     max-height: none !important;
-    border: none !important;
+    height: auto !important;
+    transform: none !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
     box-shadow: none !important;
+    border: none !important;
     padding: 0 !important;
     margin: 0 !important;
     overflow: visible !important;
+    background: transparent !important;
+  }
+
+  /* Reset scroll container di dalam dialog */
+  div[role="dialog"] .overflow-y-auto {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    padding: 0 !important;
     background: transparent !important;
   }
 
@@ -205,6 +236,7 @@
     width: 100% !important;
     max-width: 100% !important;
     background: #ffffff !important;
+    color: #000000 !important;
   }
 
   /* Cegah pemotongan di tengah-tengah baris tabel / kartu / tanda tangan */

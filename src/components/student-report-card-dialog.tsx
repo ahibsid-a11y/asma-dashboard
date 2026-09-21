@@ -4,6 +4,7 @@ import {
   Award,
   BookOpen,
   CheckCircle2,
+  FileDown,
   FileText,
   Heart,
   Loader2,
@@ -12,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,6 +25,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { exportReportToWord } from "@/lib/export-word";
 import {
   getReportCardPondok,
   getReportCardDinas,
@@ -58,6 +61,7 @@ export function StudentReportCardDialog({
   defaultTab = "pondok",
 }: StudentReportCardDialogProps) {
   const [activeTab, setActiveTab] = useState<ReportType>(defaultTab);
+  const [isDownloadingWord, setIsDownloadingWord] = useState(false);
 
   const fetchPondokFn = useServerFn(getReportCardPondok);
   const fetchDinasFn = useServerFn(getReportCardDinas);
@@ -91,7 +95,62 @@ export function StudentReportCardDialog({
   });
 
   const handlePrint = () => {
+    document.body.classList.add("printing-report-active");
     window.print();
+    setTimeout(() => {
+      document.body.classList.remove("printing-report-active");
+    }, 1000);
+  };
+
+  const handleDownloadWord = async () => {
+    setIsDownloadingWord(true);
+    try {
+      const elementId =
+        activeTab === "dinas"
+          ? "report-card-dinas"
+          : activeTab === "pondok"
+            ? "report-card-pondok"
+            : "report-card-kesantrian";
+
+      const studentName =
+        pondokQuery.data?.student?.name ||
+        dinasQuery.data?.student?.name ||
+        kesantrianQuery.data?.student?.name ||
+        "Santri";
+
+      const studentClass =
+        pondokQuery.data?.student?.class ||
+        dinasQuery.data?.student?.class ||
+        kesantrianQuery.data?.student?.class ||
+        "";
+
+      const tabLabel =
+        activeTab === "dinas"
+          ? "Rapor_Dinas"
+          : activeTab === "pondok"
+            ? "Rapor_Pondok"
+            : "Rapor_Kesantrian";
+
+      const safeName = studentName.replace(/[^a-zA-Z0-9]/g, "_");
+      const fileName = `${tabLabel}_${safeName}_${studentClass || "F4"}.doc`;
+
+      const success = await exportReportToWord(elementId, {
+        fileName,
+        title: `${tabLabel.replace("_", " ")} - ${studentName}`,
+        paperSize: "F4",
+      });
+
+      if (success) {
+        toast.success("Dokumen Word (.doc) berhasil diunduh. Siap diedit di Microsoft Word / WPS.");
+      } else {
+        toast.error("Gagal membuat berkas Word.");
+      }
+    } catch (err) {
+      console.error("Error exporting to Word:", err);
+      toast.error("Terjadi kendala saat mengekspor ke Word.");
+    } finally {
+      setIsDownloadingWord(false);
+    }
   };
 
   const getSemesterLabel = (sem: string) =>
@@ -109,11 +168,26 @@ export function StudentReportCardDialog({
                 Rapor Digital Santri
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                Pilih jenis rapor, lalu cetak
+                Pilih jenis rapor, download format Word atau cetak langsung
               </DialogDescription>
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleDownloadWord}
+              disabled={isDownloadingWord}
+              className="gap-1.5 font-medium shadow-xs border-primary/30 hover:bg-primary/5 text-foreground"
+              title="Unduh format Word (F4/Folio) untuk diedit di MS Word atau WPS"
+            >
+              {isDownloadingWord ? (
+                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+              ) : (
+                <FileDown className="w-4 h-4 text-blue-600" />
+              )}
+              Download Word (.doc)
+            </Button>
             <Button
               size="sm"
               variant="outline"

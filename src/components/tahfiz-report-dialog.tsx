@@ -1,5 +1,6 @@
-import { useRef } from "react";
-import { BookMarked, Download, Printer, Sparkles, X } from "lucide-react";
+import { useState, useRef } from "react";
+import { BookMarked, Download, FileDown, Loader2, Printer, Sparkles, X } from "lucide-react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { exportReportToWord } from "@/lib/export-word";
 import type { TahfizExam } from "@/lib/tahfiz.exams.server";
 
 interface TahfizReportDialogProps {
@@ -19,11 +21,43 @@ interface TahfizReportDialogProps {
 
 export function TahfizReportDialog({ isOpen, onClose, exam }: TahfizReportDialogProps) {
   const printAreaRef = useRef<HTMLDivElement>(null);
+  const [isDownloadingWord, setIsDownloadingWord] = useState(false);
 
   if (!exam) return null;
 
   const handlePrint = () => {
+    document.body.classList.add("printing-report-active");
     window.print();
+    setTimeout(() => {
+      document.body.classList.remove("printing-report-active");
+    }, 1000);
+  };
+
+  const handleDownloadWord = async () => {
+    if (!exam) return;
+    setIsDownloadingWord(true);
+    try {
+      const safeName = (exam.student_name || "Santri").replace(/[^a-zA-Z0-9]/g, "_");
+      const safeExam = (exam.exam_title || "Tahfiz").replace(/[^a-zA-Z0-9]/g, "_");
+      const fileName = `Rapor_Tahfiz_${safeName}_${safeExam}_F4.doc`;
+
+      const success = await exportReportToWord("tahfiz-report-print", {
+        fileName,
+        title: `Rapor Tahfidz - ${exam.student_name}`,
+        paperSize: "F4",
+      });
+
+      if (success) {
+        toast.success("Dokumen Word (.doc) berhasil diunduh. Siap diedit di Microsoft Word / WPS.");
+      } else {
+        toast.error("Gagal membuat berkas Word.");
+      }
+    } catch (err) {
+      console.error("Error exporting to Word:", err);
+      toast.error("Terjadi kendala saat mengekspor ke Word.");
+    } finally {
+      setIsDownloadingWord(false);
+    }
   };
 
   return (
@@ -35,6 +69,21 @@ export function TahfizReportDialog({ isOpen, onClose, exam }: TahfizReportDialog
             Cetak Rapor Ujian Tahfidz Al-Qur'an
           </DialogTitle>
           <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs font-medium gap-1.5 border-primary/40 hover:bg-primary/5 text-foreground"
+              onClick={handleDownloadWord}
+              disabled={isDownloadingWord}
+              title="Unduh format Word (F4/Folio) untuk diedit di MS Word atau WPS"
+            >
+              {isDownloadingWord ? (
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              ) : (
+                <FileDown className="h-4 w-4 text-blue-600" />
+              )}
+              Download Word (.doc)
+            </Button>
             <Button
               size="sm"
               className="text-xs font-bold gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground"
