@@ -119,41 +119,8 @@ export const updateMyProfile = createServerFn({ method: "POST" })
       "@/integrations/supabase/client.server"
     );
 
-    if (!isSantri && (data.category || data.positions || data.account_type)) {
-      const category: MemberCategory =
-        data.category ??
-        curProfile?.category ??
-        categoryOf(curProfile?.account_type);
-      // Izinkan semua posisi staf yang valid
-      const positions = (
-        data.positions ?? (data.account_type ? [data.account_type] : [])
-      ).filter((p): p is AccountType => p !== "santri" && ACCOUNT_TYPES.includes(p));
-      const primary =
-        positions[0] ??
-        data.account_type ??
-        CATEGORY_DEFAULT_ACCOUNT_TYPE[category];
-
-      updatePayload["category"] = category;
-      updatePayload["account_type"] = primary;
-
-      try {
-        await supabaseAdmin
-          .from("profile_positions")
-          .delete()
-          .eq("user_id", ctx.userId);
-        if (positions.length > 0) {
-          const rows = positions.map((p) => ({
-            user_id: ctx.userId,
-            position: p,
-          }));
-          await supabaseAdmin.from("profile_positions").upsert(rows, {
-            onConflict: "user_id,position",
-            ignoreDuplicates: true,
-          });
-        }
-      } catch {}
-    }
-
+    // Pengaturan jenis akun dan jabatan hanya boleh diubah oleh Super Admin di Manajemen Anggota.
+    // Di sini kita pastikan kolom terproteksi tidak dimutasi oleh pengguna biasa.
     let saved = false;
     try {
       const { error: adminErr } = await (supabaseAdmin.from("profiles") as any)

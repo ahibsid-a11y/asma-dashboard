@@ -8,25 +8,14 @@ import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
 import { getMyProfile, updateMyProfile } from "@/lib/profile.functions";
 import {
   ACCOUNT_TYPE_LABELS,
   ACCOUNT_TYPES,
-  CATEGORY_POSITIONS,
-  MEMBER_CATEGORIES,
   MEMBER_CATEGORY_LABELS,
-  POSITION_GROUPS,
   categoryOf,
   type AccountType,
   type MemberCategory,
@@ -149,29 +138,18 @@ function ProfilePage() {
     });
   }, [data]);
 
-  function togglePosition(position: AccountType) {
-    setForm((f) => {
-      const nextPositions = f.positions.includes(position)
-        ? f.positions.filter((p) => p !== position)
-        : [...f.positions, position];
-      return {
-        ...f,
-        positions: nextPositions,
-        account_type: nextPositions[0] ?? f.account_type,
-      };
-    });
-  }
-
   const mutation = useMutation({
     mutationFn: (values: FormState) => {
-      const payload: Record<string, unknown> = { ...values };
-      if (!values.password) delete payload["password"];
-      if (!values.gender) delete payload["gender"];
-      if (data?.account_type === "santri") {
-        delete payload["category"];
-        delete payload["positions"];
-        delete payload["account_type"];
-      }
+      const payload: Record<string, unknown> = {
+        name: values.name,
+        email: values.email,
+        phone: values.phone,
+        nis_nip: values.nis_nip,
+        avatar: values.avatar,
+      };
+      if (values.display_name) payload["display_name"] = values.display_name;
+      if (values.password) payload["password"] = values.password;
+      if (values.gender) payload["gender"] = values.gender;
       return saveProfile({ data: payload });
     },
     onSuccess: async () => {
@@ -251,76 +229,42 @@ function ProfilePage() {
               mutation.mutate(form);
             }}
           >
-            {!isSantri ? (
-              <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="category">Jenis Akun</Label>
-                  <Select
-                    value={form.category}
-                    onValueChange={(v) => {
-                      const newCat = v as MemberCategory;
-                      setForm((f) => ({
-                        ...f,
-                        category: newCat,
-                        positions: [],
-                        account_type: CATEGORY_POSITIONS[newCat]?.[0] ?? f.account_type,
-                      }));
-                    }}
-                  >
-                    <SelectTrigger id="category">
-                      <SelectValue placeholder="Pilih Jenis Akun" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MEMBER_CATEGORIES.filter((c) => c !== "siswa").map((c) => (
-                        <SelectItem key={c} value={c}>
-                          {MEMBER_CATEGORY_LABELS[c]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid gap-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Jabatan & Peran (Boleh lebih dari satu)</Label>
-                    <span className="text-xs text-muted-foreground">
-                      Mengaktifkan menu & akses fitur
-                    </span>
-                  </div>
-                  <div className="grid gap-3 rounded-lg border border-border bg-card p-3 max-h-[260px] overflow-y-auto">
-                    {POSITION_GROUPS.map((group) => (
-                      <div key={group.name} className="space-y-1.5">
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                          {group.name}
-                        </p>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          {group.positions.map((p) => (
-                            <label
-                              key={p}
-                              className="flex items-center gap-2 rounded-md border border-border/60 bg-muted/20 p-2 text-xs font-medium cursor-pointer hover:bg-muted/40 transition-colors"
-                            >
-                              <Checkbox
-                                checked={form.positions.includes(p)}
-                                onCheckedChange={() => togglePosition(p)}
-                              />
-                              <span>{ACCOUNT_TYPE_LABELS[p]}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-[11px] text-muted-foreground">
-                    Pilih seluruh amanah yang Anda emban. Menu dan hak akses di aplikasi akan langsung disesuaikan secara otomatis.
+            {/* Informasi Akun & Jabatan (Read-only: Dikelola oleh Super Admin) */}
+            <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/60 pb-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Jenis Akun & Status Jabatan
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Pengaturan peran dan jabatan hanya dapat diubah oleh Super Admin melalui menu Manajemen Anggota.
                   </p>
                 </div>
+                <Badge variant="outline" className="w-fit text-xs font-bold">
+                  {MEMBER_CATEGORY_LABELS[data.category ?? categoryOf(data.account_type)] || "-"}
+                </Badge>
               </div>
-            ) : (
-              <div className="grid gap-2">
-                <Label>Jenis Akun</Label>
-                <Input value="Santri / Siswa" disabled className="bg-muted text-muted-foreground" />
-              </div>
-            )}
+
+              {data.account_type !== "santri" ? (
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Jabatan yang Diemban:</Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(data.positions && data.positions.length > 0
+                      ? data.positions
+                      : data.account_type
+                        ? [data.account_type]
+                        : []
+                    ).map((p) => (
+                      <Badge key={p} variant="secondary" className="text-xs py-1 px-2.5 font-medium">
+                        {ACCOUNT_TYPE_LABELS[p as AccountType] || p}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs font-medium text-foreground">Akun Santri / Siswa</p>
+              )}
+            </div>
 
             <div className="grid gap-2">
               <Label htmlFor="name">Nama Lengkap</Label>
