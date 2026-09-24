@@ -10,6 +10,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
 import { getMyProfile, updateMyProfile } from "@/lib/profile.functions";
 import {
@@ -147,7 +154,6 @@ function ProfilePage() {
         nis_nip: values.nis_nip,
         avatar: values.avatar,
       };
-      if (values.display_name) payload["display_name"] = values.display_name;
       if (values.password) payload["password"] = values.password;
       if (values.gender) payload["gender"] = values.gender;
       return saveProfile({ data: payload });
