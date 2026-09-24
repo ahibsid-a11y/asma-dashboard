@@ -190,12 +190,11 @@ function PerangkatAjarPage() {
   const [localTps, setLocalTps] = useState<CurriculumTp[]>([]);
   const [hasUnsavedTp, setHasUnsavedTp] = useState(false);
 
-  // Sinkronkan TP dari server, tapi jangan menimpa isian yang belum disimpan
+  // Sinkronkan TP dari server saat subjek/kelas/data server berganti
   useEffect(() => {
     setLocalTps(serverTps);
     setHasUnsavedTp(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentSubjectId, selectedClass, selectedYear, serverTps.length]);
+  }, [currentSubjectId, selectedClass, selectedYear, serverTps]);
 
 
   const activePlan: CurriculumPlan = useMemo(() => {
@@ -433,9 +432,12 @@ function PerangkatAjarPage() {
         },
       });
     },
-    onSuccess: () => {
+    onSuccess: (res: any) => {
       toast.success("Tujuan Pembelajaran (TP & ATP) berhasil disimpan dan disinkronkan!");
       setHasUnsavedTp(false);
+      if (res?.saved && Array.isArray(res.saved) && res.saved.length > 0) {
+        setLocalTps(res.saved);
+      }
       queryClient.invalidateQueries({ queryKey: ["curriculum-plan"] });
       queryClient.invalidateQueries({ queryKey: ["input-grades-sheet"] });
     },
@@ -932,7 +934,7 @@ function PerangkatAjarPage() {
                       <th className="px-2 py-3 w-8 text-center">No</th>
                       <th className="px-2 py-3 w-20 text-center">Sem.</th>
                       <th className="px-2 py-3 w-32">Elemen Materi</th>
-                      <th className="px-2 py-3 w-20 text-center">Kode TP</th>
+                      <th className="px-2 py-3 w-32 min-w-[110px] text-center">Kode TP</th>
                       <th className="px-3 py-3 min-w-[280px]">Rumusan Tujuan Pembelajaran (TP)</th>
                       <th className="px-2 py-3 w-32 text-center">Taksonomi Bloom</th>
                       <th className="px-2 py-3 w-24 text-center">Dimensi</th>
@@ -989,11 +991,11 @@ function PerangkatAjarPage() {
                               </SelectContent>
                             </Select>
                           </td>
-                          <td className="px-1.5 py-2">
+                          <td className="px-2 py-2 min-w-[110px]">
                             <Input
                               value={tp.code}
                               onChange={(e) => handleUpdateTpField(idx, "code", e.target.value)}
-                              className="h-8 text-center font-bold font-mono text-xs"
+                              className="h-8 text-center font-bold font-mono text-xs w-full px-1"
                               placeholder="TP-7.1"
                             />
                           </td>

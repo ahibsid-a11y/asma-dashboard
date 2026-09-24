@@ -56,9 +56,22 @@ function resolveRole(data: {
   account_type?: AccountType;
 }) {
   const category: MemberCategory = data.category ?? categoryOf(data.account_type);
-  const allowed = CATEGORY_POSITIONS[category];
-  const positions = (data.positions ?? []).filter((p) => allowed.includes(p));
-  const primary = positions[0] ?? CATEGORY_DEFAULT_ACCOUNT_TYPE[category];
+  if (category === "siswa") {
+    return {
+      category: "siswa" as MemberCategory,
+      positions: [] as AccountType[],
+      primary: "santri" as AccountType,
+    };
+  }
+  // Izinkan seluruh jabatan staf non-santri (multi-role lintas bidang: guru, musyrif, admin)
+  const positions = (data.positions ?? []).filter(
+    (p): p is AccountType => p !== "santri" && ACCOUNT_TYPES.includes(p),
+  );
+  const primary =
+    positions[0] ??
+    data.account_type ??
+    CATEGORY_DEFAULT_ACCOUNT_TYPE[category] ??
+    "guru_mapel";
   return { category, positions, primary };
 }
 

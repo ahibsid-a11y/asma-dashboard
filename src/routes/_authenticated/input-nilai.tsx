@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
@@ -8,6 +8,7 @@ import {
   Check,
   CheckCircle2,
   ChevronRight,
+  ExternalLink,
   GraduationCap,
   Info,
   Layers,
@@ -308,6 +309,7 @@ function InputNilaiPage() {
       setNewTpDesc("");
       setNewTpCode(`TP ${tps.length + 2}`);
       queryClient.invalidateQueries({ queryKey: ["input-grades-sheet"] });
+      queryClient.invalidateQueries({ queryKey: ["curriculum-plan"] });
     },
     onError: (err: any) => {
       toast.error(err.message || "Gagal menambah TP");
@@ -323,6 +325,7 @@ function InputNilaiPage() {
     onSuccess: () => {
       toast.success("TP berhasil dihapus");
       queryClient.invalidateQueries({ queryKey: ["input-grades-sheet"] });
+      queryClient.invalidateQueries({ queryKey: ["curriculum-plan"] });
     },
     onError: (err: any) => {
       toast.error(err.message || "Gagal menghapus TP");
@@ -711,6 +714,24 @@ function InputNilaiPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 pt-0">
+                {/* Notice Callout & Direct Link to Perangkat Ajar */}
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-xs">
+                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                    <p className="text-muted-foreground">
+                      <strong className="text-foreground">Terhubung Dua Arah dengan Perangkat Ajar:</strong> Tujuan Pembelajaran (TP) di sini otomatis terhubung dengan modul <strong>Perangkat Ajar (CP, TP & ATP)</strong> dan buku rapor santri.
+                    </p>
+                  </div>
+                  <Link
+                    to="/perangkat-ajar"
+                    className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md border border-border bg-card hover:bg-muted/50 text-foreground transition-colors shrink-0 shadow-xs"
+                  >
+                    <BookOpen className="h-3.5 w-3.5 text-primary" />
+                    Buka Perangkat Ajar (CP & TP)
+                    <ExternalLink className="h-3 w-3 opacity-60" />
+                  </Link>
+                </div>
+
                 {/* Form Tambah TP */}
                 <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
                   <h4 className="text-xs font-semibold flex items-center gap-1">

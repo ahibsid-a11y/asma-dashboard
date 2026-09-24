@@ -279,13 +279,16 @@ export function saveElement(data: {
 
 export function getTps(subjectId: string, className: string, academicYear: string): CurriculumTp[] {
   const store = readStore();
+  const cleanClass = (className || "").replace(/^kelas\s*/i, "").trim().toLowerCase();
   return store.tps
-    .filter(
-      (t) =>
+    .filter((t) => {
+      const itemClass = (t.class_name || "").replace(/^kelas\s*/i, "").trim().toLowerCase();
+      return (
         t.subject_id === subjectId &&
-        t.class_name === className &&
+        (t.class_name === className || itemClass === cleanClass) &&
         t.academic_year === academicYear
-    )
+      );
+    })
     .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
 }
 
@@ -295,22 +298,26 @@ export function saveTpBatch(
   className: string,
   academicYear: string,
   tps: Array<Omit<CurriculumTp, "id"> & { id?: string }>
-): { success: boolean; count: number; completionPercentage: number } {
+): { success: boolean; count: number; completionPercentage: number; saved: CurriculumTp[] } {
   const store = readStore();
   const now = new Date().toISOString();
+  const cleanClass = (className || "").replace(/^kelas\s*/i, "").trim().toLowerCase();
 
-  // Remove existing TPs for this subject, class, year
-  store.tps = store.tps.filter(
-    (t) =>
-      !(
-        t.subject_id === subjectId &&
-        t.class_name === className &&
-        t.academic_year === academicYear
-      )
-  );
+  // Hapus TP sebelumnya untuk kombinasi mapel, kelas, dan tahun yang sama
+  store.tps = store.tps.filter((t) => {
+    const itemClass = (t.class_name || "").replace(/^kelas\s*/i, "").trim().toLowerCase();
+    const isSame =
+      t.subject_id === subjectId &&
+      (t.class_name === className || itemClass === cleanClass) &&
+      t.academic_year === academicYear;
+    return !isSame;
+  });
 
   const insertedTps: CurriculumTp[] = tps.map((tp, idx) => ({
-    id: tp.id && !tp.id.startsWith("temp_") ? tp.id : `tp_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 6)}`,
+    id:
+      tp.id && !tp.id.startsWith("temp_")
+        ? tp.id
+        : `tp_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 6)}`,
     plan_id: planId,
     subject_id: subjectId,
     class_name: className,
@@ -354,7 +361,12 @@ export function saveTpBatch(
   }
 
   writeStore(store);
-  return { success: true, count: insertedTps.length, completionPercentage: completionPct };
+  return {
+    success: true,
+    count: insertedTps.length,
+    completionPercentage: completionPct,
+    saved: insertedTps,
+  };
 }
 
 export function deleteTp(id: string): { success: boolean; deletedId: string } {

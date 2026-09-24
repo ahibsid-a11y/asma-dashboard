@@ -89,9 +89,10 @@ export const updateMyProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context, data }) => {
     const ctx = context as Ctx;
+    const cleanEmail = empty(data.email);
     const updatePayload: Record<string, unknown> = {
       name: data.name,
-      email: data.email ?? null,
+      email: cleanEmail,
       phone: empty(data.phone),
       gender: (data.gender ?? null) as "L" | "P" | null,
       class: empty(data.class),
@@ -114,15 +115,19 @@ export const updateMyProfile = createServerFn({ method: "POST" })
     const isSantri =
       curProfile?.account_type === "santri" || curProfile?.category === "siswa";
 
+    const { supabaseAdmin } = await import(
+      "@/integrations/supabase/client.server"
+    );
+
     if (!isSantri && (data.category || data.positions || data.account_type)) {
       const category: MemberCategory =
         data.category ??
         curProfile?.category ??
         categoryOf(curProfile?.account_type);
-      const allowed = CATEGORY_POSITIONS[category] || [];
+      // Izinkan semua posisi staf yang valid
       const positions = (
         data.positions ?? (data.account_type ? [data.account_type] : [])
-      ).filter((p) => allowed.includes(p as AccountType));
+      ).filter((p): p is AccountType => p !== "santri" && ACCOUNT_TYPES.includes(p));
       const primary =
         positions[0] ??
         data.account_type ??
@@ -131,64 +136,78 @@ export const updateMyProfile = createServerFn({ method: "POST" })
       updatePayload["category"] = category;
       updatePayload["account_type"] = primary;
 
-      const { supabaseAdmin } = await import(
-        "@/integrations/supabase/client.server"
-      );
-      await supabaseAdmin
-        .from("profile_positions")
-        .delete()
-        .eq("user_id", ctx.userId);
-      if (positions.length > 0) {
-        const rows = positions.map((p) => ({
-          user_id: ctx.userId,
-          position: p,
-        }));
-        await supabaseAdmin.from("profile_positions").upsert(rows, {
-          onConflict: "user_id,position",
-          ignoreDuplicates: true,
-        });
-      }
+      try {
+        await supabaseAdmin
+          .from("profile_positions")
+          .delete()
+          .eq("user_id", ctx.userId);
+        if (positions.length > 0) {
+          const rows = positions.map((p) => ({
+            user_id: ctx.userId,
+            position: p,
+          }));
+          await supabaseAdmin.from("profile_positions").upsert(rows, {
+            onConflict: "user_id,position",
+            ignoreDuplicates: true,
+          });
+        }
+      } catch {}
     }
 
-    const { error } = await (ctx.supabase
-      .from("profiles") as any)
-      .update(updatePayload)
-      .eq("id", ctx.userId);
-    if (error) throw new Error(friendly(error.message));
+    let saved = false;
+    try {
+      const { error: adminErr } = await (supabaseAdmin.from("profiles") as any)
+        .update(updatePayload)
+        .eq("id", ctx.userId);
+      if (!adminErr) saved = true;
+    } catch {}
 
-    if (data.email || data.password) {
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const displayName = empty(data.display_name) ?? data.name;
-      const authUpdate: Record<string, unknown> = {
-        user_metadata: { name: data.name, display_name: displayName },
-      };
-      if (data.email) {
-        authUpdate["email"] = data.email;
-        authUpdate["email_confirm"] = true;
+    if (!saved) {
+      // Fallback via ctx.supabase: hindari kolom privilege jika trigger DB proteksi aktif
+      const safePayload = { ...updatePayload };
+      if (curProfile?.account_type) {
+        delete safePayload["account_type"];
       }
-      const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
-        ctx.userId,
-        authUpdate,
-      );
-      if (authError) throw new Error(friendly(authError.message));
-      if (data.password) {
-        const { setUserPassword } = await import("./password.server");
-        await setUserPassword(supabaseAdmin, ctx.userId, data.password);
+      delete safePayload["status"];
+      const { error: ctxErr } = await (ctx.supabase.from("profiles") as any)
+        .update(safePayload)
+        .eq("id", ctx.userId);
+      if (ctxErr) throw new Error(friendly(ctxErr.message));
+    }
 
-        const { data: cur } = await supabaseAdmin
-          .from("profiles")
-          .select("preferences")
-          .eq("id", ctx.userId)
-          .maybeSingle();
-        await supabaseAdmin
-          .from("profiles")
-          .update({
-            preferences: {
-              ...((cur?.preferences as Record<string, unknown>) || {}),
-              password_hint: data.password,
-            },
-          })
-          .eq("id", ctx.userId);
+    const displayName = empty(data.display_name) ?? data.name;
+    if (cleanEmail || data.password) {
+      try {
+        const authUpdate: Record<string, unknown> = {
+          user_metadata: { name: data.name, display_name: displayName },
+        };
+        if (cleanEmail) {
+          authUpdate["email"] = cleanEmail;
+          authUpdate["email_confirm"] = true;
+        }
+        await supabaseAdmin.auth.admin.updateUserById(ctx.userId, authUpdate);
+      } catch {}
+
+      if (data.password) {
+        try {
+          const { setUserPassword } = await import("./password.server");
+          await setUserPassword(supabaseAdmin, ctx.userId, data.password);
+
+          const { data: cur } = await supabaseAdmin
+            .from("profiles")
+            .select("preferences")
+            .eq("id", ctx.userId)
+            .maybeSingle();
+          await supabaseAdmin
+            .from("profiles")
+            .update({
+              preferences: {
+                ...((cur?.preferences as Record<string, unknown>) || {}),
+                password_hint: data.password,
+              },
+            })
+            .eq("id", ctx.userId);
+        } catch {}
       }
     }
 

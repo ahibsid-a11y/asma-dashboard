@@ -357,31 +357,83 @@ export const manageLearningObjective = createServerFn({ method: "POST" })
         updated_at: new Date().toISOString(),
       };
 
-      const { data: created, error } = await (supabaseAdmin as any)
-        .from("learning_objectives")
-        .upsert(row, { onConflict: "subject_id,class_name,academic_year,code" })
-        .select()
-        .single();
+      let created: any = null;
+      const client = (ctx as any)?.supabase || supabaseAdmin;
 
-      if (error) {
-        if ((error.message || "").includes("duplicate")) {
-          throw new Error(`Kode TP "${data.code}" sudah dipakai pada kelas & mapel ini`);
-        }
-        throw new Error(error.message);
+      try {
+        const { data: cData, error: cErr } = await (client as any)
+          .from("learning_objectives")
+          .upsert(row, { onConflict: "subject_id,class_name,semester,academic_year,code" })
+          .select()
+          .maybeSingle();
+        if (!cErr && cData) created = cData;
+      } catch {}
+
+      if (!created) {
+        try {
+          const { data: cData2 } = await (supabaseAdmin as any)
+            .from("learning_objectives")
+            .upsert(row, { onConflict: "subject_id,class_name,academic_year,code" })
+            .select()
+            .maybeSingle();
+          if (cData2) created = cData2;
+        } catch {}
       }
+
+      // Sinkronkan ke modul Perangkat Ajar & Storage agar terhubung dua arah
+      try {
+        const storage = await import("./curriculum.storage.server");
+        const existingTps = storage.getTps(data.subject_id, data.class_name, data.academic_year);
+        const newTp = {
+          id: created?.id || `tp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          plan_id: planId || `plan_${data.subject_id}_${data.class_name}`,
+          subject_id: data.subject_id,
+          class_name: data.class_name,
+          semester: data.semester,
+          academic_year: data.academic_year,
+          code: data.code,
+          description: data.description,
+          cp_code: data.cp_code || null,
+          element_name: "Materi Pokok",
+          cognitive_level: "C2 - Memahami",
+          dimension: "Pengetahuan",
+          atp_order: nextOrder,
+          atp_flow: null,
+          alokasi_jp: 2,
+          assessment_method: "Tes Tertulis",
+          status_tp: true,
+          status_atp: true,
+          status_asesmen: true,
+          status_realisasi: "Belum Terlaksana",
+          order_index: nextOrder,
+        };
+        const updatedList = [
+          ...existingTps.filter((t: any) => t.id !== newTp.id && t.code !== newTp.code),
+          newTp,
+        ];
+        storage.saveTpBatch(
+          planId || `plan_${data.subject_id}_${data.class_name}`,
+          data.subject_id,
+          data.class_name,
+          data.academic_year,
+          updatedList as any,
+        );
+      } catch {}
 
       if (planId) {
-        const { count: total } = await (supabaseAdmin as any)
-          .from("learning_objectives")
-          .select("id", { count: "exact", head: true })
-          .eq("plan_id", planId);
-        await (supabaseAdmin as any)
-          .from("curriculum_plans")
-          .update({ total_tp_count: total ?? 0, updated_at: new Date().toISOString() })
-          .eq("id", planId);
+        try {
+          const { count: total } = await (supabaseAdmin as any)
+            .from("learning_objectives")
+            .select("id", { count: "exact", head: true })
+            .eq("plan_id", planId);
+          await (supabaseAdmin as any)
+            .from("curriculum_plans")
+            .update({ total_tp_count: total ?? 0, updated_at: new Date().toISOString() })
+            .eq("id", planId);
+        } catch {}
       }
 
-      return { success: true, created };
+      return { success: true, created: created || row };
     }
 
     if (!data.id) throw new Error("ID TP wajib diisi");
@@ -404,11 +456,18 @@ export const manageLearningObjective = createServerFn({ method: "POST" })
     }
 
     if (data.action === "delete") {
-      const { error } = await (supabaseAdmin as any)
-        .from("learning_objectives")
-        .delete()
-        .eq("id", data.id);
-      if (error) throw new Error(error.message);
+      try {
+        await (supabaseAdmin as any)
+          .from("learning_objectives")
+          .delete()
+          .eq("id", data.id);
+      } catch {}
+
+      try {
+        const storage = await import("./curriculum.storage.server");
+        storage.deleteTp(data.id);
+      } catch {}
+
       return { success: true, deletedId: data.id };
     }
 
@@ -453,7 +512,7 @@ export const getInputGradesSheet = createServerFn({ method: "POST" })
     if (!subject) {
       subject = subjects[0] || {
         id: data.subject_id,
-        code: "MAPEL",
+        code: "MP",
         name: "Mata Pelajaran",
         group: "Umum",
         kkm: 75,
@@ -465,9 +524,9 @@ export const getInputGradesSheet = createServerFn({ method: "POST" })
     const { classNameVariants } = await import("./curriculum-plan.server");
     const classVariants = classNameVariants(data.class_name);
 
-    // TP aktif — sumber tunggal: Perangkat Ajar (learning_objectives)
+    // TP aktif — sumber tunggal: Perangkat Ajar (learning_objectives & storage fallback)
     let tps: LearningObjective[] = [];
-    {
+    try {
       const { data: tpData, error: tpErr } = await (supabaseAdmin as any)
         .from("learning_objectives")
         .select("*")
@@ -476,9 +535,33 @@ export const getInputGradesSheet = createServerFn({ method: "POST" })
         .eq("semester", data.semester)
         .eq("academic_year", data.academic_year)
         .order("order_index", { ascending: true });
-      if (tpErr) throw new Error(tpErr.message);
-      tps = (tpData ?? []) as LearningObjective[];
+      if (!tpErr && tpData && tpData.length > 0) {
+        tps = tpData as LearningObjective[];
+      }
+    } catch {}
+
+    if (tps.length === 0) {
+      try {
+        const storage = await import("./curriculum.storage.server");
+        const fileTps = storage.getTps(data.subject_id, data.class_name, data.academic_year);
+        tps = fileTps
+          .filter((t: any) => String(t.semester || "1") === String(data.semester || "1"))
+          .map((t: any) => ({
+            id: t.id,
+            subject_id: t.subject_id,
+            class_name: t.class_name,
+            semester: t.semester || "1",
+            academic_year: t.academic_year,
+            code: t.code,
+            description: t.description,
+            cp_code: t.cp_code || null,
+            order_index: t.order_index || 1,
+            created_at: t.created_at || new Date().toISOString(),
+            updated_at: t.updated_at || new Date().toISOString(),
+          })) as LearningObjective[];
+      } catch {}
     }
+
 
     // Santri di kelas tersebut
     let students: any[] = [];

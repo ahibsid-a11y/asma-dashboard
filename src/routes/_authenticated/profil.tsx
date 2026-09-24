@@ -22,9 +22,11 @@ import { useCurrentProfile } from "@/hooks/use-current-profile";
 import { getMyProfile, updateMyProfile } from "@/lib/profile.functions";
 import {
   ACCOUNT_TYPE_LABELS,
+  ACCOUNT_TYPES,
   CATEGORY_POSITIONS,
   MEMBER_CATEGORIES,
   MEMBER_CATEGORY_LABELS,
+  POSITION_GROUPS,
   categoryOf,
   type AccountType,
   type MemberCategory,
@@ -121,8 +123,8 @@ function ProfilePage() {
   useEffect(() => {
     if (!data) return;
     const cat = data.category ?? categoryOf(data.account_type);
-    const validPositions = (data.positions ?? []).filter((p) =>
-      CATEGORY_POSITIONS[cat]?.includes(p),
+    const validPositions = (data.positions ?? []).filter(
+      (p) => ACCOUNT_TYPES.includes(p) && p !== "santri",
     );
     setForm({
       name: data.name ?? "",
@@ -131,7 +133,12 @@ function ProfilePage() {
       phone: data.phone ?? "",
       gender: data.gender ?? "",
       category: cat,
-      positions: validPositions,
+      positions:
+        validPositions.length > 0
+          ? validPositions
+          : data.account_type && data.account_type !== "santri"
+            ? [data.account_type as AccountType]
+            : [],
       account_type: (data.account_type as AccountType) ?? "santri",
       class: data.class ?? "",
       dorm: data.dorm ?? "",
@@ -173,6 +180,7 @@ function ProfilePage() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["my-profile"] }),
         queryClient.invalidateQueries({ queryKey: ["current-profile"] }),
+        queryClient.invalidateQueries({ queryKey: ["members"] }),
       ]);
     },
     onError: (error: Error) => toast.error(error.message),
@@ -272,28 +280,40 @@ function ProfilePage() {
                   </Select>
                 </div>
 
-                {CATEGORY_POSITIONS[form.category] && CATEGORY_POSITIONS[form.category].length > 0 && (
-                  <div className="grid gap-2">
-                    <Label>Jabatan (Pilih peran/tanggung jawab Anda)</Label>
-                    <div className="grid gap-2 rounded-lg border border-border bg-card p-3 sm:grid-cols-2">
-                      {CATEGORY_POSITIONS[form.category].map((p) => (
-                        <label
-                          key={p}
-                          className="flex items-center gap-2 text-sm font-medium cursor-pointer"
-                        >
-                          <Checkbox
-                            checked={form.positions.includes(p)}
-                            onCheckedChange={() => togglePosition(p)}
-                          />
-                          <span>{ACCOUNT_TYPE_LABELS[p]}</span>
-                        </label>
-                      ))}
-                    </div>
-                    <p className="text-[11px] text-muted-foreground">
-                      Jabatan ini akan langsung mengaktifkan fitur dan hak akses terkait di aplikasi (misal: Wali Kelas mengaktifkan fitur perizinan).
-                    </p>
+                <div className="grid gap-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Jabatan & Peran (Boleh lebih dari satu)</Label>
+                    <span className="text-xs text-muted-foreground">
+                      Mengaktifkan menu & akses fitur
+                    </span>
                   </div>
-                )}
+                  <div className="grid gap-3 rounded-lg border border-border bg-card p-3 max-h-[260px] overflow-y-auto">
+                    {POSITION_GROUPS.map((group) => (
+                      <div key={group.name} className="space-y-1.5">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                          {group.name}
+                        </p>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {group.positions.map((p) => (
+                            <label
+                              key={p}
+                              className="flex items-center gap-2 rounded-md border border-border/60 bg-muted/20 p-2 text-xs font-medium cursor-pointer hover:bg-muted/40 transition-colors"
+                            >
+                              <Checkbox
+                                checked={form.positions.includes(p)}
+                                onCheckedChange={() => togglePosition(p)}
+                              />
+                              <span>{ACCOUNT_TYPE_LABELS[p]}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Pilih seluruh amanah yang Anda emban. Menu dan hak akses di aplikasi akan langsung disesuaikan secara otomatis.
+                  </p>
+                </div>
               </div>
             ) : (
               <div className="grid gap-2">

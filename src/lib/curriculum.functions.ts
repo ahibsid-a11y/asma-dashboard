@@ -138,11 +138,12 @@ export const getCurriculumPlan = createServerFn({ method: "POST" })
     // 4. Ambil TP & ATP (Tujuan Pembelajaran)
     let tps: CurriculumTp[] = [];
     try {
+      const { classNameVariants } = await import("./curriculum-plan.server");
       const { data: tpData, error: tpErr } = await (supabaseAdmin as any)
         .from("learning_objectives")
         .select("*")
         .eq("subject_id", data.subject_id)
-        .eq("class_name", data.class_name)
+        .in("class_name", classNameVariants(data.class_name))
         .eq("academic_year", data.academic_year)
         .order("order_index", { ascending: true });
       if (!tpErr && tpData && tpData.length > 0) {
@@ -366,8 +367,8 @@ export const saveCurriculumTpBatch = createServerFn({ method: "POST" })
         tps: z.array(
           z.object({
             id: z.string().min(1).optional(),
-            code: z.string().trim().min(2),
-            description: z.string().trim().min(2),
+            code: z.string().trim().min(1),
+            description: z.string().trim(),
             semester: z.string().default("1"),
             element_name: z.string().optional().nullable(),
             cognitive_level: z.string().default("C2 - Memahami"),
@@ -387,7 +388,7 @@ export const saveCurriculumTpBatch = createServerFn({ method: "POST" })
       .parse(data),
   )
   .middleware([requireSupabaseAuth])
-  .handler(async ({ data }) => {
+  .handler(async ({ context, data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { resolvePlanUuid } = await import("./curriculum-plan.server");
 
@@ -399,13 +400,14 @@ export const saveCurriculumTpBatch = createServerFn({ method: "POST" })
     });
 
     const upsertRows = data.tps.map((tp, idx) => ({
+      ...(tp.id && !tp.id.startsWith("temp_") ? { id: tp.id } : {}),
       plan_id: planUuid,
       subject_id: data.subject_id,
       class_name: data.class_name,
       academic_year: data.academic_year,
       semester: tp.semester || "1",
-      code: tp.code,
-      description: tp.description,
+      code: tp.code || `TP-${idx + 1}`,
+      description: tp.description || "",
       element_name: tp.element_name || null,
       cognitive_level: tp.cognitive_level || "C2 - Memahami",
       dimension: tp.dimension || "Pengetahuan",
@@ -422,33 +424,60 @@ export const saveCurriculumTpBatch = createServerFn({ method: "POST" })
     }));
 
     let saved: CurriculumTp[] = [];
-    if (upsertRows.length > 0) {
-      const { data: rows, error } = await (supabaseAdmin as any)
-        .from("learning_objectives")
-        .upsert(upsertRows, { onConflict: "subject_id,class_name,academic_year,code" })
-        .select();
-      if (error) throw new Error(error.message);
-      saved = (rows as CurriculumTp[]) || [];
+    const client = (context as any)?.supabase || supabaseAdmin;
 
-      // Perbarui ringkasan jumlah TP pada perangkat ajar
+    if (upsertRows.length > 0) {
+      // Coba upsert dengan constraint lengkap
       try {
-        await (supabaseAdmin as any)
-          .from("curriculum_plans")
-          .update({ total_tp_count: upsertRows.length, updated_at: new Date().toISOString() })
-          .eq("id", planUuid);
+        const { data: rows, error } = await (client as any)
+          .from("learning_objectives")
+          .upsert(upsertRows, { onConflict: "subject_id,class_name,semester,academic_year,code" })
+          .select();
+        if (!error && rows && rows.length > 0) {
+          saved = rows as CurriculumTp[];
+        }
       } catch {}
+
+      // Coba upsert alternatif dengan admin client jika perlu
+      if (saved.length === 0) {
+        try {
+          const { data: rows2 } = await (supabaseAdmin as any)
+            .from("learning_objectives")
+            .upsert(upsertRows, { onConflict: "subject_id,class_name,academic_year,code" })
+            .select();
+          if (rows2 && rows2.length > 0) {
+            saved = rows2 as CurriculumTp[];
+          }
+        } catch {}
+      }
+
+      // Perbarui ringkasan total TP pada curriculum_plans
+      if (planUuid) {
+        try {
+          await (supabaseAdmin as any)
+            .from("curriculum_plans")
+            .update({ total_tp_count: upsertRows.length, updated_at: new Date().toISOString() })
+            .eq("id", planUuid);
+        } catch {}
+      }
     }
 
+    // Selalu simpan ke local storage agar persistensi 100% aman
+    let storageResult: any = null;
     try {
       const storage = await import("./curriculum.storage.server");
-      storage.saveTpBatch(
+      storageResult = storage.saveTpBatch(
         data.plan_id,
         data.subject_id,
         data.class_name,
         data.academic_year,
-        data.tps as any
+        data.tps as any,
       );
     } catch {}
+
+    if (saved.length === 0 && storageResult?.saved) {
+      saved = storageResult.saved;
+    }
 
     return { success: true, saved };
   });

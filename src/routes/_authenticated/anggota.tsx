@@ -43,6 +43,7 @@ import {
   CATEGORY_POSITIONS,
   MEMBER_CATEGORIES,
   MEMBER_CATEGORY_LABELS,
+  POSITION_GROUPS,
   categoryOf,
   isMemberAdmin,
   type AccountType,
@@ -234,9 +235,12 @@ function MembersPage() {
       gender: member.gender ?? "",
       status: member.status,
       category,
-      positions: (member.positions ?? []).filter((p) =>
-        CATEGORY_POSITIONS[category].includes(p),
-      ),
+      positions:
+        member.positions && member.positions.length > 0
+          ? member.positions
+          : member.account_type
+            ? [member.account_type]
+            : [],
       class: member.class ?? "",
       dorm: member.dorm ?? "",
       halaqoh: member.halaqoh ?? "",
@@ -475,20 +479,40 @@ function MembersPage() {
               </Select>
             </div>
 
-            {CATEGORY_POSITIONS[form.category].length > 0 && (
+            {form.category !== "siswa" && (
               <div className="grid gap-2">
-                <Label>Jabatan (boleh lebih dari satu)</Label>
-                <div className="grid gap-2 rounded-lg border border-border p-3 sm:grid-cols-2">
-                  {CATEGORY_POSITIONS[form.category].map((p) => (
-                    <label key={p} className="flex items-center gap-2 text-sm">
-                      <Checkbox
-                        checked={form.positions.includes(p)}
-                        onCheckedChange={() => togglePosition(p)}
-                      />
-                      {ACCOUNT_TYPE_LABELS[p]}
-                    </label>
+                <div className="flex items-center justify-between">
+                  <Label>Jabatan & Peran (Boleh lebih dari satu)</Label>
+                  <span className="text-xs text-muted-foreground">
+                    Menu & fitur otomatis disesuaikan
+                  </span>
+                </div>
+                <div className="grid gap-3 rounded-lg border border-border bg-muted/10 p-3.5 max-h-[300px] overflow-y-auto">
+                  {POSITION_GROUPS.map((group) => (
+                    <div key={group.name} className="space-y-1.5">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                        {group.name}
+                      </p>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {group.positions.map((p) => (
+                          <label
+                            key={p}
+                            className="flex items-center gap-2 rounded-md border border-border/60 bg-card p-2 text-xs font-medium cursor-pointer hover:bg-muted/40 transition-colors"
+                          >
+                            <Checkbox
+                              checked={form.positions.includes(p)}
+                              onCheckedChange={() => togglePosition(p)}
+                            />
+                            <span>{ACCOUNT_TYPE_LABELS[p]}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Pilih semua tanggung jawab yang diemban (contoh: Guru yang merangkap Musyrif Halaqoh). Akun akan mendapatkan akses fitur gabungan.
+                </p>
               </div>
             )}
 

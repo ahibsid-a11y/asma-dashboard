@@ -104,3 +104,36 @@ export function categoryOf(accountType?: string | null): MemberCategory {
   return entry ?? "siswa";
 }
 
+/** Seluruh jabatan yang dapat dipilih untuk staf/guru/musyrif/admin (non-santri) */
+export const ALL_STAFF_POSITIONS: AccountType[] = ACCOUNT_TYPES.filter(
+  (t) => t !== "santri",
+);
+
+/** Pengelompokan jabatan fungsional untuk tampilan UI yang rapi */
+export const POSITION_GROUPS: { name: string; positions: AccountType[] }[] = [
+  {
+    name: "Pimpinan & Manajemen",
+    positions: [
+      "super_admin",
+      "mudir",
+      "kepala_sekolah",
+      "waka_kurikulum",
+      "kabid_kesantrian",
+      "kepala_tu",
+      "kepala_rt_sarpras",
+    ],
+  },
+  {
+    name: "Akademik & Pengajaran",
+    positions: ["guru_mapel", "wali_kelas", "pembina_ekskul"],
+  },
+  {
+    name: "Kepesantrenan & Halaqoh",
+    positions: ["musyrif_asrama", "musyrif_halaqoh"],
+  },
+  {
+    name: "Tata Usaha & Kependidikan",
+    positions: ["tendik"],
+  },
+];
+
