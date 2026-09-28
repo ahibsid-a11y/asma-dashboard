@@ -399,14 +399,24 @@ export const saveCurriculumTpBatch = createServerFn({ method: "POST" })
       plan_id: data.plan_id,
     });
 
-    const upsertRows = data.tps.map((tp, idx) => ({
-      ...(tp.id && !tp.id.startsWith("temp_") ? { id: tp.id } : {}),
+    const isUuid = (v?: string) =>
+      !!v && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+
+    // Buang duplikat kode (baris terakhir menang) agar upsert tidak gagal
+    const seenCodes = new Map<string, number>();
+    data.tps.forEach((tp, idx) => seenCodes.set((tp.code || `TP-${idx + 1}`).trim(), idx));
+
+    const upsertRows = data.tps
+      .map((tp, idx) => ({ tp, idx }))
+      .filter(({ tp, idx }) => seenCodes.get((tp.code || `TP-${idx + 1}`).trim()) === idx)
+      .map(({ tp, idx }) => ({
+      id: (isUuid(tp.id) ? tp.id : crypto.randomUUID()) as string,
       plan_id: planUuid,
       subject_id: data.subject_id,
       class_name: data.class_name,
       academic_year: data.academic_year,
       semester: tp.semester || "1",
-      code: tp.code || `TP-${idx + 1}`,
+      code: (tp.code || `TP-${idx + 1}`).trim(),
       description: tp.description || "",
       element_name: tp.element_name || null,
       cognitive_level: tp.cognitive_level || "C2 - Memahami",
@@ -424,32 +434,46 @@ export const saveCurriculumTpBatch = createServerFn({ method: "POST" })
     }));
 
     let saved: CurriculumTp[] = [];
-    const client = (context as any)?.supabase || supabaseAdmin;
+    void context;
+
+    // Hapus TP yang sudah dihapus guru di layar
+    const { classNameVariants } = await import("./curriculum-plan.server");
+    const { data: existing } = await (supabaseAdmin as any)
+      .from("learning_objectives")
+      .select("id")
+      .eq("subject_id", data.subject_id)
+      .in("class_name", classNameVariants(data.class_name))
+      .eq("academic_year", data.academic_year);
+    const keepIds = new Set(upsertRows.map((r) => r.id));
+    const removeIds = ((existing as { id: string }[]) || []).map((r) => r.id).filter((id) => !keepIds.has(id));
+    if (removeIds.length > 0) {
+      await (supabaseAdmin as any).from("learning_objectives").delete().in("id", removeIds);
+    }
 
     if (upsertRows.length > 0) {
-      // Coba upsert dengan constraint lengkap
-      try {
-        const { data: rows, error } = await (client as any)
+      const existingIds = new Set(((existing as { id: string }[]) || []).map((r) => r.id));
+      const oldRows = upsertRows.filter((r) => existingIds.has(r.id as string));
+      const newRows = upsertRows.filter((r) => !existingIds.has(r.id as string));
+      if (oldRows.length > 0) {
+        const { data: rows, error } = await (supabaseAdmin as any)
           .from("learning_objectives")
-          .upsert(upsertRows, { onConflict: "subject_id,class_name,semester,academic_year,code" })
+          .upsert(oldRows, { onConflict: "id" })
           .select();
-        if (!error && rows && rows.length > 0) {
-          saved = rows as CurriculumTp[];
-        }
-      } catch {}
-
-      // Coba upsert alternatif dengan admin client jika perlu
-      if (saved.length === 0) {
-        try {
-          const { data: rows2 } = await (supabaseAdmin as any)
-            .from("learning_objectives")
-            .upsert(upsertRows, { onConflict: "subject_id,class_name,academic_year,code" })
-            .select();
-          if (rows2 && rows2.length > 0) {
-            saved = rows2 as CurriculumTp[];
-          }
-        } catch {}
+        if (error) throw new Error(`Gagal menyimpan TP: ${error.message}`);
+        saved.push(...((rows as CurriculumTp[]) || []));
       }
+      if (newRows.length > 0) {
+        const { data: rows, error } = await (supabaseAdmin as any)
+          .from("learning_objectives")
+          .upsert(newRows, { onConflict: "subject_id,class_name,academic_year,code" })
+          .select();
+        if (error) throw new Error(`Gagal menyimpan TP: ${error.message}`);
+        saved.push(...((rows as CurriculumTp[]) || []));
+      }
+      saved.sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+    }
+    {
+
 
       // Perbarui ringkasan total TP pada curriculum_plans
       if (planUuid) {
@@ -462,22 +486,6 @@ export const saveCurriculumTpBatch = createServerFn({ method: "POST" })
       }
     }
 
-    // Selalu simpan ke local storage agar persistensi 100% aman
-    let storageResult: any = null;
-    try {
-      const storage = await import("./curriculum.storage.server");
-      storageResult = storage.saveTpBatch(
-        data.plan_id,
-        data.subject_id,
-        data.class_name,
-        data.academic_year,
-        data.tps as any,
-      );
-    } catch {}
-
-    if (saved.length === 0 && storageResult?.saved) {
-      saved = storageResult.saved;
-    }
 
     return { success: true, saved };
   });
@@ -590,22 +598,32 @@ export const saveCurriculumPromesGrid = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const rows = data.entries.map((e) => ({
-      plan_id: data.plan_id,
-      tp_id: e.tp_id,
-      semester: data.semester,
-      month_name: e.month_name,
-      week_number: e.week_number,
-      allocated_jp: e.allocated_jp,
-      activity_type: e.activity_type,
-      notes: e.notes || null,
-      updated_at: new Date().toISOString(),
-    }));
+    const rows = data.entries
+      .filter((e) => !e.tp_id.startsWith("temp_"))
+      .map((e) => ({
+        plan_id: data.plan_id,
+        tp_id: e.tp_id,
+        semester: data.semester,
+        month_name: e.month_name,
+        week_number: e.week_number,
+        allocated_jp: e.allocated_jp,
+        activity_type: e.activity_type,
+        notes: e.notes || null,
+        updated_at: new Date().toISOString(),
+      }));
+
+    // Ganti seluruh isi semester ini agar sel yang dikosongkan ikut terhapus
+    const { error: delErr } = await (supabaseAdmin as any)
+      .from("curriculum_promes_entries")
+      .delete()
+      .eq("plan_id", data.plan_id)
+      .eq("semester", data.semester);
+    if (delErr) throw new Error(delErr.message);
 
     if (rows.length > 0) {
       const { error } = await (supabaseAdmin as any)
         .from("curriculum_promes_entries")
-        .upsert(rows, { onConflict: "plan_id,tp_id,semester,month_name,week_number" });
+        .insert(rows);
       if (error) throw new Error(error.message);
     }
 
