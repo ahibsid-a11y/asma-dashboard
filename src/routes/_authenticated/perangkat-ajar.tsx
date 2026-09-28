@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
   BookOpen,
@@ -192,11 +192,19 @@ function PerangkatAjarPage() {
 
   // Sinkronkan TP dari server hanya saat subjek/kelas/tahun berganti — BUKAN saat refetch
   // ponytail: menghapus serverTps dari deps agar race condition (refetch menimpa baris TP baru) tidak terjadi
+  const tpVersion = useRef(0);
+  const [allocDirty, setAllocDirty] = useState(false);
+  const [promesDirty, setPromesDirty] = useState(false);
   useEffect(() => {
-    setLocalTps(serverTps);
     setHasUnsavedTp(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setAllocDirty(false);
+    setPromesDirty(false);
   }, [currentSubjectId, selectedClass, selectedYear]);
+  // Ambil TP dari server ketika data selesai dimuat, selama tidak ada ketikan yang belum tersimpan
+  useEffect(() => {
+    if (!hasUnsavedTp) setLocalTps(serverTps);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverTps]);
 
 
   const activePlan: CurriculumPlan = useMemo(() => {
@@ -256,6 +264,7 @@ function PerangkatAjarPage() {
   // Local state for time allocations
   const [localTimeAlloc, setLocalTimeAlloc] = useState<CurriculumTimeAllocation[]>([]);
   useEffect(() => {
+    if (allocDirty) return;
     if (timeAllocations && timeAllocations.length > 0) {
       setLocalTimeAlloc(timeAllocations);
     } else {
@@ -271,13 +280,14 @@ function PerangkatAjarPage() {
     for (const e of promesEntries) {
       map[`${e.tp_id}_${e.month_name}_${e.week_number}`] = e.allocated_jp;
     }
-    setLocalPromesGrid(map);
+    if (!promesDirty) setLocalPromesGrid(map);
 
     const statusMap: Record<string, string> = {};
     for (const t of serverTps) {
       statusMap[t.id] = t.status_realisasi || "Belum Terlaksana";
     }
-    setLocalTpStatuses(statusMap);
+    if (!promesDirty) setLocalTpStatuses(statusMap);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [promesEntries, serverTps]);
 
 
@@ -383,6 +393,7 @@ function PerangkatAjarPage() {
     };
     setLocalTps((prev) => [...prev, newTp]);
     setHasUnsavedTp(true);
+    tpVersion.current++;
   };
 
   const handleUpdateTpField = (index: number, field: keyof CurriculumTp, value: any) => {
@@ -395,16 +406,19 @@ function PerangkatAjarPage() {
       return copy;
     });
     setHasUnsavedTp(true);
+    tpVersion.current++;
   };
 
   const handleDeleteTpRow = (index: number) => {
     setLocalTps((prev) => prev.filter((_, i) => i !== index));
     setHasUnsavedTp(true);
+    tpVersion.current++;
   };
 
   // Save TP Batch Mutation
   const saveTpMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (_opts?: { silent?: boolean }) => {
+      const version = tpVersion.current;
       const payload = localTps.map((tp, idx) => ({
         id: tp.id && !tp.id.startsWith("temp_") ? tp.id : undefined,
         code: tp.code.trim() || `TP-${idx + 1}`,
@@ -424,7 +438,7 @@ function PerangkatAjarPage() {
         order_index: idx + 1,
       }));
 
-      return saveTpBatchFn({
+      const res = await saveTpBatchFn({
         data: {
           plan_id: activePlanId,
           subject_id: currentSubjectId,
@@ -433,17 +447,24 @@ function PerangkatAjarPage() {
           tps: payload,
         },
       });
+      return { res, version };
     },
-    onSuccess: (res: any) => {
-      toast.success("Tujuan Pembelajaran (TP & ATP) berhasil disimpan dan disinkronkan!");
-      setHasUnsavedTp(false);
-      if (res?.saved && Array.isArray(res.saved) && res.saved.length > 0) {
-        setLocalTps(res.saved);
-      }
+    onSuccess: ({ res, version }: any, opts) => {
+      if (!opts?.silent) toast.success("Tujuan Pembelajaran (TP & ATP) berhasil disimpan dan disinkronkan!");
+      const saved: CurriculumTp[] = Array.isArray(res?.saved) ? res.saved : [];
+      const byCode = new Map(saved.map((t) => [t.code.trim(), t.id]));
+      // Ganti ID sementara dengan ID tersimpan tanpa menimpa ketikan terbaru
+      setLocalTps((prev) =>
+        prev.map((t) =>
+          t.id.startsWith("temp_") && byCode.get(t.code.trim()) ? { ...t, id: byCode.get(t.code.trim())! } : t,
+        ),
+      );
+      if (version === tpVersion.current) setHasUnsavedTp(false);
       queryClient.invalidateQueries({ queryKey: ["curriculum-plan"] });
       queryClient.invalidateQueries({ queryKey: ["input-grades-sheet"] });
     },
     onError: (err: any) => toast.error(err.message || "Gagal menyimpan TP"),
+    retry: 1,
   });
 
   // Time Allocations Change Handler
@@ -472,10 +493,11 @@ function PerangkatAjarPage() {
         return item;
       })
     );
+    setAllocDirty(true);
   };
 
   const saveTimeAllocMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (_opts?: { silent?: boolean }) => {
       const payload = (localTimeAlloc.length > 0 ? localTimeAlloc : defaultAllocations).map((a) => ({
         id: a.id,
         semester: a.semester,
@@ -495,8 +517,9 @@ function PerangkatAjarPage() {
         },
       });
     },
-    onSuccess: () => {
-      toast.success("Analisis alokasi waktu efektif berhasil disimpan");
+    onSuccess: (_r, opts) => {
+      setAllocDirty(false);
+      if (!opts?.silent) toast.success("Analisis alokasi waktu efektif berhasil disimpan");
       queryClient.invalidateQueries({ queryKey: ["curriculum-plan"] });
     },
     onError: (err: any) => toast.error(err.message || "Gagal menyimpan alokasi waktu"),
@@ -509,21 +532,24 @@ function PerangkatAjarPage() {
       ...prev,
       [`${tpId}_${month}_${week}`]: val,
     }));
+    setPromesDirty(true);
   };
 
   const handleTpStatusChange = (tpId: string, status: string) => {
     setLocalTpStatuses((prev) => ({ ...prev, [tpId]: status }));
+    setPromesDirty(true);
   };
 
   const savePromesMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (_opts?: { silent?: boolean; semester?: "1" | "2" }) => {
+      const sem = _opts?.semester ?? promesSemester;
       const entriesPayload: any[] = [];
       const activeMonths =
-        promesSemester === "1"
+        sem === "1"
           ? ["Juli", "Agustus", "September", "Oktober", "November", "Desember"]
           : ["Januari", "Februari", "Maret", "April", "Mei", "Juni"];
 
-      const targetTps = localTps.filter((t) => t.semester === promesSemester);
+      const targetTps = localTps.filter((t) => t.semester === sem && !t.id.startsWith("temp_"));
 
       for (const t of targetTps) {
         for (const m of activeMonths) {
@@ -545,18 +571,81 @@ function PerangkatAjarPage() {
       return savePromesFn({
         data: {
           plan_id: activePlanId,
-          semester: promesSemester,
+          semester: sem,
           entries: entriesPayload,
           tpStatuses: localTpStatuses,
         },
       });
     },
-    onSuccess: () => {
-      toast.success("Matriks Program Semester (PROMES) berhasil disimpan");
+    onSuccess: (_r, opts) => {
+      setPromesDirty(false);
+      if (!opts?.silent) toast.success("Matriks Program Semester (PROMES) berhasil disimpan");
       queryClient.invalidateQueries({ queryKey: ["curriculum-plan"] });
     },
     onError: (err: any) => toast.error(err.message || "Gagal menyimpan PROMES"),
   });
+
+  // ===== Simpan otomatis =====
+  const canAutoSave = Boolean(plan?.id && currentSubjectId);
+  useEffect(() => {
+    if (!hasUnsavedTp || !canAutoSave || saveTpMutation.isPending) return;
+    const t = setTimeout(() => saveTpMutation.mutate({ silent: true }), 1200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localTps, hasUnsavedTp, canAutoSave, saveTpMutation.isPending]);
+  useEffect(() => {
+    if (!allocDirty || !canAutoSave || saveTimeAllocMutation.isPending) return;
+    const t = setTimeout(() => saveTimeAllocMutation.mutate({ silent: true }), 1200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localTimeAlloc, allocDirty, canAutoSave, saveTimeAllocMutation.isPending]);
+  useEffect(() => {
+    if (!promesDirty || !canAutoSave || savePromesMutation.isPending || hasUnsavedTp) return;
+    const t = setTimeout(() => savePromesMutation.mutate({ silent: true }), 1200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localPromesGrid, localTpStatuses, promesDirty, canAutoSave, savePromesMutation.isPending, hasUnsavedTp]);
+
+  // Simpan segera saat pindah halaman / ganti mapel / tutup tab
+  const flushRef = useRef<() => void>(() => {});
+  flushRef.current = () => {
+    if (!canAutoSave) return;
+    if (hasUnsavedTp) saveTpMutation.mutate({ silent: true });
+    if (allocDirty) saveTimeAllocMutation.mutate({ silent: true });
+    if (promesDirty && !hasUnsavedTp) savePromesMutation.mutate({ silent: true });
+  };
+  const anyDirty = hasUnsavedTp || allocDirty || promesDirty;
+  useEffect(() => {
+    const onHide = () => {
+      if (document.visibilityState === "hidden") flushRef.current();
+    };
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      flushRef.current();
+      if (anyDirty) e.preventDefault();
+    };
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => {
+      document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("beforeunload", onBeforeUnload);
+    };
+  }, [anyDirty]);
+  useEffect(() => () => flushRef.current(), [currentSubjectId, selectedClass, selectedYear, promesSemester]);
+
+  // Elemen/CP: simpan otomatis saat dialog ditutup tanpa klik Simpan
+  const handleElementDialogChange = (open: boolean) => {
+    if (!open && !elementMutation.isPending && elementNameInput.trim()) {
+      const changed =
+        !editingElement ||
+        editingElement.name !== elementNameInput.trim() ||
+        editingElement.cp_description !== elementCpInput.trim();
+      if (changed) {
+        elementMutation.mutate(editingElement ? "update" : "create");
+        return;
+      }
+    }
+    setElementDialogOpen(open);
+  };
 
   const activeSubject = subjects.find((s) => s.id === currentSubjectId);
 
@@ -1610,7 +1699,7 @@ function PerangkatAjarPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setElementDialogOpen(false)}>
+            <Button variant="outline" size="sm" onClick={() => { setElementNameInput(""); setElementDialogOpen(false); }}>
               Batal
             </Button>
             <Button
