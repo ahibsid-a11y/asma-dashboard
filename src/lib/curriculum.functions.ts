@@ -585,22 +585,32 @@ export const saveCurriculumPromesGrid = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const rows = data.entries.map((e) => ({
-      plan_id: data.plan_id,
-      tp_id: e.tp_id,
-      semester: data.semester,
-      month_name: e.month_name,
-      week_number: e.week_number,
-      allocated_jp: e.allocated_jp,
-      activity_type: e.activity_type,
-      notes: e.notes || null,
-      updated_at: new Date().toISOString(),
-    }));
+    const rows = data.entries
+      .filter((e) => !e.tp_id.startsWith("temp_"))
+      .map((e) => ({
+        plan_id: data.plan_id,
+        tp_id: e.tp_id,
+        semester: data.semester,
+        month_name: e.month_name,
+        week_number: e.week_number,
+        allocated_jp: e.allocated_jp,
+        activity_type: e.activity_type,
+        notes: e.notes || null,
+        updated_at: new Date().toISOString(),
+      }));
+
+    // Ganti seluruh isi semester ini agar sel yang dikosongkan ikut terhapus
+    const { error: delErr } = await (supabaseAdmin as any)
+      .from("curriculum_promes_entries")
+      .delete()
+      .eq("plan_id", data.plan_id)
+      .eq("semester", data.semester);
+    if (delErr) throw new Error(delErr.message);
 
     if (rows.length > 0) {
       const { error } = await (supabaseAdmin as any)
         .from("curriculum_promes_entries")
-        .upsert(rows, { onConflict: "plan_id,tp_id,semester,month_name,week_number" });
+        .insert(rows);
       if (error) throw new Error(error.message);
     }
 
