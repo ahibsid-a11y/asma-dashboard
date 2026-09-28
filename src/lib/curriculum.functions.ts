@@ -451,12 +451,25 @@ export const saveCurriculumTpBatch = createServerFn({ method: "POST" })
     }
 
     if (upsertRows.length > 0) {
-      const { data: rows, error } = await (supabaseAdmin as any)
-        .from("learning_objectives")
-        .upsert(upsertRows, { onConflict: "subject_id,class_name,academic_year,code" })
-        .select();
-      if (error) throw new Error(`Gagal menyimpan TP: ${error.message}`);
-      saved = (rows as CurriculumTp[]) || [];
+      const existingIds = new Set(((existing as { id: string }[]) || []).map((r) => r.id));
+      const oldRows = upsertRows.filter((r) => existingIds.has(r.id));
+      const newRows = upsertRows.filter((r) => !existingIds.has(r.id));
+      if (oldRows.length > 0) {
+        const { data: rows, error } = await (supabaseAdmin as any)
+          .from("learning_objectives")
+          .upsert(oldRows, { onConflict: "id" })
+          .select();
+        if (error) throw new Error(`Gagal menyimpan TP: ${error.message}`);
+        saved.push(...((rows as CurriculumTp[]) || []));
+      }
+      if (newRows.length > 0) {
+        const { data: rows, error } = await (supabaseAdmin as any)
+          .from("learning_objectives")
+          .upsert(newRows, { onConflict: "subject_id,class_name,academic_year,code" })
+          .select();
+        if (error) throw new Error(`Gagal menyimpan TP: ${error.message}`);
+        saved.push(...((rows as CurriculumTp[]) || []));
+      }
       saved.sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
     }
     {
