@@ -473,22 +473,6 @@ export const saveCurriculumTpBatch = createServerFn({ method: "POST" })
       }
     }
 
-    // Selalu simpan ke local storage agar persistensi 100% aman
-    let storageResult: any = null;
-    try {
-      const storage = await import("./curriculum.storage.server");
-      storageResult = storage.saveTpBatch(
-        data.plan_id,
-        data.subject_id,
-        data.class_name,
-        data.academic_year,
-        data.tps as any,
-      );
-    } catch {}
-
-    if (saved.length === 0 && storageResult?.saved) {
-      saved = storageResult.saved;
-    }
 
     return { success: true, saved };
   });
