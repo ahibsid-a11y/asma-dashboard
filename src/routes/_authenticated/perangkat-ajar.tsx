@@ -195,6 +195,7 @@ function PerangkatAjarPage() {
   const tpVersion = useRef(0);
   const [allocDirty, setAllocDirty] = useState(false);
   const [promesDirty, setPromesDirty] = useState(false);
+  const promesSemRef = useRef<"1" | "2">("1");
   useEffect(() => {
     setHasUnsavedTp(false);
     setAllocDirty(false);
@@ -532,11 +533,13 @@ function PerangkatAjarPage() {
       ...prev,
       [`${tpId}_${month}_${week}`]: val,
     }));
+    promesSemRef.current = promesSemester;
     setPromesDirty(true);
   };
 
   const handleTpStatusChange = (tpId: string, status: string) => {
     setLocalTpStatuses((prev) => ({ ...prev, [tpId]: status }));
+    promesSemRef.current = promesSemester;
     setPromesDirty(true);
   };
 
@@ -601,7 +604,7 @@ function PerangkatAjarPage() {
   }, [localTimeAlloc, allocDirty, canAutoSave, saveTimeAllocMutation.isPending]);
   useEffect(() => {
     if (!promesDirty || !canAutoSave || savePromesMutation.isPending || hasUnsavedTp) return;
-    const t = setTimeout(() => savePromesMutation.mutate({ silent: true }), 1200);
+    const t = setTimeout(() => savePromesMutation.mutate({ silent: true, semester: promesSemRef.current }), 1200);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localPromesGrid, localTpStatuses, promesDirty, canAutoSave, savePromesMutation.isPending, hasUnsavedTp]);
@@ -612,7 +615,7 @@ function PerangkatAjarPage() {
     if (!canAutoSave) return;
     if (hasUnsavedTp) saveTpMutation.mutate({ silent: true });
     if (allocDirty) saveTimeAllocMutation.mutate({ silent: true });
-    if (promesDirty && !hasUnsavedTp) savePromesMutation.mutate({ silent: true });
+    if (promesDirty && !hasUnsavedTp) savePromesMutation.mutate({ silent: true, semester: promesSemRef.current });
   };
   const anyDirty = hasUnsavedTp || allocDirty || promesDirty;
   useEffect(() => {
@@ -1667,7 +1670,7 @@ function PerangkatAjarPage() {
       </div>
 
       {/* Dialog Tambah/Edit Elemen */}
-      <Dialog open={elementDialogOpen} onOpenChange={setElementDialogOpen}>
+      <Dialog open={elementDialogOpen} onOpenChange={handleElementDialogChange}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
