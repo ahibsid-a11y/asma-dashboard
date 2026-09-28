@@ -410,7 +410,7 @@ export const saveCurriculumTpBatch = createServerFn({ method: "POST" })
       .map((tp, idx) => ({ tp, idx }))
       .filter(({ tp, idx }) => seenCodes.get((tp.code || `TP-${idx + 1}`).trim()) === idx)
       .map(({ tp, idx }) => ({
-      id: isUuid(tp.id) ? tp.id : crypto.randomUUID(),
+      id: (isUuid(tp.id) ? tp.id : crypto.randomUUID()) as string,
       plan_id: planUuid,
       subject_id: data.subject_id,
       class_name: data.class_name,
@@ -452,8 +452,8 @@ export const saveCurriculumTpBatch = createServerFn({ method: "POST" })
 
     if (upsertRows.length > 0) {
       const existingIds = new Set(((existing as { id: string }[]) || []).map((r) => r.id));
-      const oldRows = upsertRows.filter((r) => existingIds.has(r.id));
-      const newRows = upsertRows.filter((r) => !existingIds.has(r.id));
+      const oldRows = upsertRows.filter((r) => existingIds.has(r.id as string));
+      const newRows = upsertRows.filter((r) => !existingIds.has(r.id as string));
       if (oldRows.length > 0) {
         const { data: rows, error } = await (supabaseAdmin as any)
           .from("learning_objectives")

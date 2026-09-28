@@ -1005,7 +1005,7 @@ function PerangkatAjarPage() {
                 </Button>
                 <Button
                   size="sm"
-                  onClick={() => saveTpMutation.mutate()}
+                  onClick={() => saveTpMutation.mutate(undefined)}
                   disabled={saveTpMutation.isPending}
                   className="gap-1.5 text-xs shadow-xs"
                 >
@@ -1196,7 +1196,7 @@ function PerangkatAjarPage() {
                   </span>
                   <Button
                     size="sm"
-                    onClick={() => saveTpMutation.mutate()}
+                    onClick={() => saveTpMutation.mutate(undefined)}
                     disabled={saveTpMutation.isPending}
                     className="gap-1.5 text-xs shadow-xs"
                   >
@@ -1220,7 +1220,7 @@ function PerangkatAjarPage() {
               </p>
               <Button
                 size="sm"
-                onClick={() => saveTimeAllocMutation.mutate()}
+                onClick={() => saveTimeAllocMutation.mutate(undefined)}
                 disabled={saveTimeAllocMutation.isPending}
                 className="gap-1.5 shadow-xs"
               >
@@ -1529,7 +1529,7 @@ function PerangkatAjarPage() {
                 </Button>
                 <Button
                   size="sm"
-                  onClick={() => savePromesMutation.mutate()}
+                  onClick={() => savePromesMutation.mutate(undefined)}
                   disabled={savePromesMutation.isPending}
                   className="gap-1.5 text-xs shadow-xs"
                 >
