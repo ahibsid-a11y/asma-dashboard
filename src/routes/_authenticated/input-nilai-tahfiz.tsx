@@ -58,7 +58,7 @@ import {
   saveTilawahEntry,
   updateStudentLevelFn,
 } from "@/lib/tahfiz.functions";
-import { calculatePredicate, type TahfizExam } from "@/lib/tahfiz.exams.server";
+import { calculatePredicate, type TahfizExam } from "@/lib/tahfiz.exams.types";
 import type { IqroStage } from "@/lib/quran-data";
 import type { TahfizHafalanType, TahfizLevel } from "@/lib/tahfiz.storage.server";
 
