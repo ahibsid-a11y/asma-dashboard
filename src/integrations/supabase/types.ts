@@ -1670,6 +1670,89 @@ export type Database = {
           },
         ]
       }
+      tahfiz_exams: {
+        Row: {
+          academic_year: string
+          class_name: string
+          created_at: string
+          created_by: string | null
+          date: string
+          exam_title: string
+          examiner_name: string
+          final_score: number
+          hafalan_avg: number
+          halaqoh_name: string
+          id: string
+          musyrif_name: string
+          nis_nip: string
+          notes: string | null
+          predicate: string
+          questions: Json
+          semester: string
+          student_id: string
+          student_name: string
+          tajwid_avg: number
+          target_juz: string
+          updated_at: string
+        }
+        Insert: {
+          academic_year?: string
+          class_name?: string
+          created_at?: string
+          created_by?: string | null
+          date: string
+          exam_title?: string
+          examiner_name?: string
+          final_score?: number
+          hafalan_avg?: number
+          halaqoh_name?: string
+          id?: string
+          musyrif_name?: string
+          nis_nip?: string
+          notes?: string | null
+          predicate?: string
+          questions?: Json
+          semester?: string
+          student_id: string
+          student_name?: string
+          tajwid_avg?: number
+          target_juz?: string
+          updated_at?: string
+        }
+        Update: {
+          academic_year?: string
+          class_name?: string
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          exam_title?: string
+          examiner_name?: string
+          final_score?: number
+          hafalan_avg?: number
+          halaqoh_name?: string
+          id?: string
+          musyrif_name?: string
+          nis_nip?: string
+          notes?: string | null
+          predicate?: string
+          questions?: Json
+          semester?: string
+          student_id?: string
+          student_name?: string
+          tajwid_avg?: number
+          target_juz?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tahfiz_exams_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tahfiz_hafalan_records: {
         Row: {
           ayat_end: number
