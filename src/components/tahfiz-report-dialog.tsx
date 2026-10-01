@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { exportReportToWord } from "@/lib/export-word";
-import type { TahfizExam } from "@/lib/tahfiz.exams.server";
+import type { TahfizExam } from "@/lib/tahfiz.exams.types";
 
 interface TahfizReportDialogProps {
   isOpen: boolean;

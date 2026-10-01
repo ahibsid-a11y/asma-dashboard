@@ -29,7 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
 import { TahfizReportDialog } from "@/components/tahfiz-report-dialog";
 import { getMyTahfizData, getStudentTahfizExamsFn } from "@/lib/tahfiz.functions";
-import type { TahfizExam } from "@/lib/tahfiz.exams.server";
+import type { TahfizExam } from "@/lib/tahfiz.exams.types";
 
 export const Route = createFileRoute("/_authenticated/nilai-tahfiz-saya")({
   head: () => ({

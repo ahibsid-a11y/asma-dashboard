@@ -483,9 +483,10 @@ export const saveTahfizExamFn = createServerFn({ method: "POST" })
       .parse(data)
   )
   .middleware([requireSupabaseAuth])
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const ctx = context as Ctx;
     const { saveOrUpdateTahfizExam } = await import("./tahfiz.exams.server");
-    const exam = saveOrUpdateTahfizExam(data as any);
+    const exam = await saveOrUpdateTahfizExam(ctx.supabase, ctx.userId, data as any);
     return { success: true, exam, message: "Ujian Tahfiz berhasil disimpan!" };
   });
 
@@ -501,24 +502,10 @@ export const getTahfizExamsListFn = createServerFn({ method: "POST" })
       .parse(data)
   )
   .middleware([requireSupabaseAuth])
-  .handler(async ({ data }) => {
-    const { loadTahfizExamsStore } = await import("./tahfiz.exams.server");
-    const store = loadTahfizExamsStore();
-    let exams = store.exams;
-
-    if (data.studentId) {
-      exams = exams.filter((e) => e.student_id === data.studentId);
-    }
-    if (data.semester && data.semester !== "all") {
-      exams = exams.filter((e) => e.semester === data.semester);
-    }
-    if (data.academicYear && data.academicYear !== "all") {
-      exams = exams.filter((e) => e.academic_year === data.academicYear);
-    }
-    if (data.halaqoh && data.halaqoh !== "all") {
-      exams = exams.filter((e) => e.halaqoh_name === data.halaqoh);
-    }
-
+  .handler(async ({ data, context }) => {
+    const ctx = context as Ctx;
+    const { listTahfizExams } = await import("./tahfiz.exams.server");
+    const exams = await listTahfizExams(ctx.supabase, data);
     return { exams };
   });
 
@@ -531,9 +518,10 @@ export const deleteTahfizExamFn = createServerFn({ method: "POST" })
       .parse(data)
   )
   .middleware([requireSupabaseAuth])
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const ctx = context as Ctx;
     const { deleteTahfizExam } = await import("./tahfiz.exams.server");
-    const deleted = deleteTahfizExam(data.examId);
+    const deleted = await deleteTahfizExam(ctx.supabase, data.examId);
     return { success: deleted, message: "Data ujian berhasil dihapus" };
   });
 
@@ -546,9 +534,9 @@ export const getStudentTahfizExamsFn = createServerFn({ method: "POST" })
       .parse(data)
   )
   .middleware([requireSupabaseAuth])
-  .handler(async ({ data }) => {
-    const { loadTahfizExamsStore } = await import("./tahfiz.exams.server");
-    const store = loadTahfizExamsStore();
-    const exams = store.exams.filter((e) => e.student_id === data.studentId);
+  .handler(async ({ data, context }) => {
+    const ctx = context as Ctx;
+    const { listTahfizExams } = await import("./tahfiz.exams.server");
+    const exams = await listTahfizExams(ctx.supabase, { studentId: data.studentId });
     return { exams };
   });
