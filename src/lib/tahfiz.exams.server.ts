@@ -47,7 +47,7 @@ function toExam(row: any): TahfizExam {
 
 export async function listTahfizExams(
   db: Db,
-  filter: { studentId?: string; semester?: string; academicYear?: string; halaqoh?: string } = {},
+  filter: { studentId?: string | undefined; semester?: string | undefined; academicYear?: string | undefined; halaqoh?: string | undefined } = {},
 ): Promise<TahfizExam[]> {
   let q = db.from("tahfiz_exams").select("*").order("date", { ascending: false }).order("created_at", { ascending: false });
   if (filter.studentId) q = q.eq("student_id", filter.studentId);
