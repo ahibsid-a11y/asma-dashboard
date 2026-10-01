@@ -477,7 +477,7 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "perizinan",
     "kalender",
     "jadwal-pelajaran",
-    "profil",
+    "input-nilai-tahfiz", "profil",
   ],
 
   waka_kurikulum: [
@@ -495,7 +495,7 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "perangkat-ajar",
     "input-nilai",
     "input-kokur",
-    "profil",
+    "input-nilai-tahfiz", "profil",
   ],
   kabid_kesantrian: [
     "dashboard",
@@ -547,7 +547,7 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "perangkat-ajar",
     "input-nilai",
     "input-kokur",
-    "profil",
+    "input-nilai-tahfiz", "profil",
   ],
   guru_mapel: [
     "dashboard",
@@ -560,7 +560,7 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "perangkat-ajar",
     "input-nilai",
     "input-kokur",
-    "profil",
+    "input-nilai-tahfiz", "profil",
   ],
   pembina_ekskul: [
     "dashboard",
@@ -570,10 +570,10 @@ const MENUS: Record<AccountType, NavKey[]> = {
     "scan-presensi",
     "absensi-diri",
     "kalender",
-    "profil",
+    "input-nilai-tahfiz", "profil",
   ],
-  kepala_rt_sarpras: ["dashboard", "presensi-insidental", "absensi-diri", "kalender", "profil"],
-  tendik: ["dashboard", "perpustakaan", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "profil"],
+  kepala_rt_sarpras: ["dashboard", "presensi-insidental", "absensi-diri", "kalender", "input-nilai-tahfiz", "profil"],
+  tendik: ["dashboard", "perpustakaan", "scan-presensi", "presensi-insidental", "absensi-diri", "kalender", "input-nilai-tahfiz", "profil"],
   santri: [
     "dashboard",
     "absensi-diri",
