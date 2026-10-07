@@ -743,3 +743,129 @@ export const getCurriculumSupervisionRecap = createServerFn({ method: "POST" })
     // Fallback ke penyimpanan storage lokal
     return storage.getSupervisionRecap(data.academic_year, data.class_name, activeSubjects);
   });
+
+/** Salin Perangkat Ajar (CP, TP/ATP, Prota/Promes) ke kelas lain. Hanya menambah yang belum ada — data kelas tujuan tidak pernah ditimpa/dihapus. */
+export const copyCurriculumToClasses = createServerFn({ method: "POST" })
+  .validator((data: unknown) =>
+    z
+      .object({
+        source_plan_id: z.string().min(1),
+        subject_id: z.string().min(1),
+        source_class: z.string().min(1),
+        academic_year: z.string().min(1),
+        target_classes: z.array(z.string().min(1)).min(1),
+        sections: z.object({ cp: z.boolean(), tp: z.boolean(), promes: z.boolean() }),
+      })
+      .parse(data),
+  )
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context, data }) => {
+    const ctx = context as Ctx;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { resolvePlanUuid, classNameVariants, isUuid } = await import("./curriculum-plan.server");
+    const db = supabaseAdmin as any;
+    if (!isUuid(data.source_plan_id)) throw new Error("Perangkat ajar sumber belum tersimpan");
+
+    const [{ data: srcPlan }, { data: srcEls }, { data: srcTps }, { data: srcAlloc }, { data: srcPromes }] =
+      await Promise.all([
+        db.from("curriculum_plans").select("*").eq("id", data.source_plan_id).maybeSingle(),
+        db.from("curriculum_elements").select("*").eq("plan_id", data.source_plan_id),
+        db
+          .from("learning_objectives")
+          .select("*")
+          .eq("subject_id", data.subject_id)
+          .in("class_name", classNameVariants(data.source_class))
+          .eq("academic_year", data.academic_year),
+        db.from("curriculum_time_allocations").select("*").eq("plan_id", data.source_plan_id),
+        db.from("curriculum_promes_entries").select("*").eq("plan_id", data.source_plan_id),
+      ]);
+
+    const results: { class_name: string; cp: number; tp: number; promes: number; error?: string }[] = [];
+    const srcVariants = new Set(classNameVariants(data.source_class));
+
+    for (const target of data.target_classes) {
+      if (srcVariants.has(target)) continue;
+      const r = { class_name: target, cp: 0, tp: 0, promes: 0 } as (typeof results)[number];
+      try {
+        const planId = await resolvePlanUuid(db, {
+          subject_id: data.subject_id,
+          class_name: target,
+          academic_year: data.academic_year,
+          teacher_id: srcPlan?.teacher_id ?? ctx.userId,
+        });
+        if (!planId) throw new Error("Gagal menyiapkan perangkat ajar kelas tujuan");
+
+        if (data.sections.cp && (srcEls ?? []).length) {
+          const { data: have } = await db.from("curriculum_elements").select("name").eq("plan_id", planId);
+          const names = new Set((have ?? []).map((e: any) => String(e.name).trim().toLowerCase()));
+          const rows = (srcEls ?? [])
+            .filter((e: any) => !names.has(String(e.name).trim().toLowerCase()))
+            .map((e: any) => ({ plan_id: planId, name: e.name, cp_description: e.cp_description, order_index: e.order_index }));
+          if (rows.length) {
+            const { error } = await db.from("curriculum_elements").insert(rows);
+            if (error) throw new Error(error.message);
+          }
+          r.cp = rows.length;
+        }
+
+        // Peta kode TP -> id di kelas tujuan (untuk Promes)
+        const { data: haveTps } = await db
+          .from("learning_objectives")
+          .select("id,code")
+          .eq("subject_id", data.subject_id)
+          .in("class_name", classNameVariants(target))
+          .eq("academic_year", data.academic_year);
+        const codeToId = new Map<string, string>((haveTps ?? []).map((t: any) => [String(t.code).trim(), t.id]));
+
+        if (data.sections.tp && (srcTps ?? []).length) {
+          const rows = (srcTps ?? [])
+            .filter((t: any) => !codeToId.has(String(t.code).trim()))
+            .map((t: any) => {
+              const { id: _id, created_at: _c, updated_at: _u, ...rest } = t;
+              return { ...rest, id: crypto.randomUUID(), plan_id: planId, class_name: target, status_realisasi: "Belum Terlaksana" };
+            });
+          if (rows.length) {
+            const { error } = await db.from("learning_objectives").insert(rows);
+            if (error) throw new Error(error.message);
+            rows.forEach((t: any) => codeToId.set(String(t.code).trim(), t.id));
+          }
+          r.tp = rows.length;
+          await db.from("curriculum_plans").update({ total_tp_count: codeToId.size }).eq("id", planId);
+        }
+
+        if (data.sections.promes) {
+          if ((srcAlloc ?? []).length) {
+            const rows = (srcAlloc ?? []).map((a: any) => {
+              const { id: _id, created_at: _c, updated_at: _u, ...rest } = a;
+              return { ...rest, plan_id: planId };
+            });
+            const { error } = await db
+              .from("curriculum_time_allocations")
+              .upsert(rows, { onConflict: "plan_id,semester,month_name", ignoreDuplicates: true });
+            if (error) throw new Error(error.message);
+          }
+          const srcIdToCode = new Map<string, string>((srcTps ?? []).map((t: any) => [t.id, String(t.code).trim()]));
+          const rows = (srcPromes ?? [])
+            .map((p: any) => {
+              const code = srcIdToCode.get(p.tp_id);
+              const tpId = code ? codeToId.get(code) : undefined;
+              if (!tpId) return null;
+              const { id: _id, created_at: _c, updated_at: _u, ...rest } = p;
+              return { ...rest, plan_id: planId, tp_id: tpId };
+            })
+            .filter(Boolean);
+          if (rows.length) {
+            const { error } = await db
+              .from("curriculum_promes_entries")
+              .upsert(rows, { onConflict: "plan_id,tp_id,semester,month_name,week_number", ignoreDuplicates: true });
+            if (error) throw new Error(error.message);
+          }
+          r.promes = rows.length;
+        }
+      } catch (e: any) {
+        r.error = e?.message || "Gagal menyalin";
+      }
+      results.push(r);
+    }
+    return { results };
+  });

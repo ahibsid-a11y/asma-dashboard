@@ -56,6 +56,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
 import {
   getCurriculumPlan,
+  copyCurriculumToClasses,
   saveCurriculumElement,
   saveCurriculumPromesGrid,
   saveCurriculumTimeAllocations,
@@ -635,6 +636,41 @@ function PerangkatAjarPage() {
   }, [anyDirty]);
   useEffect(() => () => flushRef.current(), [currentSubjectId, selectedClass, selectedYear, promesSemester]);
 
+  // Terapkan ke kelas lain
+  const [copyOpen, setCopyOpen] = useState(false);
+  const [copyTargets, setCopyTargets] = useState<string[]>([]);
+  const [copySections, setCopySections] = useState({ cp: true, tp: true, promes: true });
+  const copyFn = useServerFn(copyCurriculumToClasses);
+  const copyMutation = useMutation({
+    mutationFn: async () => {
+      if (anyDirty) {
+        if (hasUnsavedTp) await saveTpMutation.mutateAsync({ silent: true });
+        if (allocDirty) await saveTimeAllocMutation.mutateAsync({ silent: true });
+        if (promesDirty) await savePromesMutation.mutateAsync({ silent: true, semester: promesSemRef.current });
+      }
+      return copyFn({
+        data: {
+          source_plan_id: plan!.id,
+          subject_id: currentSubjectId,
+          source_class: selectedClass,
+          academic_year: selectedYear,
+          target_classes: copyTargets,
+          sections: copySections,
+        },
+      });
+    },
+    onSuccess: (res) => {
+      const failed = res.results.filter((r) => r.error);
+      res.results
+        .filter((r) => !r.error)
+        .forEach((r) => toast.success(`${r.class_name}: ${r.cp} CP, ${r.tp} TP, ${r.promes} isian Promes ditambahkan`));
+      failed.forEach((r) => toast.error(`${r.class_name}: ${r.error}`));
+      queryClient.invalidateQueries({ queryKey: ["curriculum-plan"] });
+      if (failed.length === 0) setCopyOpen(false);
+    },
+    onError: (err: any) => toast.error(err.message || "Gagal menyalin ke kelas lain"),
+  });
+
   // Elemen/CP: simpan otomatis saat dialog ditutup tanpa klik Simpan
   const handleElementDialogChange = (open: boolean) => {
     if (!open && !elementMutation.isPending && elementNameInput.trim()) {
@@ -703,6 +739,19 @@ function PerangkatAjarPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              onClick={() => {
+                flushRef.current();
+                setCopyTargets([]);
+                setCopyOpen(true);
+              }}
+              disabled={!activeSubject || !plan?.id}
+              className="gap-1.5 font-medium shadow-xs"
+            >
+              <Layers className="w-4 h-4" />
+              Terapkan ke Kelas Lain
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -1730,6 +1779,64 @@ function PerangkatAjarPage() {
         onOpenChange={setPrintDialogProtaOpen}
         data={activePrintData}
       />
+
+      <Dialog open={copyOpen} onOpenChange={setCopyOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Terapkan ke Kelas Lain</DialogTitle>
+            <DialogDescription>
+              Salin isian {activeSubject?.name ?? "mapel ini"} dari {selectedClass}. Isian yang sudah ada di kelas tujuan tidak diubah atau dihapus, hanya yang belum ada yang ditambahkan.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs uppercase text-muted-foreground">Kelas tujuan</Label>
+              <div className="mt-2 grid grid-cols-2 gap-2 max-h-56 overflow-y-auto">
+                {classOptions.filter((c) => c !== selectedClass).map((cls) => (
+                  <label key={cls} className="flex items-center gap-2 rounded-md border border-border p-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="accent-primary"
+                      checked={copyTargets.includes(cls)}
+                      onChange={(e) =>
+                        setCopyTargets((p) => (e.target.checked ? [...p, cls] : p.filter((x) => x !== cls)))
+                      }
+                    />
+                    {cls}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs uppercase text-muted-foreground">Bagian yang disalin</Label>
+              <div className="mt-2 space-y-1.5 text-sm">
+                {([["cp", "Elemen & CP"], ["tp", "TP & ATP"], ["promes", "Prota & Promes"]] as const).map(([k, l]) => (
+                  <label key={k} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="accent-primary"
+                      checked={copySections[k]}
+                      onChange={(e) => setCopySections((p) => ({ ...p, [k]: e.target.checked }))}
+                    />
+                    {l}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCopyOpen(false)}>Batal</Button>
+            <Button
+              disabled={copyMutation.isPending || copyTargets.length === 0 || !Object.values(copySections).some(Boolean)}
+              onClick={() => copyMutation.mutate()}
+              className="gap-1.5"
+            >
+              {copyMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+              Terapkan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
