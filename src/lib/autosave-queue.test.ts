@@ -31,3 +31,14 @@ it("retains distinct classes and retries failed saves", async () => {
   await queue.flush();
   assert.deepEqual(saved, ["7A:90", "7B:80"]);
 });
+it("keeps attendance changes for different students in the same session", async () => {
+  const saved: { session: string; student: string; status: string }[] = [];
+  const queue = createAutosaveQueue<{ session: string; student: string; status: string }>(async (value) => { saved.push(value); });
+  queue.put("session:student-A", { session: "session", student: "student-A", status: "izin" });
+  queue.put("session:student-B", { session: "session", student: "student-B", status: "sakit" });
+  await queue.flush();
+  assert.deepEqual(saved, [
+    { session: "session", student: "student-A", status: "izin" },
+    { session: "session", student: "student-B", status: "sakit" },
+  ]);
+});
