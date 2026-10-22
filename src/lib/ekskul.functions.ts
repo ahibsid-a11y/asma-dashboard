@@ -719,6 +719,29 @@ export const getEkskulRecapDataFn = createServerFn({ method: "POST" })
   });
 
 // ──────────────────────────────────────────────────────────────
+// 7b. OPSI SANTRI AKTIF (untuk tambah peserta dari halaman rekap)
+// ──────────────────────────────────────────────────────────────
+
+export const listSantriOptionsFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const supabase = (context as any).supabase;
+    const { data: students, error } = await supabase
+      .from("profiles")
+      .select("id, name, display_name, nis_nip, class")
+      .eq("account_type", "santri")
+      .eq("status", "Aktif")
+      .order("name");
+    if (error) throw new Error(error.message);
+    return ((students ?? []) as any[]).map((s) => ({
+      id: s.id as string,
+      name: (s.name || s.display_name || "Santri") as string,
+      nis_nip: (s.nis_nip ?? null) as string | null,
+      class_name: (s.class || "-") as string,
+    }));
+  });
+
+// ──────────────────────────────────────────────────────────────
 // 8. OPSI PEMBINA / PENGAJAR EKSKUL DARI MANAJEMEN ANGGOTA
 // ──────────────────────────────────────────────────────────────
 
