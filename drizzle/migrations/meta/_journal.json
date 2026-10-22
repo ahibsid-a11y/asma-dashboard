@@ -15,6 +15,13 @@
       "when": 1792643323181,
       "tag": "0001_ekskul_participation_months",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792643360347,
+      "tag": "0002_ekskul_monthly_enrollment_atomic",
+      "breakpoints": true
     }
   ]
 }

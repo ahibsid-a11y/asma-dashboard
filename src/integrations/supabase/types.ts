@@ -2182,6 +2182,16 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      enroll_monthly_ekskul: {
+        Args: {
+          p_academic_year: string
+          p_ekskul_id: string
+          p_months: string[]
+          p_semester: string
+          p_student_id: string
+        }
+        Returns: Json
+      }
       get_report_signatures: { Args: { _student_id: string }; Returns: Json }
       has_role: {
         Args: {
