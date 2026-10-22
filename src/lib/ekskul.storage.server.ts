@@ -6,6 +6,7 @@ import crypto from "node:crypto";
 
 import { createClient } from "@supabase/supabase-js";
 import { getRequest } from "@tanstack/react-start/server";
+import { attendsMonth } from "./ekskul-months";
 import { ekskulUpdateFields } from "./ekskul.schema";
 
 import type {
@@ -133,6 +134,7 @@ export async function saveOrUpdateEkskul(
     quota: item.quota ?? 30,
     description: item.description || "",
     is_active: item.is_active ?? true,
+    available_months: item.available_months ?? null,
   };
 
   const { data, error } = await supabase
@@ -161,9 +163,18 @@ export async function enrollStudentToEkskul(data: {
   semester: string;
   academic_year: string;
   session_label?: string | undefined;
+  months?: string[];
 }): Promise<EkskulEnrollment> {
   const supabase = await db();
   const ekskul = await getEkskulById(data.ekskul_id);
+  if (ekskul?.fee_period === "per_bulan") {
+    const { data: enrollment, error } = await supabase.rpc("enroll_monthly_ekskul", {
+      p_ekskul_id: data.ekskul_id, p_student_id: data.student_id,
+      p_semester: data.semester, p_academic_year: data.academic_year, p_months: data.months ?? [],
+    });
+    if (error) throw new Error(error.message);
+    return enrollment as EkskulEnrollment;
+  }
   const isPilihan = ekskul?.category === "pilihan";
   const initialStatus = isPilihan && ekskul && ekskul.fee > 0 ? "menunggu_konfirmasi" : "aktif";
   const sessionLabel = data.session_label || "Sesi 1 (4 Pertemuan)";
@@ -342,6 +353,11 @@ export async function createSessionAndAttendance(data: {
   created_by?: string | undefined;
 }): Promise<EkskulSession> {
   const supabase = await db();
+  const { data: enrolled, error: enrollmentError } = await supabase.from("ekskul_enrollments").select("*")
+    .eq("ekskul_id", data.ekskul_id).eq("academic_year", data.academic_year).eq("semester", data.semester).eq("status", "aktif");
+  if (enrollmentError) throw new Error(enrollmentError.message);
+  const eligible = new Set((enrolled ?? []).filter((enr: EkskulEnrollment) => attendsMonth(enr, data.date.slice(0, 7))).map((enr: EkskulEnrollment) => enr.student_id));
+  if (data.records.some(rec => !eligible.has(rec.student_id))) throw new Error("Santri tidak terdaftar pada bulan kegiatan ini. Muat ulang daftar peserta.");
   const { data: session, error } = await supabase
     .from("ekskul_sessions")
     .upsert({

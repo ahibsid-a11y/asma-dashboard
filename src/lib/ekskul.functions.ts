@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { attendsMonth, enrollmentMonthsLabel } from "./ekskul-months";
 import { manageEkskulSchema } from "./ekskul.schema";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -70,6 +71,7 @@ export const getEkskulEnrollmentDataFn = createServerFn({ method: "POST" })
         ekskulId: z.string(),
         semester: z.string().default("1"),
         academicYear: z.string().default("2026/2027"),
+        month: z.string().regex(/^\d{4}-\d{2}$/).optional(),
       })
       .parse(data)
   )
@@ -86,7 +88,7 @@ export const getEkskulEnrollmentDataFn = createServerFn({ method: "POST" })
         enr.ekskul_id === data.ekskulId &&
         enr.semester === data.semester &&
         enr.academic_year === data.academicYear &&
-        enr.status === "aktif"
+        enr.status === "aktif" && (!data.month || attendsMonth(enr, data.month))
     );
 
     const studentIds = enrollments.map((e) => e.student_id);
@@ -124,17 +126,23 @@ export const enrollStudentFn = createServerFn({ method: "POST" })
         ekskulId: z.string(),
         studentId: z.string(),
         sessionLabel: z.string().optional(),
+        months: z.array(z.string().regex(/^\d{4}-\d{2}$/)).min(1).optional(),
         semester: z.string().default("1"),
         academicYear: z.string().default("2026/2027"),
       })
       .parse(data)
   )
   .middleware([requireSupabaseAuth])
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    if (data.studentId !== context.userId) {
+      const { data: allowed } = await context.supabase.rpc("is_not_santri", { _user_id: context.userId });
+      if (!allowed) throw new Error("Tidak dapat mendaftarkan santri lain");
+    }
     const enrollment = await enrollStudentToEkskul({
       ekskul_id: data.ekskulId,
       student_id: data.studentId,
       session_label: data.sessionLabel,
+      months: data.months,
       semester: data.semester,
       academic_year: data.academicYear,
     });
@@ -247,6 +255,7 @@ export const getEkskulSessionsAndGradesFn = createServerFn({ method: "POST" })
         ekskulId: z.string(),
         semester: z.string().default("1"),
         academicYear: z.string().default("2026/2027"),
+        month: z.string().regex(/^\d{4}-\d{2}$/).optional(),
       })
       .parse(data)
   )
@@ -264,7 +273,7 @@ export const getEkskulSessionsAndGradesFn = createServerFn({ method: "POST" })
       (s) =>
         s.ekskul_id === data.ekskulId &&
         s.semester === data.semester &&
-        s.academic_year === data.academicYear
+        s.academic_year === data.academicYear && (!data.month || s.date.slice(0, 7) === data.month)
     );
 
     // 3. Ambil santri terdaftar
@@ -273,7 +282,7 @@ export const getEkskulSessionsAndGradesFn = createServerFn({ method: "POST" })
         enr.ekskul_id === data.ekskulId &&
         enr.semester === data.semester &&
         enr.academic_year === data.academicYear &&
-        enr.status === "aktif"
+        enr.status === "aktif" && (!data.month || attendsMonth(enr, data.month))
     );
 
     const studentIds = enrollments.map((e) => e.student_id);
@@ -313,7 +322,8 @@ export const getEkskulSessionsAndGradesFn = createServerFn({ method: "POST" })
         class_name: "-",
       };
 
-      const myAtt = attendanceRecords.filter((a) => a.student_id === enr.student_id);
+      const eligibleIds = new Set(sessions.filter(session => attendsMonth(enr, session.date.slice(0, 7))).map(session => session.id));
+      const myAtt = attendanceRecords.filter((a) => a.student_id === enr.student_id && eligibleIds.has(a.session_id));
       const hadir = myAtt.filter((a) => a.status === "hadir").length;
       const izin = myAtt.filter((a) => a.status === "izin").length;
       const sakit = myAtt.filter((a) => a.status === "sakit").length;
@@ -385,6 +395,7 @@ export const getEkskulPaymentsFn = createServerFn({ method: "POST" })
         ekskulId: z.string().optional(),
         semester: z.string().default("1"),
         academicYear: z.string().default("2026/2027"),
+        month: z.string().regex(/^\d{4}-\d{2}$/).optional(),
       })
       .parse(data)
   )
@@ -393,7 +404,8 @@ export const getEkskulPaymentsFn = createServerFn({ method: "POST" })
     const supabaseAdmin = (context as any).supabase;
     const store = await loadEkskulStore();
 
-    let payments = store.payments;
+    const periodEnrollmentIds = new Set(store.enrollments.filter(enr => enr.semester === data.semester && enr.academic_year === data.academicYear).map(enr => enr.id));
+    let payments = store.payments.filter(p => periodEnrollmentIds.has(p.enrollment_id) && (!data.month || p.month_key === data.month || p.month_key == null));
     if (data.ekskulId && data.ekskulId !== "all") {
       payments = payments.filter((p) => p.ekskul_id === data.ekskulId);
     }
@@ -500,6 +512,7 @@ export const getStudentEkskulPortalDataFn = createServerFn({ method: "POST" })
         studentId: z.string(),
         semester: z.string().default("1"),
         academicYear: z.string().default("2026/2027"),
+        month: z.string().regex(/^\d{4}-\d{2}$/).optional(),
       })
       .parse(data)
   )
@@ -513,7 +526,7 @@ export const getStudentEkskulPortalDataFn = createServerFn({ method: "POST" })
         enr.student_id === data.studentId &&
         enr.semester === data.semester &&
         enr.academic_year === data.academicYear &&
-        enr.status === "aktif"
+        enr.status !== "keluar" && (!data.month || attendsMonth(enr, data.month))
     );
 
     const ekskulMap = new Map(store.ekskuls.map((e) => [e.id, e]));
@@ -531,7 +544,7 @@ export const getStudentEkskulPortalDataFn = createServerFn({ method: "POST" })
         (s) =>
           s.ekskul_id === enr.ekskul_id &&
           s.semester === data.semester &&
-          s.academic_year === data.academicYear
+          s.academic_year === data.academicYear && attendsMonth(enr, s.date.slice(0, 7)) && (!data.month || s.date.slice(0, 7) === data.month)
       );
 
       const sessionIds = new Set(sessions.map((s) => s.id));
@@ -543,7 +556,7 @@ export const getStudentEkskulPortalDataFn = createServerFn({ method: "POST" })
       const izin = myAttendances.filter((a) => a.status === "izin").length;
       const sakit = myAttendances.filter((a) => a.status === "sakit").length;
       const alpa = myAttendances.filter((a) => a.status === "alpa").length;
-      const totalSesi = sessions.length;
+      const totalSesi = myAttendances.length;
       const attendanceRate = totalSesi > 0 ? Math.round((hadir / totalSesi) * 100) : 100;
 
       // Nilai
@@ -558,7 +571,7 @@ export const getStudentEkskulPortalDataFn = createServerFn({ method: "POST" })
 
       // Pembayaran
       const payments = store.payments.filter(
-        (p) => p.ekskul_id === enr.ekskul_id && p.student_id === data.studentId
+        (p) => p.enrollment_id === enr.id && (!data.month || p.month_key === data.month || p.month_key == null)
       );
 
       const totalFee = payments.reduce((sum, p) => sum + p.amount, 0);
@@ -577,7 +590,7 @@ export const getStudentEkskulPortalDataFn = createServerFn({ method: "POST" })
           sakit,
           alpa,
           attendanceRate,
-          records: myAttendances,
+          records: myAttendances.map(a => ({ ...a, date: sessions.find(session => session.id === a.session_id)?.date })).sort((a, b) => (a.date ?? "").localeCompare(b.date ?? "")),
         },
         grade,
         payments,
@@ -606,6 +619,7 @@ export const getEkskulRecapDataFn = createServerFn({ method: "POST" })
       .object({
         semester: z.string().default("1"),
         academicYear: z.string().default("2026/2027"),
+        month: z.string().regex(/^\d{4}-\d{2}$/).optional(),
       })
       .parse(data)
   )
@@ -630,20 +644,21 @@ export const getEkskulRecapDataFn = createServerFn({ method: "POST" })
           enr.ekskul_id === ekskul.id &&
           enr.semester === data.semester &&
           enr.academic_year === data.academicYear &&
-          enr.status !== "keluar"
+          enr.status !== "keluar" && (!data.month || attendsMonth(enr, data.month))
       );
 
-      const activeEnrollments = allEnrollments.filter((enr) => enr.status === "aktif");
+      const activeEnrollments = allEnrollments.filter((enr) => enr.status === "aktif" && (!data.month || attendsMonth(enr, data.month)));
       const pendingEnrollments = allEnrollments.filter((enr) => enr.status === "menunggu_konfirmasi");
 
       const sessions = store.sessions.filter(
         (s) =>
           s.ekskul_id === ekskul.id &&
           s.semester === data.semester &&
-          s.academic_year === data.academicYear
+          s.academic_year === data.academicYear && (!data.month || s.date.slice(0, 7) === data.month)
       );
 
-      const payments = store.payments.filter((p) => p.ekskul_id === ekskul.id);
+      const enrollmentIds = new Set(allEnrollments.map(enr => enr.id));
+      const payments = store.payments.filter(p => p.ekskul_id === ekskul.id && enrollmentIds.has(p.enrollment_id) && (!data.month || p.month_key === data.month || p.month_key == null));
       const totalBilled = payments.reduce((sum, p) => sum + p.amount, 0);
       const totalPaid = payments
         .filter((p) => p.status === "lunas")
@@ -658,14 +673,15 @@ export const getEkskulRecapDataFn = createServerFn({ method: "POST" })
 
       const members = allEnrollments.map((enr) => {
         const s = studentsMap.get(enr.student_id) as any;
-        const payment = payments.find((p) => p.enrollment_id === enr.id);
+        const bills = payments.filter(p => p.enrollment_id === enr.id);
+        const payment = bills[0] ? { ...bills[0], amount: bills.reduce((sum, p) => sum + p.amount, 0), status: bills.every(p => p.status === "lunas") ? "lunas" : "belum_bayar" } : null;
         return {
           enrollmentId: enr.id,
           studentId: enr.student_id,
           name: s?.name || s?.display_name || s?.full_name || "Santri",
           className: s?.class || "-",
           nis: s?.nis_nip || "-",
-          sessionLabel: enr.session_label || "Sesi 1 (4 Pertemuan)",
+          sessionLabel: enrollmentMonthsLabel(enr),
           enrollmentStatus: enr.status,
           enrolledAt: enr.enrolled_at,
           payment: payment
