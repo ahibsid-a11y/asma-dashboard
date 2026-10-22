@@ -10,3 +10,4 @@
 <!-- LOVABLE:END -->
 
 - Extracurricular save validation lives in the client-safe `ekskul.schema.ts`; edits update only explicitly supplied fields by existing ID, so repairs cannot reset unrelated saved values or linked records.
+- Student academic reads use the authenticated client, class/year subject assignments, and explicit year/semester filters; shared assignment selection stays client-safe and never rewrites saved subject IDs or grades.

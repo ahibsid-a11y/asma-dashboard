@@ -51,6 +51,9 @@ export const Route = createFileRoute("/_authenticated/nilai-pelajaran")({
         content: "Lihat capaian nilai hasil belajar santri, rincian per-TP, STS, SAS, dan cetak rapor.",
       },
       { property: "og:title", content: "Nilai Pelajaran Santri | SIM-AHIBS" },
+      { property: "og:description", content: "Nilai pelajaran sesuai mapel kelas santri, dengan rincian TP, STS, dan SAS per semester." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: NilaiPelajaranPage,
@@ -61,12 +64,17 @@ function NilaiPelajaranPage() {
   const [selectedGroup, setSelectedGroup] = useState<string>("all");
   const [expandedSubjectId, setExpandedSubjectId] = useState<string | null>(null);
   const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [semester, setSemester] = useState("1");
+  const [academicYear, setAcademicYear] = useState("2026/2027");
 
   const fetchMyGradesFn = useServerFn(getMyGrades);
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["my-academic-grades"],
-    queryFn: () => fetchMyGradesFn(),
+    queryKey: ["my-academic-grades", profile?.id, profile?.class, semester, academicYear],
+    queryFn: () => fetchMyGradesFn({ data: { semester: semester === "2" ? "2" : "1", academic_year: academicYear } }),
+    enabled: !!profile?.id,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: "always",
   });
 
   const student = data?.student ?? profile;
@@ -160,6 +168,16 @@ function NilaiPelajaranPage() {
         </div>
 
         {/* KPI Metrics */}
+        <div className="flex flex-wrap gap-3">
+          <Select value={academicYear} onValueChange={setAcademicYear}>
+            <SelectTrigger className="w-40" aria-label="Tahun pelajaran"><SelectValue /></SelectTrigger>
+            <SelectContent>{["2025/2026", "2026/2027", "2027/2028"].map((year) => <SelectItem key={year} value={year}>{year}</SelectItem>)}</SelectContent>
+          </Select>
+          <Select value={semester} onValueChange={setSemester}>
+            <SelectTrigger className="w-44" aria-label="Semester"><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="1">Semester 1 (Ganjil)</SelectItem><SelectItem value="2">Semester 2 (Genap)</SelectItem></SelectContent>
+          </Select>
+        </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 md:gap-4">
           <Card className="border-border/60 shadow-xs">
             <CardContent className="p-4 flex items-center gap-3.5">
@@ -269,6 +287,11 @@ function NilaiPelajaranPage() {
           <div className="min-h-[300px] flex flex-col items-center justify-center text-muted-foreground gap-3">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
             <p className="text-sm">Memuat rincian nilai santri...</p>
+          </div>
+        ) : error ? (
+          <div role="alert" className="flex items-center gap-3 text-destructive">
+            <p>Nilai belum dapat dimuat. Silakan coba kembali.</p>
+            <Button variant="outline" onClick={() => void refetch()}>Coba Lagi</Button>
           </div>
         ) : filteredItems.length === 0 ? (
           <Card className="border-dashed">
@@ -509,6 +532,8 @@ function NilaiPelajaranPage() {
         open={reportModalOpen}
         onOpenChange={setReportModalOpen}
         studentId={student?.id || null}
+        semester={semester}
+        academicYear={academicYear}
       />
     </AppShell>
   );
