@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { EkskulMonthPicker } from "@/components/ekskul-month-picker";
+import { MONTH_NAMES } from "@/lib/ekskul-months";
 import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -101,6 +103,7 @@ function ManajemenEkskulPage() {
   const [formQuota, setFormQuota] = useState<number>(30);
   const [formDesc, setFormDesc] = useState("");
   const [formIsActive, setFormIsActive] = useState(true);
+  const [formMonths, setFormMonths] = useState<string[]>(MONTH_NAMES.map((_, i) => String(i + 1)));
   const [formQuotaUnset, setFormQuotaUnset] = useState(false);
 
   // Queries
@@ -137,6 +140,7 @@ function ManajemenEkskulPage() {
             quota: formQuotaUnset ? null : formQuota,
             description: formDesc.trim(),
             is_active: formIsActive,
+            available_months: formMonths.map(Number),
           },
         },
       }),
@@ -181,6 +185,7 @@ function ManajemenEkskulPage() {
   });
 
   const resetForm = () => {
+    setFormMonths(MONTH_NAMES.map((_, i) => String(i + 1)));
     setEditingId(null);
     setFormName("");
     setFormCategory("pilihan");
@@ -198,6 +203,7 @@ function ManajemenEkskulPage() {
   };
 
   const handleEdit = (item: EkskulItem) => {
+    setFormMonths((item.available_months ?? MONTH_NAMES.map((_, i) => i + 1)).map(String));
     setEditingId(item.id);
     setFormName(item.name);
     setFormCategory(item.category);
@@ -407,7 +413,7 @@ function ManajemenEkskulPage() {
 
         {/* Modal Form Tambah / Edit */}
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-lg font-bold">
                 {editingId ? "Edit Program Ekstrakurikuler" : "Tambah Ekstrakurikuler Baru"}
@@ -492,6 +498,8 @@ function ManajemenEkskulPage() {
                   </div>
                 </div>
               )}
+
+              {formFeePeriod === "per_bulan" && <div className="space-y-2"><Label>Bulan kegiatan tersedia</Label><EkskulMonthPicker options={MONTH_NAMES.map((label, i) => ({ value: String(i + 1), label }))} selected={formMonths} onChange={setFormMonths} /></div>}
 
               {/* Pembina / Pelatih */}
               <div className="space-y-1.5">
@@ -591,7 +599,7 @@ function ManajemenEkskulPage() {
                 size="sm"
                 className="font-bold"
                 onClick={() => saveMutation.mutate()}
-                disabled={saveMutation.isPending || !formName.trim()}
+                disabled={saveMutation.isPending || !formName.trim() || (formFeePeriod === "per_bulan" && formMonths.length === 0)}
               >
                 {saveMutation.isPending ? "Menyimpan..." : "Simpan Ekskul"}
               </Button>

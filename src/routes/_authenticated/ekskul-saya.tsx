@@ -21,6 +21,7 @@ import {
   XCircle,
 } from "lucide-react";
 
+import { monthLabel, semesterMonths, enrollmentMonthsLabel } from "@/lib/ekskul-months";
 import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,8 @@ export const Route = createFileRoute("/_authenticated/ekskul-saya")({
         content: "Pantau riwayat absensi kegiatan, status pembayaran iuran, jadwal latihan, dan nilai capaian ekstrakurikuler santri.",
       },
       { property: "og:title", content: "Ekstrakurikuler Saya | SIM-AHIBS" },
+      { property: "og:description", content: "Pantau ekstrakurikuler AHIBS, keikutsertaan bulanan, presensi, nilai dan pembayaran." },
+      { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },
     ],
   }),
@@ -58,19 +61,21 @@ function EkskulSayaPage() {
 
   const fetchPortalData = useServerFn(getStudentEkskulPortalDataFn);
 
+  const [selectedMonth, setSelectedMonth] = useState("all");
   const [selectedSemester, setSelectedSemester] = useState<string>("1");
   const [selectedYear, setSelectedYear] = useState<string>("2026/2027");
 
   const studentId = profile?.id || "";
 
   const portalQuery = useQuery({
-    queryKey: ["my-ekskul-portal-full", studentId, selectedSemester, selectedYear],
+    queryKey: ["my-ekskul-portal-full", studentId, selectedSemester, selectedYear, selectedMonth],
     queryFn: () =>
       fetchPortalData({
         data: {
           studentId,
           semester: selectedSemester,
           academicYear: selectedYear,
+          month: selectedMonth === "all" ? undefined : selectedMonth,
         },
       }),
     enabled: Boolean(studentId),
@@ -105,8 +110,9 @@ function EkskulSayaPage() {
           </div>
 
           {/* Filter Semester & Tahun */}
-          <div className="flex items-center gap-2">
-            <Select value={selectedSemester} onValueChange={setSelectedSemester}>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={selectedMonth} onValueChange={value => { setSelectedMonth(value); }}><SelectTrigger aria-label="Bulan keikutsertaan" className="h-8 w-44 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Semua Bulan</SelectItem>{semesterMonths(selectedYear, selectedSemester).map(month => <SelectItem key={month} value={month}>{monthLabel(month)}</SelectItem>)}</SelectContent></Select>
+            <Select value={selectedSemester} onValueChange={value => { setSelectedMonth("all"); setSelectedSemester(value); }}>
               <SelectTrigger className="h-8 text-xs font-medium w-[140px]">
                 <SelectValue />
               </SelectTrigger>
@@ -116,7 +122,7 @@ function EkskulSayaPage() {
               </SelectContent>
             </Select>
 
-            <Select value={selectedYear} onValueChange={setSelectedYear}>
+            <Select value={selectedYear} onValueChange={value => { setSelectedMonth("all"); setSelectedYear(value); }}>
               <SelectTrigger className="h-8 text-xs font-medium w-[120px]">
                 <SelectValue />
               </SelectTrigger>
@@ -179,7 +185,7 @@ function EkskulSayaPage() {
                   {myEkskuls.length > 0
                     ? Math.round(
                         myEkskuls.reduce(
-                          (sum: number, item: any) => sum + (item.attendance?.attendanceRate || 100),
+                          (sum: number, item: any) => sum + (item.attendance?.attendanceRate ?? 100),
                           0
                         ) / myEkskuls.length
                       )
@@ -223,7 +229,7 @@ function EkskulSayaPage() {
                   <CardHeader className="p-4 bg-muted/20 border-b border-border/60">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <Badge
                             variant="outline"
                             className={`text-[10px] font-bold uppercase ${
@@ -266,27 +272,27 @@ function EkskulSayaPage() {
                           <div>
                             <h4 className="font-bold text-foreground flex items-center gap-1.5 text-xs">
                               <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                              Absensi Sesi ({item.enrollment?.session_label || "Sesi 1"})
+                              Absensi Sesi ({enrollmentMonthsLabel(item.enrollment)})
                             </h4>
                             <span className="text-[10px] text-muted-foreground">
-                              1 Sesi = 4 Pertemuan Latihan Rutin
+                              {item.enrollment.status === "menunggu_konfirmasi" ? "Menunggu konfirmasi keikutsertaan" : "Keikutsertaan aktif"}
                             </span>
                           </div>
                           <span className="font-extrabold text-sm text-emerald-600">
-                            {att?.attendanceRate || 100}%
+                            {att?.attendanceRate ?? 100}%
                           </span>
                         </div>
 
-                        <Progress value={att?.attendanceRate || 100} className="h-2" />
+                        <Progress value={att?.attendanceRate ?? 100} className="h-2" />
 
                         {/* Rincian 4 Pertemuan Per Sesi */}
                         <div className="space-y-1.5 pt-1">
                           <span className="text-[10.5px] font-bold text-muted-foreground uppercase tracking-wide block">
-                            Rincian 4 Pertemuan Sesi:
+                            Riwayat Pertemuan:
                           </span>
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                            {[1, 2, 3, 4].map((meetingNum) => {
-                              const rec = att?.records?.[meetingNum - 1];
+                            {(att?.records ?? []).map((rec: any, index: number) => {
+                              const meetingNum = index + 1;
                               const status = rec?.status;
 
                               return (
@@ -305,7 +311,7 @@ function EkskulSayaPage() {
                                   }`}
                                 >
                                   <div className="text-[10px] font-bold uppercase">
-                                    Pertemuan {meetingNum}
+                                    {rec.date || `Pertemuan ${meetingNum}`}
                                   </div>
                                   <div className="text-xs font-black mt-0.5 capitalize">
                                     {status ? (

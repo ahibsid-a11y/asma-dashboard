@@ -22,6 +22,7 @@ import {
 import { toast } from "sonner";
 
 import { useCurrentProfile } from "@/hooks/use-current-profile";
+import { monthLabel, semesterMonths, enrollmentMonthsLabel } from "@/lib/ekskul-months";
 import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -59,6 +60,8 @@ export const Route = createFileRoute("/_authenticated/rekap-ekskul")({
         content: "Rekapitulasi lengkap kegiatan ekstrakurikuler, presensi santri, status pembayaran iuran, dan nilai rapor.",
       },
       { property: "og:title", content: "Rekap Ekstrakurikuler | SIM-AHIBS" },
+      { property: "og:description", content: "Pantau ekstrakurikuler AHIBS, keikutsertaan bulanan, presensi, nilai dan pembayaran." },
+      { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },
     ],
   }),
@@ -75,6 +78,7 @@ function RekapEkskulPage() {
   const updatePaymentStatus = useServerFn(updateEkskulPaymentStatusFn);
   const approveEnrollmentFn = useServerFn(approveStudentEnrollmentFn);
 
+  const [selectedMonth, setSelectedMonth] = useState("all");
   const [selectedSemester, setSelectedSemester] = useState<string>("1");
   const [selectedYear, setSelectedYear] = useState<string>("2026/2027");
   const [paymentFilterStatus, setPaymentFilterStatus] = useState<string>("all");
@@ -83,19 +87,19 @@ function RekapEkskulPage() {
 
   // 1. Ambil Rekap Utama
   const recapQuery = useQuery({
-    queryKey: ["ekskul-recap-main", selectedSemester, selectedYear],
+    queryKey: ["ekskul-recap-main", selectedSemester, selectedYear, selectedMonth],
     queryFn: () =>
       fetchRecap({
-        data: { semester: selectedSemester, academicYear: selectedYear },
+        data: { semester: selectedSemester, academicYear: selectedYear, month: selectedMonth === "all" ? undefined : selectedMonth },
       }),
   });
 
   // 2. Ambil Rekap Pembayaran Keuangan
   const paymentsQuery = useQuery({
-    queryKey: ["ekskul-payments-recap", selectedSemester, selectedYear],
+    queryKey: ["ekskul-payments-recap", selectedSemester, selectedYear, selectedMonth],
     queryFn: () =>
       fetchPayments({
-        data: { semester: selectedSemester, academicYear: selectedYear },
+        data: { semester: selectedSemester, academicYear: selectedYear, month: selectedMonth === "all" ? undefined : selectedMonth },
       }),
   });
 
@@ -196,8 +200,9 @@ function RekapEkskulPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Select value={selectedSemester} onValueChange={setSelectedSemester}>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={selectedMonth} onValueChange={value => { setSelectedMonth(value); setSelectedEkskulForMembers(null); }}><SelectTrigger aria-label="Bulan keikutsertaan" className="h-8 w-44 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Semua Bulan</SelectItem>{semesterMonths(selectedYear, selectedSemester).map(month => <SelectItem key={month} value={month}>{monthLabel(month)}</SelectItem>)}</SelectContent></Select>
+            <Select value={selectedSemester} onValueChange={value => { setSelectedMonth("all"); setSelectedSemester(value); }}>
               <SelectTrigger className="h-8 text-xs font-medium w-[140px]">
                 <SelectValue />
               </SelectTrigger>
@@ -207,7 +212,7 @@ function RekapEkskulPage() {
               </SelectContent>
             </Select>
 
-            <Select value={selectedYear} onValueChange={setSelectedYear}>
+            <Select value={selectedYear} onValueChange={value => { setSelectedMonth("all"); setSelectedYear(value); }}>
               <SelectTrigger className="h-8 text-xs font-medium w-[120px]">
                 <SelectValue />
               </SelectTrigger>
