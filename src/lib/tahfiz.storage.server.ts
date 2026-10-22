@@ -166,7 +166,7 @@ async function upsertRecord(table: string, id: string | undefined, fields: Recor
     if (error) throw new Error(error.message);
     if (data) return data;
   }
-  const { data, error } = await db.from(table).insert(fields).select("*").single();
+  const { data, error } = await db.from(table).upsert({ ...fields, ...(id ? { id } : {}) }, { onConflict: "id" }).select("*").single();
   if (error) throw new Error(error.message);
   return data;
 }

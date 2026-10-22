@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   BookMarked,
   BookOpen,
@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useAutosaveQueue } from "@/hooks/use-autosave-queue";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
 import { TahfizReportDialog } from "@/components/tahfiz-report-dialog";
 import {
@@ -76,6 +77,7 @@ export const Route = createFileRoute("/_authenticated/input-nilai-tahfiz")({
         content: "Pencatatan setoran Iqro Metode Itqon, Tilawah, dan Tahfiz Sabq/Sabqy/Manzil santri AHIBS.",
       },
       { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: InputNilaiTahfizPage,
@@ -330,65 +332,64 @@ function InputNilaiTahfizPage() {
   const countTilawah = halaqohStudents.filter((s: any) => s.level === "tilawah").length;
   const countTahfiz = halaqohStudents.filter((s: any) => s.level === "tahfiz").length;
 
-  const handleSaveIqro = (e: React.FormEvent) => {
-    e.preventDefault();
+  type SaveJob = { kind: string; data: any };
+  const recordIds = useRef(new Map<string, string>());
+  const [editVersion, setEditVersion] = useState(0);
+  const lastEdit = useRef<{ studentId: string; kind: string; date: string } | null>(null);
+  const autosave = useAutosaveQueue<SaveJob>(async ({ kind, data }) => {
+    if (kind === "iqro") await saveIqro({ data });
+    else if (kind === "tilawah") await saveTilawah({ data });
+    else if (kind === "ujian") await saveExam({ data });
+    else await saveTahfiz({ data });
+    await queryClient.invalidateQueries({ queryKey: [kind === "ujian" ? "student-tahfiz-exams" : "tahfiz-student-detail", data.student_id] });
+  });
+  const queueCurrent = () => {
     if (!activeStudent?.id) return;
-    iqroMutation.mutate({
-      data: {
-        student_id: activeStudent.id,
-        date: inputDate,
-        halaman: Number(iqroHalaman),
-        tahap: iqroTahap,
-        nilai: Number(iqroNilai),
-        catatan: iqroCatatan,
-        murojaah_harian: iqroMurojaah,
-      },
-    });
+    const kind = activeTab;
+    const key = [activeStudent.id, kind, inputDate, kind === "tahfiz" ? tahfizType : ""].join(":");
+    let id = recordIds.current.get(key);
+    if (!id) { id = crypto.randomUUID(); recordIds.current.set(key, id); }
+    const base = { id, student_id: activeStudent.id, date: inputDate };
+    let data: any;
+    if (kind === "iqro") {
+      if (!iqroTahap || iqroHalaman < 1) return;
+      data = { ...base, halaman: iqroHalaman, tahap: iqroTahap, nilai: iqroNilai, catatan: iqroCatatan, murojaah_harian: iqroMurojaah };
+    } else if (kind === "tilawah") {
+      if (!tilawahSurah || tilawahAyatStart < 1 || tilawahAyatEnd < tilawahAyatStart) return;
+      data = { ...base, juz: tilawahJuz, surah_name: tilawahSurah, ayat_start: tilawahAyatStart, ayat_end: tilawahAyatEnd,
+        halaman: tilawahHalaman, nilai_kelancaran: tilawahKelancaran, nilai_tajwid: tilawahTajwid, catatan: tilawahCatatan, murojaah_harian: tilawahMurojaah };
+    } else if (kind === "ujian") {
+      if (!examTitle.trim() || !examJuz.trim() || examQuestions.some((q) => !q.surah_ayat.trim())) return;
+      data = { ...base, student_name: activeStudent.name, nis_nip: activeStudent.nis_nip || "-",
+        class_name: activeStudent.class || "-", halaqoh_name: activeStudent.halaqoh || activeHalaqohName,
+        musyrif_name: profile?.name || "Musyrif Halaqoh", examiner_name: examinerName,
+        exam_title: examTitle, target_juz: examJuz, semester: "1", academic_year: "2026/2027", notes: examNotes,
+        questions: examQuestions.map((q, idx) => ({ ...q, question_number: idx + 1 })) };
+    } else if (kind === "tahfiz") {
+      if (!tahfizSurah || tahfizAyatStart < 1 || tahfizAyatEnd < tahfizAyatStart) return;
+      const predikat = tahfizNilai < 70 ? "Perlu Bimbingan" : tahfizNilai < 80 ? "Jayyid" : tahfizNilai < 90 ? "Jayyid Jiddan" : "Mumtaz";
+      data = { ...base, type: tahfizType, juz: tahfizJuz, surah_name: tahfizSurah,
+        ayat_start: tahfizAyatStart, ayat_end: tahfizAyatEnd, nilai: tahfizNilai, predikat, catatan: tahfizCatatan };
+    } else return;
+    autosave.enqueue(key, { kind, data });
   };
-
-  const handleSaveTilawah = (e: React.FormEvent) => {
-    e.preventDefault();
+  const markEdited = () => {
     if (!activeStudent?.id) return;
-    tilawahMutation.mutate({
-      data: {
-        student_id: activeStudent.id,
-        date: inputDate,
-        juz: Number(tilawahJuz),
-        surah_name: tilawahSurah,
-        ayat_start: Number(tilawahAyatStart),
-        ayat_end: Number(tilawahAyatEnd),
-        halaman: tilawahHalaman ? Number(tilawahHalaman) : undefined,
-        nilai_kelancaran: tilawahKelancaran,
-        nilai_tajwid: tilawahTajwid,
-        catatan: tilawahCatatan,
-        murojaah_harian: tilawahMurojaah,
-      },
-    });
+    lastEdit.current = { studentId: activeStudent.id, kind: activeTab, date: inputDate };
+    setEditVersion((v) => v + 1);
   };
-
-  const handleSaveTahfiz = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!activeStudent?.id) return;
-    let predikat = "Mumtaz";
-    if (tahfizNilai < 70) predikat = "Perlu Bimbingan";
-    else if (tahfizNilai < 80) predikat = "Jayyid";
-    else if (tahfizNilai < 90) predikat = "Jayyid Jiddan";
-
-    tahfizMutation.mutate({
-      data: {
-        student_id: activeStudent.id,
-        date: inputDate,
-        type: tahfizType,
-        juz: Number(tahfizJuz),
-        surah_name: tahfizSurah,
-        ayat_start: Number(tahfizAyatStart),
-        ayat_end: Number(tahfizAyatEnd),
-        nilai: Number(tahfizNilai),
-        predikat,
-        catatan: tahfizCatatan,
-      },
-    });
+  useEffect(() => {
+    if (editVersion === 0 || lastEdit.current?.studentId !== activeStudent?.id || lastEdit.current?.kind !== activeTab) return;
+    queueCurrent();
+    // Edits only: never save initialized form defaults.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editVersion]);
+  const handleSaveCurrent = (e: React.FormEvent) => {
+    e.preventDefault(); queueCurrent(); void autosave.flush().catch(() => {});
   };
+  const handleSaveIqro = handleSaveCurrent;
+  const handleSaveTilawah = handleSaveCurrent;
+  const handleSaveTahfiz = handleSaveCurrent;
 
   return (
     <AppShell accountType={profile?.account_type ?? null}>
@@ -641,7 +642,7 @@ function InputNilaiTahfizPage() {
                     <Tabs
                       defaultValue={currentStudentLevel}
                       value={activeTab}
-                      onValueChange={setActiveTab}
+                      onValueChange={(value) => { void autosave.flush().then(() => setActiveTab(value)).catch(() => {}); }}
                       className="w-full"
                     >
                       <TabsList className="grid w-full grid-cols-4">
@@ -661,7 +662,7 @@ function InputNilaiTahfizPage() {
 
                       {/* TAB 1: IQRO */}
                       <TabsContent value="iqro" className="mt-4 space-y-4">
-                        <form onSubmit={handleSaveIqro} className="space-y-4">
+                        <form onChangeCapture={markEdited} onSubmit={handleSaveIqro} className="space-y-4">
                           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                             <div className="space-y-1.5">
                               <Label className="text-xs font-medium">Halaman Iqro</Label>
@@ -678,7 +679,7 @@ function InputNilaiTahfizPage() {
 
                             <div className="space-y-1.5">
                               <Label className="text-xs font-medium">Tahap Pembelajaran</Label>
-                              <Select value={iqroTahap} onValueChange={setIqroTahap}>
+                              <Select value={iqroTahap} onValueChange={(value) => { setIqroTahap(value); markEdited(); }}>
                                 <SelectTrigger>
                                   <SelectValue />
                                 </SelectTrigger>
@@ -717,7 +718,7 @@ function InputNilaiTahfizPage() {
                           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div className="space-y-1.5">
                               <Label className="text-xs font-medium">Rekap Murojaah Harian</Label>
-                              <Select value={iqroMurojaah} onValueChange={setIqroMurojaah}>
+                              <Select value={iqroMurojaah} onValueChange={(value) => { setIqroMurojaah(value); markEdited(); }}>
                                 <SelectTrigger>
                                   <SelectValue />
                                 </SelectTrigger>
@@ -761,7 +762,7 @@ function InputNilaiTahfizPage() {
 
                       {/* TAB 2: TILAWAH */}
                       <TabsContent value="tilawah" className="mt-4 space-y-4">
-                        <form onSubmit={handleSaveTilawah} className="space-y-4">
+                        <form onChangeCapture={markEdited} onSubmit={handleSaveTilawah} className="space-y-4">
                           <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
                             <div className="space-y-1.5">
                               <Label className="text-xs font-medium">Juz</Label>
@@ -777,7 +778,7 @@ function InputNilaiTahfizPage() {
 
                             <div className="space-y-1.5 sm:col-span-3">
                               <Label className="text-xs font-medium">Surat Al-Qur'an</Label>
-                              <Select value={tilawahSurah} onValueChange={setTilawahSurah}>
+                              <Select value={tilawahSurah} onValueChange={(value) => { setTilawahSurah(value); markEdited(); }}>
                                 <SelectTrigger>
                                   <SelectValue />
                                 </SelectTrigger>
@@ -837,7 +838,7 @@ function InputNilaiTahfizPage() {
                               <Label className="text-xs font-medium">Nilai Kelancaran</Label>
                               <Select
                                 value={tilawahKelancaran}
-                                onValueChange={setTilawahKelancaran}
+                                onValueChange={(value) => { setTilawahKelancaran(value); markEdited(); }}
                               >
                                 <SelectTrigger>
                                   <SelectValue />
@@ -855,7 +856,7 @@ function InputNilaiTahfizPage() {
 
                             <div className="space-y-1.5">
                               <Label className="text-xs font-medium">Nilai Tajwid</Label>
-                              <Select value={tilawahTajwid} onValueChange={setTilawahTajwid}>
+                              <Select value={tilawahTajwid} onValueChange={(value) => { setTilawahTajwid(value); markEdited(); }}>
                                 <SelectTrigger>
                                   <SelectValue />
                                 </SelectTrigger>
@@ -870,7 +871,7 @@ function InputNilaiTahfizPage() {
 
                             <div className="space-y-1.5">
                               <Label className="text-xs font-medium">Murojaah Harian</Label>
-                              <Select value={tilawahMurojaah} onValueChange={setTilawahMurojaah}>
+                              <Select value={tilawahMurojaah} onValueChange={(value) => { setTilawahMurojaah(value); markEdited(); }}>
                                 <SelectTrigger>
                                   <SelectValue />
                                 </SelectTrigger>
@@ -911,7 +912,7 @@ function InputNilaiTahfizPage() {
 
                       {/* TAB 3: TAHFIZ (3 PILAR) */}
                       <TabsContent value="tahfiz" className="mt-4 space-y-4">
-                        <form onSubmit={handleSaveTahfiz} className="space-y-4">
+                        <form onChangeCapture={markEdited} onSubmit={handleSaveTahfiz} className="space-y-4">
                           {/* Pilar Selector */}
                           <div className="space-y-1.5">
                             <Label className="text-xs font-semibold">Pilih Pilar Hafalan:</Label>
@@ -972,7 +973,7 @@ function InputNilaiTahfizPage() {
 
                             <div className="space-y-1.5 sm:col-span-3">
                               <Label className="text-xs font-medium">Surat</Label>
-                              <Select value={tahfizSurah} onValueChange={setTahfizSurah}>
+                              <Select value={tahfizSurah} onValueChange={(value) => { setTahfizSurah(value); markEdited(); }}>
                                 <SelectTrigger>
                                   <SelectValue />
                                 </SelectTrigger>
@@ -1067,26 +1068,8 @@ function InputNilaiTahfizPage() {
                       {/* TAB 4: UJIAN TAHFIZ & CETAK RAPOR */}
                       <TabsContent value="ujian" className="mt-4 space-y-6">
                         <form
-                          onSubmit={(e) => {
-                            e.preventDefault();
-                            if (!activeStudent) return;
-                            saveExamMutation.mutate({
-                              student_id: activeStudent.id,
-                              student_name: activeStudent.name,
-                              nis_nip: activeStudent.nis_nip || "-",
-                              class_name: activeStudent.class || "-",
-                              halaqoh_name: activeStudent.halaqoh || activeHalaqohName || "Halaqoh Al-Qur'an",
-                              musyrif_name: (profile as any)?.display_name || profile?.name || "Musyrif Halaqoh",
-                              examiner_name: examinerName.trim() || "Penguji Tahfidz",
-                              exam_title: examTitle.trim(),
-                              target_juz: examJuz.trim(),
-                              date: inputDate,
-                              semester: "1",
-                              academic_year: "2026/2027",
-                              questions: examQuestions,
-                              notes: examNotes,
-                            });
-                          }}
+                          onChangeCapture={markEdited}
+                          onSubmit={handleSaveCurrent}
                           className="space-y-4"
                         >
                           <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-foreground">
