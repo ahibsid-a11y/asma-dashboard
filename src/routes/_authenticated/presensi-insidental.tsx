@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CalendarPlus, Pencil, Search, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 
@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useAutosaveQueue } from "@/hooks/use-autosave-queue";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
 import {
   deleteIncidentalEvent,
@@ -112,6 +113,22 @@ function IncidentalPage() {
   const [memberSearch, setMemberSearch] = useState("");
   const [rosterSearch, setRosterSearch] = useState("");
 
+  const [formEdited, setFormEdited] = useState(false);
+  const newEventId = useRef<string | undefined>(undefined);
+  const eventAutosave = useAutosaveQueue<Parameters<typeof submitEvent>[0]>(async (payload) => {
+    const result = await submitEvent(payload);
+    setSelectedEventId(result.id);
+    await queryClient.invalidateQueries({ queryKey: ["incidental-events"] });
+  });
+  useEffect(() => {
+    if (!showForm || !formEdited || form.title.trim().length < 3 || !form.event_date) return;
+    if (form.target_type === "ROLE" ? !form.target_roles.length : !form.target_user_ids.length) return;
+    if (!form.id && !newEventId.current) newEventId.current = crypto.randomUUID();
+    eventAutosave.enqueue(form.id || newEventId.current || "new", { data: { ...form, id: form.id || newEventId.current } });
+    // Only intentional edits; preserve incomplete form without creating an event.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, formEdited, showForm]);
+
   const eventsQuery = useQuery({
     queryKey: ["incidental-events"],
     queryFn: () => fetchEvents({}) as Promise<EventRow[]>,
@@ -138,7 +155,7 @@ function IncidentalPage() {
     mutationFn: () =>
       submitEvent({
         data: {
-          id: form.id,
+          id: form.id || newEventId.current,
           title: form.title,
           description: form.description,
           event_date: form.event_date,
@@ -151,6 +168,7 @@ function IncidentalPage() {
       toast.success(form.id ? "Kegiatan diperbarui" : "Kegiatan dibuat");
       setShowForm(false);
       setForm(emptyForm());
+      setFormEdited(false); newEventId.current = undefined;
       setSelectedEventId(result.id);
       await queryClient.invalidateQueries({ queryKey: ["incidental-events"] });
       await queryClient.invalidateQueries({ queryKey: ["incidental-roster", result.id] });
@@ -213,6 +231,7 @@ function IncidentalPage() {
   }, [rosterQuery.data]);
 
   function startEdit(event: EventRow) {
+    setFormEdited(false); newEventId.current = undefined;
     setForm({
       id: event.id,
       title: event.title,
@@ -226,6 +245,7 @@ function IncidentalPage() {
   }
 
   function toggleRole(role: AccountType) {
+    setFormEdited(true);
     setForm((f) => ({
       ...f,
       target_roles: f.target_roles.includes(role)
@@ -235,6 +255,7 @@ function IncidentalPage() {
   }
 
   function toggleUser(id: string) {
+    setFormEdited(true);
     setForm((f) => ({
       ...f,
       target_user_ids: f.target_user_ids.includes(id)
@@ -257,6 +278,7 @@ function IncidentalPage() {
           <Button
             type="button"
             onClick={() => {
+              setFormEdited(false); newEventId.current = undefined;
               setForm(emptyForm());
               setShowForm((v) => !v);
             }}
@@ -276,6 +298,7 @@ function IncidentalPage() {
         <div className="mt-6 space-y-6">
           {showForm && (
             <form
+              onChangeCapture={() => setFormEdited(true)}
               className="space-y-4 rounded-xl border border-border bg-card p-5"
               onSubmit={(e) => {
                 e.preventDefault();
