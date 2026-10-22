@@ -314,6 +314,22 @@
     table-layout: fixed !important;
   }
 
+  .report-document .report-table th,
+  .report-document .report-table td {
+    font-size: 8pt !important;
+    line-height: 1.2 !important;
+    padding: 3pt 4pt !important;
+  }
+
+  .report-document .report-table th:first-child { width: 8mm !important; }
+  .report-document .report-table th:nth-child(3) { width: 12mm !important; }
+  .report-document .report-table th:nth-child(4) { width: 16mm !important; }
+  .report-document .report-table th:nth-child(5) { width: 16mm !important; }
+
+  .report-document .report-grade-section {
+    margin-bottom: 10pt !important;
+  }
+
   .report-table thead {
     display: table-header-group !important;
   }
