@@ -1,4 +1,9 @@
 # Mapel dan nilai siswa
+- [ ] Rapikan kolom Input Nilai agar setiap angka tetap terlihat saat TP bertambah.
+- [ ] Pastikan perubahan profil hanya menyimpan kolom yang diubah, tanpa mengosongkan kelas/asrama.
+- [ ] Tambahkan simpan otomatis seluruh isian guru dan simpan saat pindah halaman.
+- [ ] Ubah label NIS/NISN menjadi NISN/NIS tanpa menukar data tersimpan.
+- [ ] Uji perubahan nilai dan profil melalui aplikasi serta tes perlindungan data.
 - [x] Samakan mapel, nilai, dan periode rapor Pondok/Dinas dengan nilai pelajaran siswa tanpa mengubah data tersimpan.
 - [x] Periksa melalui akun peminta: rapor siswa nyata memuat 14 mapel Pondok, 10 baris Dinas; PDF F4 dua halaman, Word berisi mapel dan logo sama (tampilan Microsoft Word belum diuji).
 - [x] Samakan daftar mapel dengan penugasan kelas tanpa mengubah nilai lama.
