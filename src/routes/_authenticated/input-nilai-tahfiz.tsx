@@ -631,7 +631,7 @@ function InputNilaiTahfizPage() {
                           id="date-input"
                           type="date"
                           value={inputDate}
-                          onChange={(e) => setInputDate(e.target.value)}
+                          onChange={(e) => { setInputDate(e.target.value); markEdited(); }}
                           className="h-8 w-36 text-xs"
                         />
                       </div>
@@ -919,7 +919,7 @@ function InputNilaiTahfizPage() {
                             <div className="grid grid-cols-3 gap-2">
                               <button
                                 type="button"
-                                onClick={() => setTahfizType("sabq")}
+                                onClick={() => { setTahfizType("sabq"); markEdited(); }}
                                 className={`flex flex-col items-center justify-center rounded-lg border p-3 text-left transition-all ${
                                   tahfizType === "sabq"
                                     ? "border-emerald-600 bg-emerald-50 text-emerald-900 shadow-sm dark:bg-emerald-950/40 dark:text-emerald-200"
@@ -932,7 +932,7 @@ function InputNilaiTahfizPage() {
 
                               <button
                                 type="button"
-                                onClick={() => setTahfizType("sabqy")}
+                                onClick={() => { setTahfizType("sabqy"); markEdited(); }}
                                 className={`flex flex-col items-center justify-center rounded-lg border p-3 text-left transition-all ${
                                   tahfizType === "sabqy"
                                     ? "border-blue-600 bg-blue-50 text-blue-900 shadow-sm dark:bg-blue-950/40 dark:text-blue-200"
@@ -945,7 +945,7 @@ function InputNilaiTahfizPage() {
 
                               <button
                                 type="button"
-                                onClick={() => setTahfizType("manzil")}
+                                onClick={() => { setTahfizType("manzil"); markEdited(); }}
                                 className={`flex flex-col items-center justify-center rounded-lg border p-3 text-left transition-all ${
                                   tahfizType === "manzil"
                                     ? "border-purple-600 bg-purple-50 text-purple-900 shadow-sm dark:bg-purple-950/40 dark:text-purple-200"

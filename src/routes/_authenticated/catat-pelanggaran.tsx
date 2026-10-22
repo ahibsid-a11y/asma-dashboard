@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
   AlertTriangle,
@@ -45,6 +45,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useAutosaveQueue } from "@/hooks/use-autosave-queue";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
 import { isMemberAdmin } from "@/lib/roles";
 import {
@@ -102,6 +103,31 @@ function CatatPelanggaranPage() {
   const [penalty, setPenalty] = useState<string>("");
   const [status, setStatus] = useState<"Perlu Pembinaan" | "Dalam Pembinaan" | "Selesai">("Selesai");
   const [notes, setNotes] = useState<string>("");
+
+  const recordIds = useRef<Record<string, string>>({});
+  const violationAutosave = useAutosaveQueue<Parameters<typeof saveViolationFn>[0]>(async (payload) => {
+    await saveViolationFn(payload);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["violations-today"] }),
+      queryClient.invalidateQueries({ queryKey: ["violation-summary"] }),
+    ]);
+  });
+  const queueViolation = () => {
+    if (!selectedStudentIds.length || violationTitle.trim().length < 3 || points < 1 || !date) return;
+    for (const id of selectedStudentIds) {
+      if (!recordIds.current[id]) recordIds.current[id] = crypto.randomUUID();
+    }
+    violationAutosave.enqueue("current", { data: {
+      record_ids: { ...recordIds.current }, student_ids: selectedStudentIds,
+      violation_title: violationTitle.trim(), category, points, date,
+      penalty: penalty.trim(), notes: notes.trim(), status,
+    } });
+  };
+  useEffect(() => {
+    queueViolation();
+    // No selected students/title means no initialized defaults are saved.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStudentIds, violationTitle, category, points, date, penalty, notes, status]);
 
   // Student filter states
   const [dormFilter, setDormFilter] = useState<string>("semua");
@@ -197,6 +223,7 @@ function CatatPelanggaranPage() {
   };
 
   const handleResetForm = () => {
+    recordIds.current = {};
     setSelectedStudentIds([]);
     setViolationTitle("");
     setSelectedPresetId("");
@@ -211,24 +238,9 @@ function CatatPelanggaranPage() {
   // Mutation: Submit violation
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (selectedStudentIds.length === 0) {
-        throw new Error("Pilih minimal satu santri yang melanggar");
-      }
-      if (!violationTitle.trim()) {
-        throw new Error("Nama pelanggaran wajib diisi");
-      }
-      return saveViolationFn({
-        data: {
-          student_ids: selectedStudentIds,
-          violation_title: violationTitle.trim(),
-          category,
-          points: Number(points) || 1,
-          date,
-          penalty: penalty.trim() || undefined,
-          notes: notes.trim() || undefined,
-          status,
-        },
-      });
+      queueViolation();
+      await violationAutosave.flush();
+      return { count: selectedStudentIds.length };
     },
     onSuccess: (res) => {
       toast.success(`Berhasil mencatat pelanggaran untuk ${res.count} santri!`);

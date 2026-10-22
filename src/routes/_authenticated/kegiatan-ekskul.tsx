@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Award,
   Calendar,
@@ -133,6 +133,13 @@ function KegiatanEkskulPage() {
     setAttendanceState(attendanceRef.current);
     queueAttendance({ [studentId]: attendanceRef.current[studentId] ?? { status } });
   };
+
+  useEffect(() => {
+    const key = [selectedEkskulId, selectedSemester, selectedYear, sessionDate].join(":");
+    if (sessionIds.current.has(key)) queueAttendance({});
+    // Save edits to an already started session; never submit default attendance on load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionTopic, sessionDate]);
 
   // 1. Ambil master ekskul
   const masterEkskulQuery = useQuery({

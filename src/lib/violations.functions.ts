@@ -380,6 +380,7 @@ export const recordViolation = createServerFn({ method: "POST" })
   .validator((data: unknown) =>
     z
       .object({
+        record_ids: z.record(z.string(), z.string().uuid()).optional(),
         student_ids: z.array(z.string().uuid()).min(1, "Pilih minimal 1 santri"),
         violation_title: z.string().trim().min(3, "Nama pelanggaran wajib diisi"),
         category: z.enum(["Ringan", "Sedang", "Berat"]),
@@ -409,6 +410,7 @@ export const recordViolation = createServerFn({ method: "POST" })
 
     const nowIso = new Date().toISOString();
     const rowsToInsert = data.student_ids.map((studentId) => ({
+      ...(data.record_ids?.[studentId] ? { id: data.record_ids[studentId] } : {}),
       user_id: studentId,
       date: data.date,
       violation_title: data.violation_title,
@@ -426,7 +428,7 @@ export const recordViolation = createServerFn({ method: "POST" })
     try {
       const { data: inserted, error } = await (supabaseAdmin as any)
         .from("violation_records")
-        .insert(rowsToInsert)
+        .upsert(rowsToInsert, { onConflict: "id" })
         .select();
 
       if (error) {
@@ -442,6 +444,7 @@ export const recordViolation = createServerFn({ method: "POST" })
               .join(" | ");
 
             return {
+              ...("id" in r ? { id: r.id } : {}),
               user_id: r.user_id,
               date: r.date,
               violation_title: r.violation_title,
@@ -457,7 +460,7 @@ export const recordViolation = createServerFn({ method: "POST" })
 
           const { error: fallbackError } = await (supabaseAdmin as any)
             .from("violation_records")
-            .insert(fallbackRows);
+            .upsert(fallbackRows, { onConflict: "id" });
 
           if (fallbackError) throw new Error(fallbackError.message);
           return { success: true, count: fallbackRows.length };
