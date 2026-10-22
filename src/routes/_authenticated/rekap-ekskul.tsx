@@ -16,7 +16,9 @@ import {
   Loader2,
   Search,
   Sparkles,
+  Trash2,
   UserCheck,
+  UserPlus,
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -24,10 +26,12 @@ import { toast } from "sonner";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
 import { monthLabel, semesterMonths, enrollmentMonthsLabel } from "@/lib/ekskul-months";
 import { AppShell } from "@/components/app-shell";
+import { EkskulMonthPicker } from "@/components/ekskul-month-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -40,14 +44,18 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
   approveStudentEnrollmentFn,
+  enrollStudentFn,
   getEkskulPaymentsFn,
   getEkskulRecapDataFn,
   getMasterEkskulListFn,
+  listSantriOptionsFn,
+  unenrollStudentFn,
   updateEkskulPaymentStatusFn,
 } from "@/lib/ekskul.functions";
 
@@ -77,13 +85,19 @@ function RekapEkskulPage() {
   const fetchPayments = useServerFn(getEkskulPaymentsFn);
   const updatePaymentStatus = useServerFn(updateEkskulPaymentStatusFn);
   const approveEnrollmentFn = useServerFn(approveStudentEnrollmentFn);
+  const fetchSantriOptions = useServerFn(listSantriOptionsFn);
+  const enrollStudent = useServerFn(enrollStudentFn);
+  const unenrollStudent = useServerFn(unenrollStudentFn);
 
   const [selectedMonth, setSelectedMonth] = useState("all");
   const [selectedSemester, setSelectedSemester] = useState<string>("1");
   const [selectedYear, setSelectedYear] = useState<string>("2026/2027");
   const [paymentFilterStatus, setPaymentFilterStatus] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedEkskulForMembers, setSelectedEkskulForMembers] = useState<any | null>(null);
+  const [selectedEkskulId, setSelectedEkskulId] = useState<string | null>(null);
+  const [addParticipantOpen, setAddParticipantOpen] = useState(false);
+  const [newStudentId, setNewStudentId] = useState("");
+  const [newMonths, setNewMonths] = useState<string[]>([]);
 
   // 1. Ambil Rekap Utama
   const recapQuery = useQuery({
@@ -103,7 +117,17 @@ function RekapEkskulPage() {
       }),
   });
 
+  // 3. Daftar santri aktif untuk formulir tambah peserta
+  const santriOptionsQuery = useQuery({
+    queryKey: ["santri-options"],
+    queryFn: () => fetchSantriOptions(),
+  });
+  const santriOptions = santriOptionsQuery.data ?? [];
+
   const ekskulStats = recapQuery.data?.ekskulStats || [];
+  // Dialog peserta diturunkan dari data rekap agar otomatis segar setelah simpan/hapus
+  const selectedEkskulForMembers =
+    ekskulStats.find((item: any) => item.ekskul.id === selectedEkskulId) ?? null;
   const paymentList = paymentsQuery.data?.payments || [];
   const paymentSummary = paymentsQuery.data?.summary || {
     totalBilled: 0,
@@ -144,27 +168,50 @@ function RekapEkskulPage() {
       toast.success("Keikutsertaan santri berhasil disetujui & pembayaran ditandai lunas!");
       queryClient.invalidateQueries({ queryKey: ["ekskul-recap-main"] });
       queryClient.invalidateQueries({ queryKey: ["ekskul-payments-recap"] });
-      // Update selectedEkskulForMembers bila sedang terbuka
-      if (selectedEkskulForMembers) {
-        setSelectedEkskulForMembers((prev: any) => {
-          if (!prev) return null;
-          return {
-            ...prev,
-            members: prev.members.map((m: any) =>
-              m.enrollmentId === approveEnrollmentMutation.variables
-                ? {
-                    ...m,
-                    enrollmentStatus: "aktif",
-                    payment: m.payment ? { ...m.payment, status: "lunas" } : null,
-                  }
-                : m
-            ),
-          };
-        });
-      }
     },
     onError: (err: any) => {
       toast.error(err.message || "Gagal menyetujui keikutsertaan");
+    },
+  });
+
+  // Mutation Tambah Peserta (admin/pembina dari halaman rekap)
+  const addParticipantMutation = useMutation({
+    mutationFn: () => {
+      if (!selectedEkskulForMembers) throw new Error("Pilih program ekskul terlebih dahulu");
+      const isMonthly = selectedEkskulForMembers.ekskul?.fee_period === "per_bulan";
+      return enrollStudent({
+        data: {
+          ekskulId: selectedEkskulForMembers.ekskul.id,
+          studentId: newStudentId,
+          months: isMonthly ? newMonths : undefined,
+          semester: selectedSemester,
+          academicYear: selectedYear,
+        },
+      });
+    },
+    onSuccess: () => {
+      toast.success("Peserta berhasil ditambahkan");
+      setAddParticipantOpen(false);
+      setNewStudentId("");
+      setNewMonths([]);
+      queryClient.invalidateQueries({ queryKey: ["ekskul-recap-main"] });
+      queryClient.invalidateQueries({ queryKey: ["ekskul-payments-recap"] });
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Gagal menambahkan peserta");
+    },
+  });
+
+  // Mutation Hapus Peserta (status menjadi "keluar"; presensi & tagihan lama tetap tersimpan)
+  const removeParticipantMutation = useMutation({
+    mutationFn: (enrollmentId: string) => unenrollStudent({ data: { enrollmentId } }),
+    onSuccess: () => {
+      toast.success("Peserta dikeluarkan dari program");
+      queryClient.invalidateQueries({ queryKey: ["ekskul-recap-main"] });
+      queryClient.invalidateQueries({ queryKey: ["ekskul-payments-recap"] });
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Gagal menghapus peserta");
     },
   });
 
@@ -201,7 +248,7 @@ function RekapEkskulPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Select value={selectedMonth} onValueChange={value => { setSelectedMonth(value); setSelectedEkskulForMembers(null); }}><SelectTrigger aria-label="Bulan keikutsertaan" className="h-8 w-44 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Semua Bulan</SelectItem>{semesterMonths(selectedYear, selectedSemester).map(month => <SelectItem key={month} value={month}>{monthLabel(month)}</SelectItem>)}</SelectContent></Select>
+            <Select value={selectedMonth} onValueChange={value => { setSelectedMonth(value); setSelectedEkskulId(null); }}><SelectTrigger aria-label="Bulan keikutsertaan" className="h-8 w-44 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Semua Bulan</SelectItem>{semesterMonths(selectedYear, selectedSemester).map(month => <SelectItem key={month} value={month}>{monthLabel(month)}</SelectItem>)}</SelectContent></Select>
             <Select value={selectedSemester} onValueChange={value => { setSelectedMonth("all"); setSelectedSemester(value); }}>
               <SelectTrigger className="h-8 text-xs font-medium w-[140px]">
                 <SelectValue />
@@ -390,7 +437,7 @@ function RekapEkskulPage() {
                                 size="sm"
                                 variant="outline"
                                 className="h-7 text-[11px] font-bold gap-1.5 border-primary/40 hover:bg-primary/10 text-primary"
-                                onClick={() => setSelectedEkskulForMembers(item)}
+                                onClick={() => setSelectedEkskulId(e.id)}
                               >
                                 <Users className="h-3.5 w-3.5" />
                                 Rekap Santri ({item.members?.length || 0})
@@ -559,7 +606,7 @@ function RekapEkskulPage() {
         {/* DIALOG DAFTAR SANTRI & APPROVE KEIKUTSERTAAN */}
         <Dialog
           open={Boolean(selectedEkskulForMembers)}
-          onOpenChange={(open) => !open && setSelectedEkskulForMembers(null)}
+          onOpenChange={(open) => !open && setSelectedEkskulId(null)}
         >
           <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
@@ -570,6 +617,20 @@ function RekapEkskulPage() {
               <DialogDescription className="text-xs">
                 Daftar lengkap santri terdaftar, sesi pilihan, rincian tagihan kas, dan persetujuan (approval) keikutsertaan.
               </DialogDescription>
+              <div className="pt-1">
+                <Button
+                  size="sm"
+                  className="h-8 text-xs font-bold gap-1.5"
+                  onClick={() => {
+                    setNewStudentId("");
+                    setNewMonths([]);
+                    setAddParticipantOpen(true);
+                  }}
+                >
+                  <UserPlus className="h-3.5 w-3.5" />
+                  Tambah Peserta
+                </Button>
+              </div>
             </DialogHeader>
 
             {selectedEkskulForMembers && (
@@ -671,25 +732,45 @@ function RekapEkskulPage() {
                                 </Badge>
                               </td>
                               <td className="p-2.5 text-center">
-                                {isAktif ? (
-                                  <span className="text-[11px] font-bold text-emerald-600 flex items-center justify-center gap-1">
-                                    <CheckCircle2 className="h-3.5 w-3.5" /> Disetujui
-                                  </span>
-                                ) : (
+                                <div className="flex items-center justify-center gap-1.5">
+                                  {isAktif ? (
+                                    <span className="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
+                                      <CheckCircle2 className="h-3.5 w-3.5" /> Disetujui
+                                    </span>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      className="h-7 text-[10.5px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
+                                      disabled={isPendingApprove}
+                                      onClick={() => approveEnrollmentMutation.mutate(m.enrollmentId)}
+                                    >
+                                      {isPendingApprove ? (
+                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                      ) : (
+                                        <UserCheck className="h-3.5 w-3.5" />
+                                      )}
+                                      Approve Keikutsertaan
+                                    </Button>
+                                  )}
                                   <Button
+                                    variant="ghost"
                                     size="sm"
-                                    className="h-7 text-[10.5px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
-                                    disabled={isPendingApprove}
-                                    onClick={() => approveEnrollmentMutation.mutate(m.enrollmentId)}
+                                    className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
+                                    title="Keluarkan peserta dari program"
+                                    disabled={removeParticipantMutation.isPending}
+                                    onClick={() => {
+                                      if (
+                                        window.confirm(
+                                          `Keluarkan ${m.name} dari program ini? Riwayat presensi dan tagihan lama tetap tersimpan.`,
+                                        )
+                                      ) {
+                                        removeParticipantMutation.mutate(m.enrollmentId);
+                                      }
+                                    }}
                                   >
-                                    {isPendingApprove ? (
-                                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                    ) : (
-                                      <UserCheck className="h-3.5 w-3.5" />
-                                    )}
-                                    Approve Keikutsertaan
+                                    <Trash2 className="h-3.5 w-3.5" />
                                   </Button>
-                                )}
+                                </div>
                               </td>
                             </tr>
                           );
@@ -700,6 +781,76 @@ function RekapEkskulPage() {
                 )}
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* DIALOG TAMBAH PESERTA */}
+        <Dialog open={addParticipantOpen} onOpenChange={setAddParticipantOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-base font-bold flex items-center gap-2">
+                <UserPlus className="h-5 w-5 text-primary" />
+                Tambah Peserta: {selectedEkskulForMembers?.ekskul?.name}
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Pilih santri yang akan didaftarkan. Untuk ekskul bulanan, pilih juga bulan
+                keikutsertaannya — tagihan dibuat per bulan yang dipilih.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 pt-1">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Santri</Label>
+                <Select value={newStudentId} onValueChange={setNewStudentId}>
+                  <SelectTrigger className="h-9 text-xs">
+                    <SelectValue placeholder="Pilih santri..." />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-64">
+                    {santriOptions.map((s: any) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name} — {s.class_name} (NIS {s.nis_nip || "-"})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedEkskulForMembers?.ekskul?.fee_period === "per_bulan" && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Bulan Keikutsertaan</Label>
+                  <EkskulMonthPicker
+                    options={semesterMonths(selectedYear, selectedSemester).map((m) => ({
+                      value: m,
+                      label: monthLabel(m),
+                    }))}
+                    selected={newMonths}
+                    onChange={setNewMonths}
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Bila santri sudah terdaftar, bulan yang dipilih akan ditambahkan tanpa
+                    menghapus bulan yang sudah dimilikinya.
+                  </p>
+                </div>
+              )}
+
+              <DialogFooter>
+                <Button variant="outline" size="sm" onClick={() => setAddParticipantOpen(false)}>
+                  Batal
+                </Button>
+                <Button
+                  size="sm"
+                  className="font-bold"
+                  disabled={
+                    !newStudentId ||
+                    (selectedEkskulForMembers?.ekskul?.fee_period === "per_bulan" &&
+                      newMonths.length === 0) ||
+                    addParticipantMutation.isPending
+                  }
+                  onClick={() => addParticipantMutation.mutate()}
+                >
+                  {addParticipantMutation.isPending ? "Menyimpan…" : "Tambahkan"}
+                </Button>
+              </DialogFooter>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
