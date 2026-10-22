@@ -163,7 +163,7 @@ export async function enrollStudentToEkskul(data: {
   semester: string;
   academic_year: string;
   session_label?: string | undefined;
-  months?: string[];
+  months?: string[] | undefined;
 }): Promise<EkskulEnrollment> {
   const supabase = await db();
   const ekskul = await getEkskulById(data.ekskul_id);
