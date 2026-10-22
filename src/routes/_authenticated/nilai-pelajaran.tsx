@@ -70,7 +70,7 @@ function NilaiPelajaranPage() {
   const fetchMyGradesFn = useServerFn(getMyGrades);
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["my-academic-grades", profile?.id, profile?.class, semester, academicYear],
+    queryKey: ["my-academic-grades", profile?.id, semester, academicYear],
     queryFn: () => fetchMyGradesFn({ data: { semester: semester === "2" ? "2" : "1", academic_year: academicYear } }),
     enabled: !!profile?.id,
     refetchInterval: 30_000,
