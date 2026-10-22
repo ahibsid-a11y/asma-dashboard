@@ -94,6 +94,9 @@ export function StudentReportCardDialog({
     enabled: open && Boolean(studentId) && activeTab === "kesantrian",
   });
 
+  const activeQuery = activeTab === "pondok" ? pondokQuery : activeTab === "dinas" ? dinasQuery : kesantrianQuery;
+  const reportReady = Boolean(activeQuery.data) && !activeQuery.isFetching && !activeQuery.error;
+
   useEffect(() => {
     if (!open) return;
     document.body.classList.add("report-dialog-open");
@@ -103,6 +106,7 @@ export function StudentReportCardDialog({
   }, [open]);
 
   const handlePrint = () => {
+    if (!reportReady) return;
     document.body.classList.add("printing-report-active");
     window.print();
   };
@@ -182,7 +186,7 @@ export function StudentReportCardDialog({
               size="sm"
               variant="outline"
               onClick={handleDownloadWord}
-              disabled={isDownloadingWord}
+              disabled={isDownloadingWord || !reportReady}
               className="min-w-0 gap-1.5 px-2 font-medium shadow-xs border-primary/30 hover:bg-primary/5 text-foreground sm:px-3"
               title="Unduh format Word (F4/Folio) untuk diedit di MS Word atau WPS"
             >
@@ -197,6 +201,7 @@ export function StudentReportCardDialog({
               size="sm"
               variant="outline"
               onClick={handlePrint}
+              disabled={!reportReady}
               className="min-w-0 gap-1.5 px-2 font-medium shadow-xs sm:px-3"
             >
               <Printer className="w-4 h-4 text-primary" />
@@ -707,6 +712,15 @@ function RaporPondok({ data }: { data: any }) {
         </div>
         <ReportGradesTable items={data.groupedSubjects.bahasa_arab} />
       </div>
+
+      {data.groupedSubjects.muatan_lokal?.length > 0 && (
+        <div className="report-grade-section mb-6 print-section">
+          <div className="flex items-center gap-2 mb-2">
+            <h4 className="text-xs md:text-sm font-bold uppercase">Muatan Lokal</h4>
+          </div>
+          <ReportGradesTable items={data.groupedSubjects.muatan_lokal} />
+        </div>
+      )}
 
       {/* Kehadiran & Catatan */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 text-xs print-section print-avoid-break">
