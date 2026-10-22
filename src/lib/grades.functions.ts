@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { selectAssignedSubjects } from "./grades-subjects";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { isMemberAdmin } from "@/lib/roles";
@@ -136,24 +137,24 @@ export async function subjectsForClass(
   supabaseAdmin: any,
   className: string,
   academicYear: string,
+  fallbackToCatalog = true,
 ): Promise<AcademicSubject[]> {
   const subjects = await ensureSubjects(supabaseAdmin);
   const active = subjects.filter((s) => s.is_active);
-  if (!className) return active;
+  if (!className) return fallbackToCatalog ? active : [];
 
   try {
     const { classNameVariants } = await import("./curriculum-plan.server");
-    const { data: rows } = await (supabaseAdmin as any)
+    const { data: rows, error } = await (supabaseAdmin as any)
       .from("class_subject_assignments")
       .select("subject_id")
       .in("class_name", classNameVariants(className))
       .eq("academic_year", academicYear);
 
-    const ids = new Set<string>((rows ?? []).map((r: any) => r.subject_id));
-    if (ids.size === 0) return active;
-    const scoped = active.filter((s) => ids.has(s.id));
-    return scoped.length > 0 ? scoped : active;
-  } catch {
+    if (error) throw new Error(error.message);
+    return selectAssignedSubjects(subjects, rows ?? [], fallbackToCatalog);
+  } catch (error) {
+    if (!fallbackToCatalog) throw error;
     return active;
   }
 }
@@ -938,9 +939,8 @@ export const getStudentReportCard = createServerFn({ method: "POST" })
 
     if (stdErr || !student) throw new Error("Santri tidak ditemukan");
 
-    // 2. Daftar mapel aktif
-    const allSubjects = await ensureSubjects(supabaseAdmin);
-    const activeSubjects = allSubjects.filter((s) => s.is_active);
+    // 2. Mapel sesuai penugasan kelas santri.
+    const activeSubjects = await subjectsForClass(supabaseAdmin, student.class ?? "", data.academic_year, false);
 
     // 3. Nilai summaries
     const { data: summaries } = await (supabaseAdmin as any)
@@ -1083,28 +1083,36 @@ export const getStudentReportCard = createServerFn({ method: "POST" })
   });
 
 /** 9. Ambil data nilai mandiri untuk santri yang sedang login */
-export const getMyGrades = createServerFn({ method: "GET" })
+export const getMyGrades = createServerFn({ method: "POST" })
+  .validator((input: unknown) => z.object({
+    semester: z.enum(["1", "2"]).default("1"),
+    academic_year: z.string().regex(/^\d{4}\/\d{4}$/).default("2026/2027"),
+  }).parse(input))
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .handler(async ({ data, context }) => {
     const ctx = context as Ctx;
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const supabase = ctx.supabase;
 
-    const { data: me } = await (supabaseAdmin as any)
+    const { data: me, error: profileError } = await supabase
       .from("profiles")
       .select("id,name,display_name,nis_nip,dorm,class,avatar")
       .eq("id", ctx.userId)
       .maybeSingle();
 
+    if (profileError) throw new Error(profileError.message);
     if (!me) throw new Error("Santri tidak ditemukan");
 
-    // Panggil getStudentReportCard untuk semester 1 tahun 2026/2027
-    const allSubjects = await ensureSubjects(supabaseAdmin);
-    const activeSubjects = allSubjects.filter((s) => s.is_active);
+    const activeSubjects = await subjectsForClass(supabase, me.class ?? "", data.academic_year, false);
+    const { classNameVariants } = await import("./curriculum-plan.server");
+    const classVariants = classNameVariants(me.class ?? "");
 
-    const { data: summaries } = await (supabaseAdmin as any)
+    const { data: summaries, error: summaryError } = await supabase
       .from("student_subject_summaries")
       .select("*")
-      .eq("student_id", me.id);
+      .eq("student_id", me.id)
+      .eq("semester", data.semester)
+      .eq("academic_year", data.academic_year);
+    if (summaryError) throw new Error(summaryError.message);
 
     const summaryMap = new Map<string, any>();
     for (const sum of summaries ?? []) {
@@ -1112,7 +1120,7 @@ export const getMyGrades = createServerFn({ method: "GET" })
     }
 
     // TP grades
-    const { data: tpGrades } = await (supabaseAdmin as any)
+    const { data: tpGrades, error: tpError } = await supabase
       .from("student_tp_grades")
       .select(
         `
@@ -1125,14 +1133,19 @@ export const getMyGrades = createServerFn({ method: "GET" })
         )
       `,
       )
-      .eq("student_id", me.id);
+      .eq("student_id", me.id)
+      .eq("learning_objectives.semester", data.semester)
+      .eq("learning_objectives.academic_year", data.academic_year)
+      .in("learning_objectives.class_name", classVariants);
+    if (tpError) throw new Error(tpError.message);
 
     const tpMap: Record<string, any[]> = {};
     for (const g of tpGrades ?? []) {
       const lo = g.learning_objectives;
       if (!lo) continue;
-      if (!tpMap[lo.subject_id]) tpMap[lo.subject_id] = [];
-      tpMap[lo.subject_id]!.push({
+      const subjectGrades = tpMap[lo.subject_id] ?? [];
+      tpMap[lo.subject_id] = subjectGrades;
+      subjectGrades.push({
         code: lo.code,
         desc: lo.description,
         score: Number(g.score),
