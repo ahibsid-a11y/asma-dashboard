@@ -152,8 +152,9 @@ function IncidentalPage() {
   });
 
   const saveEventMutation = useMutation({
-    mutationFn: () =>
-      submitEvent({
+    mutationFn: async () => {
+      await eventAutosave.flush();
+      return submitEvent({
         data: {
           id: form.id || newEventId.current,
           title: form.title,
@@ -163,7 +164,8 @@ function IncidentalPage() {
           target_roles: form.target_roles,
           target_user_ids: form.target_user_ids,
         },
-      }) as Promise<{ id: string }>,
+      }) as Promise<{ id: string }>;
+    },
     onSuccess: async (result) => {
       toast.success(form.id ? "Kegiatan diperbarui" : "Kegiatan dibuat");
       setShowForm(false);

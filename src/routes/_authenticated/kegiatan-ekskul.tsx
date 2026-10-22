@@ -124,7 +124,7 @@ function KegiatanEkskulPage() {
     const key = [selectedEkskulId, selectedSemester, selectedYear, sessionDate].join(":");
     let id = sessionIds.current.get(key);
     if (!id) { id = crypto.randomUUID(); sessionIds.current.set(key, id); }
-    attendanceAutosave.enqueue(key, { data: { id, ekskulId: selectedEkskulId, semester: selectedSemester,
+    attendanceAutosave.enqueue([key, ...Object.keys(records).sort()].join(":"), { data: { id, ekskulId: selectedEkskulId, semester: selectedSemester,
       academicYear: selectedYear, date: sessionDate, topic: sessionTopic,
       records: Object.entries(records).map(([student_id, rec]) => ({ student_id, ...rec })) } });
   };

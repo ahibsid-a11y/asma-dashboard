@@ -373,13 +373,13 @@ function InputNilaiTahfizPage() {
     } else return;
     autosave.enqueue(key, { kind, data });
   };
-  const markEdited = () => {
+  const markEdited = (date = inputDate) => {
     if (!activeStudent?.id) return;
-    lastEdit.current = { studentId: activeStudent.id, kind: activeTab, date: inputDate };
+    lastEdit.current = { studentId: activeStudent.id, kind: activeTab, date };
     setEditVersion((v) => v + 1);
   };
   useEffect(() => {
-    if (editVersion === 0 || lastEdit.current?.studentId !== activeStudent?.id || lastEdit.current?.kind !== activeTab) return;
+    if (editVersion === 0 || lastEdit.current?.studentId !== activeStudent?.id || lastEdit.current?.kind !== activeTab || lastEdit.current?.date !== inputDate) return;
     queueCurrent();
     // Edits only: never save initialized form defaults.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -631,7 +631,7 @@ function InputNilaiTahfizPage() {
                           id="date-input"
                           type="date"
                           value={inputDate}
-                          onChange={(e) => { setInputDate(e.target.value); markEdited(); }}
+                          onChange={(e) => { setInputDate(e.target.value); markEdited(e.target.value); }}
                           className="h-8 w-36 text-xs"
                         />
                       </div>

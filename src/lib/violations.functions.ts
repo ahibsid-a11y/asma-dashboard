@@ -408,6 +408,18 @@ export const recordViolation = createServerFn({ method: "POST" })
       throw new Error("Hanya admin dan kepala kesantrian yang berhak mencatat pelanggaran santri");
     }
 
+    const suppliedIds = Object.values(data.record_ids ?? {});
+    if (suppliedIds.length) {
+      const { data: existing, error } = await ctx.supabase
+        .from("violation_records").select("id,user_id,recorded_by,created_at").in("id", suppliedIds);
+      if (error) throw new Error(error.message);
+      for (const row of existing ?? []) {
+        if (row.recorded_by !== ctx.userId || data.record_ids?.[row.user_id] !== row.id) {
+          throw new Error("Catatan ini tidak sesuai dengan pencatat atau santri yang dipilih");
+        }
+      }
+    }
+
     const nowIso = new Date().toISOString();
     const rowsToInsert = data.student_ids.map((studentId) => ({
       ...(data.record_ids?.[studentId] ? { id: data.record_ids[studentId] } : {}),
