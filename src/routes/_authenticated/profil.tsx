@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
 import { getMyProfile, updateMyProfile } from "@/lib/profile.functions";
+import { changedProfileFields } from "@/lib/profile-patch";
 import {
   ACCOUNT_TYPE_LABELS,
   ACCOUNT_TYPES,
@@ -147,15 +148,8 @@ function ProfilePage() {
 
   const mutation = useMutation({
     mutationFn: (values: FormState) => {
-      const payload: Record<string, unknown> = {
-        name: values.name,
-        email: values.email,
-        phone: values.phone,
-        nis_nip: values.nis_nip,
-        avatar: values.avatar,
-      };
-      if (values.password) payload["password"] = values.password;
-      if (values.gender) payload["gender"] = values.gender;
+      if (!data) throw new Error("Data profil belum tersedia");
+      const payload = changedProfileFields({ ...values }, { ...data });
       return saveProfile({ data: payload });
     },
     onSuccess: async () => {
@@ -317,7 +311,7 @@ function ProfilePage() {
 
             <div className="grid gap-5 sm:grid-cols-2">
               <div className="grid gap-2">
-                <Label htmlFor="nis_nip">Nomor Induk (NIS/NIY)</Label>
+                <Label htmlFor="nis_nip">{isSantri ? "NISN/NIS" : "Nomor Induk (NIY)"}</Label>
                 <Input
                   id="nis_nip"
                   value={form.nis_nip}
