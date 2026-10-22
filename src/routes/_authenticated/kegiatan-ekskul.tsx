@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Award,
   Calendar,
@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useAutosaveQueue } from "@/hooks/use-autosave-queue";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
 import {
   getEkskulEnrollmentDataFn,
@@ -55,6 +56,8 @@ export const Route = createFileRoute("/_authenticated/kegiatan-ekskul")({
         content: "Presensi sesi kegiatan ekstrakurikuler santri dan penilaian akhir semester untuk Rapor Dinas.",
       },
       { property: "og:title", content: "Kegiatan & Nilai Ekstrakurikuler | SIM-AHIBS" },
+      { property: "og:description", content: "Presensi kegiatan dan penilaian ekstrakurikuler santri AHIBS." },
+      { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },
     ],
   }),
@@ -89,6 +92,26 @@ function KegiatanEkskulPage() {
   const [localGrades, setLocalGrades] = useState<
     Record<string, { grade: "A" | "B" | "C" | "D"; predicate: string; description: string }>
   >({});
+
+  const gradesRef = useRef(localGrades);
+  const gradeAutosave = useAutosaveQueue<Parameters<typeof saveGradeFn>[0]>(async (payload) => {
+    await saveGradeFn(payload);
+    await queryClient.invalidateQueries({ queryKey: ["report-card-dinas"] });
+  });
+  const updateGrade = (studentId: string, patch: Partial<typeof localGrades[string]>) => {
+    const current = gradesRef.current[studentId];
+    if (!current) return;
+    const next = { ...current, ...patch };
+    gradesRef.current = { ...gradesRef.current, [studentId]: next };
+    setLocalGrades(gradesRef.current);
+    gradeAutosave.enqueue([selectedEkskulId, studentId, selectedSemester, selectedYear].join(":"), {
+      data: { ekskulId: selectedEkskulId, studentId, semester: selectedSemester,
+        academicYear: selectedYear, grade: next.grade, predicate: next.predicate as any, description: next.description },
+    });
+  };
+  const changeFilter = async (setter: (value: string) => void, value: string) => {
+    try { await gradeAutosave.flush(); setter(value); } catch { /* Preserve edits. */ }
+  };
 
   // 1. Ambil master ekskul
   const masterEkskulQuery = useQuery({
@@ -161,7 +184,7 @@ function KegiatanEkskulPage() {
           };
         }
       }
-      setLocalGrades(initGrades);
+      if (!gradeAutosave.hasPending()) { gradesRef.current = initGrades; setLocalGrades(initGrades); }
       return res;
     },
     enabled: Boolean(selectedEkskulId),
@@ -260,7 +283,7 @@ function KegiatanEkskulPage() {
               {/* Ekskul */}
               <div className="space-y-1">
                 <Label className="text-[11px] text-muted-foreground font-semibold">Pilih Program Ekskul</Label>
-                <Select value={selectedEkskulId} onValueChange={setSelectedEkskulId}>
+                <Select value={selectedEkskulId} onValueChange={(value) => void changeFilter(setSelectedEkskulId, value)}>
                   <SelectTrigger className="h-9 text-xs font-medium">
                     <SelectValue />
                   </SelectTrigger>
@@ -277,7 +300,7 @@ function KegiatanEkskulPage() {
               {/* Semester */}
               <div className="space-y-1">
                 <Label className="text-[11px] text-muted-foreground font-semibold">Semester</Label>
-                <Select value={selectedSemester} onValueChange={setSelectedSemester}>
+                <Select value={selectedSemester} onValueChange={(value) => void changeFilter(setSelectedSemester, value)}>
                   <SelectTrigger className="h-9 text-xs font-medium">
                     <SelectValue />
                   </SelectTrigger>
@@ -291,7 +314,7 @@ function KegiatanEkskulPage() {
               {/* Tahun Ajaran */}
               <div className="space-y-1">
                 <Label className="text-[11px] text-muted-foreground font-semibold">Tahun Pelajaran</Label>
-                <Select value={selectedYear} onValueChange={setSelectedYear}>
+                <Select value={selectedYear} onValueChange={(value) => void changeFilter(setSelectedYear, value)}>
                   <SelectTrigger className="h-9 text-xs font-medium">
                     <SelectValue />
                   </SelectTrigger>
@@ -568,14 +591,7 @@ function KegiatanEkskulPage() {
                                       C: "Cukup",
                                       D: "Kurang",
                                     };
-                                    setLocalGrades((prev) => ({
-                                      ...prev,
-                                      [studentId]: {
-                                        ...prev[studentId]!,
-                                        grade: val,
-                                        predicate: predMap[val],
-                                      },
-                                    }));
+                                    updateGrade(studentId, { grade: val, predicate: predMap[val] });
                                   }}
                                 >
                                   <SelectTrigger className="h-9 text-xs font-bold">
@@ -597,15 +613,7 @@ function KegiatanEkskulPage() {
                                 </Label>
                                 <Input
                                   value={current.description}
-                                  onChange={(e) =>
-                                    setLocalGrades((prev) => ({
-                                      ...prev,
-                                      [studentId]: {
-                                        ...prev[studentId]!,
-                                        description: e.target.value,
-                                      },
-                                    }))
-                                  }
+                                  onChange={(e) => updateGrade(studentId, { description: e.target.value })}
                                   placeholder="Deskripsi pencapaian santri dalam kegiatan ekskul ini..."
                                   className="h-9 text-xs"
                                 />
