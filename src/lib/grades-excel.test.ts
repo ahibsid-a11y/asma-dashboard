@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
 import * as XLSX from "xlsx";
 
 import { parseGradesExcel, type GradesExcelStudent, type GradesExcelTp } from "./grades-excel";
@@ -28,13 +29,13 @@ describe("parseGradesExcel", () => {
       students,
       tps,
     );
-    expect(rows).toHaveLength(1);
-    expect(rows[0]!.studentId).toBe("s1");
-    expect(rows[0]!.tpScores).toEqual({ tp1: 80, tp2: 90 });
-    expect(rows[0]!.stsScore).toBe(85);
-    expect(rows[0]!.sasScore).toBe(88);
-    expect(rows[0]!.changeCount).toBe(4);
-    expect(rows[0]!.errors).toEqual([]);
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0]!.studentId, "s1");
+    assert.deepEqual(rows[0]!.tpScores, { tp1: 80, tp2: 90 });
+    assert.equal(rows[0]!.stsScore, 85);
+    assert.equal(rows[0]!.sasScore, 88);
+    assert.equal(rows[0]!.changeCount, 4);
+    assert.deepEqual(rows[0]!.errors, []);
   });
 
   it("sel kosong tidak dihitung sebagai perubahan sehingga nilai lama tidak tertimpa", async () => {
@@ -43,11 +44,11 @@ describe("parseGradesExcel", () => {
       students,
       tps,
     );
-    expect(rows[0]!.studentId).toBe("s2");
-    expect(rows[0]!.tpScores).toEqual({ tp2: 70 });
-    expect(rows[0]!.stsScore).toBeUndefined();
-    expect(rows[0]!.sasScore).toBeUndefined();
-    expect(rows[0]!.changeCount).toBe(1);
+    assert.equal(rows[0]!.studentId, "s2");
+    assert.deepEqual(rows[0]!.tpScores, { tp2: 70 });
+    assert.equal(rows[0]!.stsScore, undefined);
+    assert.equal(rows[0]!.sasScore, undefined);
+    assert.equal(rows[0]!.changeCount, 1);
   });
 
   it("menandai baris dengan NIS yang tidak dikenal", async () => {
@@ -56,8 +57,8 @@ describe("parseGradesExcel", () => {
       students,
       tps,
     );
-    expect(rows[0]!.studentId).toBeNull();
-    expect(rows[0]!.errors.join(" ")).toContain("tidak cocok");
+    assert.equal(rows[0]!.studentId, null);
+    assert.match(rows[0]!.errors.join(" "), /tidak cocok/);
   });
 
   it("menolak nilai di luar rentang 0-100", async () => {
@@ -66,8 +67,8 @@ describe("parseGradesExcel", () => {
       students,
       tps,
     );
-    expect(rows[0]!.tpScores).toEqual({});
-    expect(rows[0]!.errors.join(" ")).toContain("0-100");
+    assert.deepEqual(rows[0]!.tpScores, {});
+    assert.match(rows[0]!.errors.join(" "), /0-100/);
   });
 
   it("mencocokkan berdasarkan nama bila kolom NIS kosong", async () => {
@@ -76,8 +77,8 @@ describe("parseGradesExcel", () => {
       students,
       tps,
     );
-    expect(rows[0]!.studentId).toBe("s2");
-    expect(rows[0]!.stsScore).toBe(77);
-    expect(rows[0]!.errors).toEqual([]);
+    assert.equal(rows[0]!.studentId, "s2");
+    assert.equal(rows[0]!.stsScore, 77);
+    assert.deepEqual(rows[0]!.errors, []);
   });
 });
