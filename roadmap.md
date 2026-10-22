@@ -1,5 +1,5 @@
 # Mapel dan nilai siswa
-- [ ] Sinkronkan nama penandatangan rapor dengan wali kelas dan jabatan kepala sekolah tanpa mengubah data; uji akses terbatas dan tampilan rapor.
+- [x] Sinkronkan nama penandatangan rapor dengan wali kelas dan jabatan kepala sekolah tanpa mengubah data; sembilan tes lulus, akun peminta menampilkan nama/NIY di Pondok, Dinas, PDF dua halaman dan Word; akses akun siswa langsung tetap terhalang izin sesi sebelumnya.
 - [x] Rapikan kolom Input Nilai agar setiap angka tetap terlihat saat TP bertambah.
 - [x] Pastikan perubahan profil hanya menyimpan kolom yang diubah, tanpa mengosongkan kelas/asrama.
 - [x] Simpan otomatis nilai pelajaran, Kokurikuler, Tahfiz, nilai/presensi Ekskul, kegiatan insidental dan catatan pelanggaran lengkap; Mutaba'ah/presensi sudah langsung menyimpan. CP dan Perangkat Ajar menunggu simpan sebelum navigasi.
