@@ -264,7 +264,7 @@ function PendaftaranEkskulPage() {
                         }}
                       >
                         <UserPlus className="h-3.5 w-3.5" />
-                        Daftar & Pilih Sesi
+                        {isMonthly ? "Pilih Bulan Keikutsertaan" : "Daftar & Pilih Sesi"}
                       </Button>
                     )}
                   </div>
@@ -296,6 +296,7 @@ function PendaftaranEkskulPage() {
                   <Label className="text-xs font-semibold">Pilih Sesi / Bulan:</Label>
                   {selectedEkskulToEnroll.fee_period === "per_bulan" ? <EkskulMonthPicker
                     options={semesterMonths(selectedYear, selectedSemester).filter(month => selectedEkskulToEnroll.available_months == null || selectedEkskulToEnroll.available_months.includes(Number(month.slice(5)))).map(month => ({ value: month, label: monthLabel(month) }))}
+                    disabled={myPortalQuery.data?.myEkskuls.find(item => item.ekskul?.id === selectedEkskulToEnroll.id)?.enrollment.participation_months ?? []}
                     selected={selectedMonths} onChange={setSelectedMonths}
                   /> : <Select value={selectedSession} onValueChange={setSelectedSession}>
                     <SelectTrigger className="h-9 text-xs">
@@ -310,6 +311,7 @@ function PendaftaranEkskulPage() {
                       <SelectItem value="Sesi 6 (Desember / 4 Pertemuan)">Sesi 6 (Desember / 4 Pertemuan)</SelectItem>
                     </SelectContent>
                   </Select>}
+                  {selectedEkskulToEnroll.fee_period === "per_bulan" && <p className="text-muted-foreground">Bulan terdaftar: {myPortalQuery.data?.myEkskuls.find(item => item.ekskul?.id === selectedEkskulToEnroll.id)?.enrollment.participation_months?.map(monthLabel).join(", ") || "—"}</p>}
                 </div>
 
                 <div className="p-3 rounded-lg border bg-muted/20 space-y-1.5">
@@ -334,6 +336,8 @@ function PendaftaranEkskulPage() {
                     </span>
                   </div>
                 </div>
+
+                {selectedEkskulToEnroll.fee_period === "per_bulan" && <div className="flex justify-between font-semibold"><span>Total {selectedMonths.length} bulan</span><span>Rp {(selectedEkskulToEnroll.fee * selectedMonths.length).toLocaleString("id-ID")}</span></div>}
 
                 <p className="text-[11px] text-muted-foreground">
                   * Setelah mendaftar, keikutsertaan Anda akan disetujui (approve) oleh pembina/admin setelah pembayaran iuran diselesaikan.

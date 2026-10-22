@@ -681,7 +681,7 @@ export const getEkskulRecapDataFn = createServerFn({ method: "POST" })
           name: s?.name || s?.display_name || s?.full_name || "Santri",
           className: s?.class || "-",
           nis: s?.nis_nip || "-",
-          sessionLabel: enrollmentMonthsLabel(enr),
+          sessionLabel: ekskul.fee_period === "per_bulan" ? enrollmentMonthsLabel(enr) : enr.session_label || `Semester ${enr.semester}`,
           enrollmentStatus: enr.status,
           enrolledAt: enr.enrolled_at,
           payment: payment

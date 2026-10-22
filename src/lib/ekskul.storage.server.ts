@@ -253,6 +253,7 @@ export async function approveStudentEnrollment(
       notes: approvedBy ? `Disetujui oleh ${approvedBy}` : "Disetujui admin",
     })
     .eq("enrollment_id", enrollmentId)
+    .is("month_key", null)
     .eq("status", "belum_bayar");
 
   return enr as EkskulEnrollment;
