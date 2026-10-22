@@ -328,6 +328,7 @@ export async function createBillingForStudent(data: {
 // ──────────────────────────────────────────────────────────────
 
 export async function createSessionAndAttendance(data: {
+  id?: string | undefined;
   ekskul_id: string;
   date: string;
   topic: string;
@@ -343,14 +344,15 @@ export async function createSessionAndAttendance(data: {
   const supabase = await db();
   const { data: session, error } = await supabase
     .from("ekskul_sessions")
-    .insert({
+    .upsert({
+      ...(data.id ? { id: data.id } : {}),
       ekskul_id: data.ekskul_id,
       date: data.date,
       topic: data.topic,
       semester: data.semester,
       academic_year: data.academic_year,
       created_by: data.created_by || null,
-    })
+    }, { onConflict: "id" })
     .select("*")
     .single();
   if (error) throw new Error(error.message);

@@ -153,7 +153,7 @@ export function TahfizReportDialog({ isOpen, onClose, exam }: TahfizReportDialog
               <span className="font-bold text-emerald-800">{exam.target_juz}</span>
             </div>
             <div className="flex">
-              <span className="w-32 font-bold text-slate-700">NIS / No. Induk</span>
+              <span className="w-32 font-bold text-slate-700">NISN/NIS</span>
               <span className="w-3">:</span>
               <span className="font-mono text-slate-800">{exam.nis_nip}</span>
             </div>

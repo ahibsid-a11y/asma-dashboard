@@ -585,7 +585,7 @@ function InputNilaiTahfizPage() {
                         <Badge variant="secondary">{activeStudent.halaqoh || "Halaqoh"}</Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        NIS: {activeStudent.nis_nip || "-"} • Target Mustawa:{" "}
+                        NISN/NIS: {activeStudent.nis_nip || "-"} • Target Mustawa:{" "}
                         <span className="font-semibold text-foreground">
                           {activeStudent.target?.semesterGasal.title || "Tahfiz"}
                         </span>

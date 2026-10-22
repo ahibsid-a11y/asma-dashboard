@@ -398,7 +398,7 @@ function BiodataGrid({ student, semester, academicYear }: { student: any; semest
         </span>
       </div>
       <div className="flex">
-        <span className="w-32 font-semibold text-slate-600 dark:text-slate-400 print:text-black">NIS / NISN</span>
+        <span className="w-32 font-semibold text-slate-600 dark:text-slate-400 print:text-black">NISN/NIS</span>
         <span className="text-slate-800 dark:text-slate-200 print:text-black">
           : {student.nis_nip || "-"}
         </span>

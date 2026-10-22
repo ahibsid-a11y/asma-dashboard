@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useBlocker } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -619,6 +619,17 @@ function PerangkatAjarPage() {
     if (promesDirty && !hasUnsavedTp) savePromesMutation.mutate({ silent: true, semester: promesSemRef.current });
   };
   const anyDirty = hasUnsavedTp || allocDirty || promesDirty;
+  useBlocker({
+    shouldBlockFn: async () => {
+      try {
+        if (saveTpMutation.isPending || hasUnsavedTp) await saveTpMutation.mutateAsync({ silent: true });
+        if (saveTimeAllocMutation.isPending || allocDirty) await saveTimeAllocMutation.mutateAsync({ silent: true });
+        if (savePromesMutation.isPending || promesDirty) await savePromesMutation.mutateAsync({ silent: true, semester: promesSemRef.current });
+        return false;
+      } catch { return true; }
+    },
+    enableBeforeUnload: anyDirty,
+  });
   useEffect(() => {
     const onHide = () => {
       if (document.visibilityState === "hidden") flushRef.current();

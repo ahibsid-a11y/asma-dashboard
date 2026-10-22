@@ -110,7 +110,28 @@ function KegiatanEkskulPage() {
     });
   };
   const changeFilter = async (setter: (value: string) => void, value: string) => {
-    try { await gradeAutosave.flush(); setter(value); } catch { /* Preserve edits. */ }
+    try { await Promise.all([gradeAutosave.flush(), attendanceAutosave.flush()]); setter(value); } catch { /* Preserve edits. */ }
+  };
+
+  const attendanceRef = useRef(attendanceState);
+  const sessionIds = useRef(new Map<string, string>());
+  const attendanceAutosave = useAutosaveQueue<Parameters<typeof recordAttendanceFn>[0]>(async (payload) => {
+    await recordAttendanceFn(payload);
+    await queryClient.invalidateQueries({ queryKey: ["ekskul-sessions-grades"] });
+  });
+  const queueAttendance = (records: typeof attendanceState) => {
+    if (!sessionTopic.trim() || !sessionDate || !selectedEkskulId) return;
+    const key = [selectedEkskulId, selectedSemester, selectedYear, sessionDate].join(":");
+    let id = sessionIds.current.get(key);
+    if (!id) { id = crypto.randomUUID(); sessionIds.current.set(key, id); }
+    attendanceAutosave.enqueue(key, { data: { id, ekskulId: selectedEkskulId, semester: selectedSemester,
+      academicYear: selectedYear, date: sessionDate, topic: sessionTopic,
+      records: Object.entries(records).map(([student_id, rec]) => ({ student_id, ...rec })) } });
+  };
+  const updateAttendance = (studentId: string, status: "hadir" | "izin" | "sakit" | "alpa") => {
+    attendanceRef.current = { ...attendanceRef.current, [studentId]: { ...attendanceRef.current[studentId], status } };
+    setAttendanceState(attendanceRef.current);
+    queueAttendance({ [studentId]: attendanceRef.current[studentId] ?? { status } });
   };
 
   // 1. Ambil master ekskul
@@ -140,7 +161,7 @@ function KegiatanEkskulPage() {
       for (const m of res.members) {
         initAtt[m.student.id] = { status: "hadir" };
       }
-      setAttendanceState(initAtt);
+      if (!attendanceAutosave.hasPending()) { attendanceRef.current = initAtt; setAttendanceState(initAtt); }
       return res;
     },
     enabled: Boolean(selectedEkskulId),
@@ -195,23 +216,9 @@ function KegiatanEkskulPage() {
 
   // Mutation: Simpan Presensi Sesi
   const saveAttendanceMutation = useMutation({
-    mutationFn: () => {
-      const records = members.map((m: any) => ({
-        student_id: m.student.id,
-        status: attendanceState[m.student.id]?.status || "hadir",
-        notes: attendanceState[m.student.id]?.notes || "",
-      }));
-
-      return recordAttendanceFn({
-        data: {
-          ekskulId: selectedEkskulId,
-          date: sessionDate,
-          topic: sessionTopic.trim(),
-          semester: selectedSemester,
-          academicYear: selectedYear,
-          records,
-        },
-      });
+    mutationFn: async () => {
+      queueAttendance(Object.fromEntries(members.map((m: any) => [m.student.id, attendanceRef.current[m.student.id] || { status: "hadir" }])));
+      await attendanceAutosave.flush();
     },
     onSuccess: () => {
       toast.success(`Presensi ${selectedEkskul?.name} tanggal ${sessionDate} berhasil disimpan!`);
@@ -256,7 +263,9 @@ function KegiatanEkskulPage() {
     for (const m of members) {
       updated[m.student.id] = { status: "hadir" };
     }
+    attendanceRef.current = updated;
     setAttendanceState(updated);
+    queueAttendance(updated);
     toast.info("Semua santri ditandai hadir.");
   };
 
@@ -454,7 +463,7 @@ function KegiatanEkskulPage() {
                               {m.student.full_name || m.student.name}
                             </span>
                             <span className="text-[10px] text-muted-foreground">
-                              NIS: {m.student.nis_nip || "-"}
+                              NISN/NIS: {m.student.nis_nip || "-"}
                             </span>
                           </div>
                           <span className="col-span-2 text-muted-foreground font-medium">
@@ -480,15 +489,7 @@ function KegiatanEkskulPage() {
                                 <button
                                   key={st}
                                   type="button"
-                                  onClick={() =>
-                                    setAttendanceState((prev) => ({
-                                      ...prev,
-                                      [studentId]: {
-                                        ...prev[studentId],
-                                        status: st,
-                                      },
-                                    }))
-                                  }
+                                  onClick={() => updateAttendance(studentId, st)}
                                   className={`px-2.5 py-1 rounded text-[10.5px] font-bold capitalize transition-all border ${
                                     isSelected
                                       ? colors[st]
