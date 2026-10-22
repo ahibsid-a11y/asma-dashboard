@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { selectAssignedSubjects, selectDinasReportSubjects } from "./grades-subjects";
+import { resolveReportSignatures } from "./report-signatures";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { isMemberAdmin } from "@/lib/roles";
@@ -1050,28 +1051,8 @@ export const getStudentReportCard = createServerFn({ method: "POST" })
       // ignore
     }
 
-    // 6. Wali Kelas & Kepala Sekolah
-    let homeroomTeacherName = "Ustadz Wali Kelas";
-    let headmasterName = "Mudir / Kepala Sekolah";
-
-    try {
-      const { data: hr } = await (supabaseAdmin as any)
-        .from("profiles")
-        .select("name")
-        .eq("account_type", "wali_kelas")
-        .eq("class", student.class)
-        .maybeSingle();
-      if (hr) homeroomTeacherName = hr.name;
-
-      const { data: hm } = await (supabaseAdmin as any)
-        .from("profiles")
-        .select("name")
-        .in("account_type", ["kepala_sekolah", "mudir"])
-        .limit(1);
-      if (hm && hm[0]) headmasterName = hm[0].name;
-    } catch {
-      // ignore
-    }
+    // Same scoped signer lookup as Pondok, Dinas and Kesantrian reports.
+    const reportSignatures = await resolveReportSignatures(supabaseAdmin, data.student_id);
 
     return {
       student,
@@ -1086,8 +1067,8 @@ export const getStudentReportCard = createServerFn({ method: "POST" })
       groupedSubjects: grouped,
       attendance: { hadir, sakit, izin, alpa },
       signatures: {
-        homeroomTeacher: homeroomTeacherName,
-        headmaster: headmasterName,
+        homeroomTeacher: reportSignatures.homeroomTeacherName,
+        headmaster: reportSignatures.headmasterName,
       },
     };
   });
@@ -1196,78 +1177,6 @@ export const getMyGrades = createServerFn({ method: "POST" })
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPER: Resolve Wali Kelas & Kepala Sekolah from database
 // ─────────────────────────────────────────────────────────────────────────────
-
-async function resolveSignatures(supabaseAdmin: any, className: string | null) {
-  let homeroomTeacherName = "Wali Kelas";
-  let homeroomTeacherNiy = "-";
-  let headmasterName = "Kepala Sekolah";
-  let headmasterNiy = "-";
-
-  try {
-    // Get homeroom teacher from classes table → join profiles
-    if (className) {
-      const { data: classRow } = await (supabaseAdmin as any)
-        .from("classes")
-        .select("homeroom_teacher_id")
-        .eq("name", className)
-        .maybeSingle();
-
-      if (classRow?.homeroom_teacher_id) {
-        const { data: teacher } = await (supabaseAdmin as any)
-          .from("profiles")
-          .select("name,nis_nip")
-          .eq("id", classRow.homeroom_teacher_id)
-          .maybeSingle();
-
-        if (teacher) {
-          homeroomTeacherName = teacher.name || "Wali Kelas";
-          homeroomTeacherNiy = teacher.nis_nip || "-";
-        }
-      }
-    }
-
-    // Get Kepala Sekolah
-    const { data: ks } = await (supabaseAdmin as any)
-      .from("profiles")
-      .select("name,nis_nip")
-      .eq("account_type", "kepala_sekolah")
-      .eq("status", "Aktif")
-      .limit(1);
-
-    if (ks && ks[0]) {
-      headmasterName = ks[0].name || "Kepala Sekolah";
-      headmasterNiy = ks[0].nis_nip || "-";
-    }
-
-    // Get Kepala Kesantrian
-    let headOfKesantrianName = "Ust. H. Ahmad Fauzan, Lc";
-    let headOfKesantrianNiy = "-";
-    const { data: kk } = await (supabaseAdmin as any)
-      .from("profiles")
-      .select("name,nis_nip")
-      .eq("account_type", "kabid_kesantrian")
-      .eq("status", "Aktif")
-      .limit(1);
-
-    if (kk && kk[0]) {
-      headOfKesantrianName = kk[0].name || headOfKesantrianName;
-      headOfKesantrianNiy = kk[0].nis_nip || "-";
-    }
-
-    return { homeroomTeacherName, homeroomTeacherNiy, headmasterName, headmasterNiy, headOfKesantrianName, headOfKesantrianNiy };
-  } catch {
-    // ignore
-  }
-
-  return {
-    homeroomTeacherName,
-    homeroomTeacherNiy,
-    headmasterName,
-    headmasterNiy,
-    headOfKesantrianName: "Ust. H. Ahmad Fauzan, Lc",
-    headOfKesantrianNiy: "-",
-  };
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPER: Resolve attendance data for a student within a semester
@@ -1427,7 +1336,7 @@ export const getReportCardPondok = createServerFn({ method: "POST" })
     const attendance = await resolveAttendance(supabaseAdmin, data.student_id, data.semester, data.academic_year);
 
     // 7. Wali Kelas & Kepala Sekolah dari DB
-    const signatures = await resolveSignatures(supabaseAdmin, student.class);
+    const signatures = await resolveReportSignatures(supabaseAdmin, data.student_id);
 
     return {
       reportType: "pondok" as const,
@@ -1519,7 +1428,7 @@ export const getReportCardDinas = createServerFn({ method: "POST" })
     const attendance = await resolveAttendance(supabaseAdmin, data.student_id, data.semester, data.academic_year);
 
     // 11. Tanda Tangan
-    const signatures = await resolveSignatures(supabaseAdmin, student.class);
+    const signatures = await resolveReportSignatures(supabaseAdmin, data.student_id);
 
     return {
       reportType: "dinas" as const,
@@ -1679,7 +1588,7 @@ export const getReportCardKesantrian = createServerFn({ method: "POST" })
     } catch {}
 
     // 9. Signatures
-    const signatures = await resolveSignatures(supabaseAdmin, student.class);
+    const signatures = await resolveReportSignatures(supabaseAdmin, data.student_id);
 
     // 10. Kehadiran
     const attendance = await resolveAttendance(supabaseAdmin, data.student_id, data.semester, data.academic_year);
