@@ -593,6 +593,7 @@ export type Database = {
           ekskul_id: string
           enrolled_at: string
           id: string
+          participation_months: string[] | null
           semester: string
           status: string
           student_id: string
@@ -604,6 +605,7 @@ export type Database = {
           ekskul_id: string
           enrolled_at?: string
           id?: string
+          participation_months?: string[] | null
           semester?: string
           status?: string
           student_id: string
@@ -615,6 +617,7 @@ export type Database = {
           ekskul_id?: string
           enrolled_at?: string
           id?: string
+          participation_months?: string[] | null
           semester?: string
           status?: string
           student_id?: string
@@ -698,6 +701,7 @@ export type Database = {
           ekskul_id: string
           enrollment_id: string | null
           id: string
+          month_key: string | null
           notes: string | null
           payment_date: string | null
           payment_method: string | null
@@ -714,6 +718,7 @@ export type Database = {
           ekskul_id: string
           enrollment_id?: string | null
           id?: string
+          month_key?: string | null
           notes?: string | null
           payment_date?: string | null
           payment_method?: string | null
@@ -730,6 +735,7 @@ export type Database = {
           ekskul_id?: string
           enrollment_id?: string | null
           id?: string
+          month_key?: string | null
           notes?: string | null
           payment_date?: string | null
           payment_method?: string | null
@@ -821,6 +827,7 @@ export type Database = {
       }
       ekskuls: {
         Row: {
+          available_months: number[] | null
           category: string
           coach_id: string | null
           coach_name: string
@@ -838,6 +845,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          available_months?: number[] | null
           category?: string
           coach_id?: string | null
           coach_name?: string
@@ -855,6 +863,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          available_months?: number[] | null
           category?: string
           coach_id?: string | null
           coach_name?: string
