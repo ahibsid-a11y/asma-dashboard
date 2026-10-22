@@ -9,7 +9,7 @@ export type ReportSignatures = {
 
 /** The database exposes only signers for a student the caller may read. */
 export async function resolveReportSignatures(
-  client: { rpc: (name: string, args: { _student_id: string }) => PromiseLike<{ data: unknown; error: { message: string } | null }> },
+  client: { rpc: (name: "get_report_signatures", args: { _student_id: string }) => PromiseLike<{ data: unknown; error: { message: string } | null }> },
   studentId: string,
 ): Promise<ReportSignatures> {
   const { data, error } = await client.rpc("get_report_signatures", { _student_id: studentId });

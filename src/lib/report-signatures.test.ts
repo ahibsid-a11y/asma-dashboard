@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
 import { resolveReportSignatures } from "./report-signatures";
 
 describe("report signer reads", () => {
@@ -8,12 +9,15 @@ describe("report signer reads", () => {
       headmasterName: "Faiz Abdullah", headmasterNiy: "23.07.05.003",
       headOfKesantrianName: "Khairul Anwar, S.Pd", headOfKesantrianNiy: "NIP1005",
     };
-    const rpc = vi.fn().mockResolvedValue({ data: signatures, error: null });
-    expect(await resolveReportSignatures({ rpc }, "student-8a")).toEqual(signatures);
-    expect(rpc).toHaveBeenCalledWith("get_report_signatures", { _student_id: "student-8a" });
+    const rpc = async (name: string, args: { _student_id: string }) => {
+      assert.equal(name, "get_report_signatures");
+      assert.deepEqual(args, { _student_id: "student-8a" });
+      return { data: signatures, error: null };
+    };
+    assert.deepEqual(await resolveReportSignatures({ rpc }, "student-8a"), signatures);
   });
   it("does not hide denied access behind placeholder names", async () => {
-    const rpc = vi.fn().mockResolvedValue({ data: null, error: { message: "Tidak berwenang" } });
-    await expect(resolveReportSignatures({ rpc }, "another-student")).rejects.toThrow("Tidak berwenang");
+    const rpc = async () => ({ data: null, error: { message: "Tidak berwenang" } });
+    await assert.rejects(resolveReportSignatures({ rpc }, "another-student"), /Tidak berwenang/);
   });
 });
