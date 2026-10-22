@@ -374,7 +374,7 @@ function InputNilaiPage() {
           tp_scores: { ...current.tp_scores, ...row.tpScores },
           sts_score: row.stsScore ?? current.sts_score,
           sas_score: row.sasScore ?? current.sas_score,
-          teacher_notes: current.teacher_notes,
+          ...(current.teacher_notes ? { teacher_notes: current.teacher_notes } : {}),
         };
       }
 
