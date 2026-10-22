@@ -1,3 +1,4 @@
+/// <reference types="bun" />
 import { expect, it } from "bun:test";
 import { createAutosaveQueue } from "./autosave-queue";
 
