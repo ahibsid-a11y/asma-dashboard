@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { manageEkskulSchema } from "./ekskul.schema";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
@@ -42,31 +43,7 @@ export const getMasterEkskulListFn = createServerFn({ method: "GET" })
   });
 
 export const manageEkskulItemFn = createServerFn({ method: "POST" })
-  .validator((data: unknown) =>
-    z
-      .object({
-        action: z.enum(["save", "delete"]),
-        item: z
-          .object({
-            id: z.string().optional(),
-            name: z.string().min(1),
-            category: z.enum(["wajib", "pilihan"]),
-            fee: z.number().default(0),
-            fee_period: z.enum(["per_bulan", "per_semester", "sekali"]).default("per_bulan"),
-            coach_name: z.string().default("Belum Ditentukan"),
-            coach_id: z.string().optional(),
-            schedule_day: z.string().default("Sabtu"),
-            schedule_time: z.string().default("16:00 - 17:30"),
-            location: z.string().default("Pesantren"),
-            quota: z.number().optional(),
-            description: z.string().default(""),
-            is_active: z.boolean().default(true),
-          })
-          .optional(),
-        deleteId: z.string().optional(),
-      })
-      .parse(data)
-  )
+  .inputValidator((data: unknown) => manageEkskulSchema.parse(data))
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     if (data.action === "delete" && data.deleteId) {

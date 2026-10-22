@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Extracurricular save validation lives in the client-safe `ekskul.schema.ts`; edits update only explicitly supplied fields by existing ID, so repairs cannot reset unrelated saved values or linked records.

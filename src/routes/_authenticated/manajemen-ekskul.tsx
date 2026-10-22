@@ -64,7 +64,9 @@ export const Route = createFileRoute("/_authenticated/manajemen-ekskul")({
         content: "Kelola program ekstrakurikuler wajib & pilihan, jadwal, pembina/pelatih, dan iuran kegiatan santri.",
       },
       { property: "og:title", content: "Manajemen Ekstrakurikuler | SIM-AHIBS" },
+      { property: "og:description", content: "Kelola program ekstrakurikuler, pembina, jadwal, dan iuran kegiatan santri." },
       { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: ManajemenEkskulPage,
@@ -98,6 +100,8 @@ function ManajemenEkskulPage() {
   const [formLocation, setFormLocation] = useState("Lapangan Pesantren");
   const [formQuota, setFormQuota] = useState<number>(30);
   const [formDesc, setFormDesc] = useState("");
+  const [formIsActive, setFormIsActive] = useState(true);
+  const [formQuotaUnset, setFormQuotaUnset] = useState(false);
 
   // Queries
   const ekskulsQuery = useQuery({
@@ -123,16 +127,16 @@ function ManajemenEkskulPage() {
             id: editingId || undefined,
             name: formName.trim(),
             category: formCategory,
-            fee: formCategory === "wajib" ? 0 : formFee,
-            fee_period: formCategory === "wajib" ? "sekali" : formFeePeriod,
+            fee: formCategory === "wajib" && !editingId ? 0 : formFee,
+            fee_period: formCategory === "wajib" && !editingId ? "sekali" : formFeePeriod,
             coach_name: formCoachName.trim() || "Belum Ditentukan",
             coach_id: formCoachId,
             schedule_day: formDay,
             schedule_time: formTime,
             location: formLocation.trim(),
-            quota: formQuota,
+            quota: formQuotaUnset ? null : formQuota,
             description: formDesc.trim(),
-            is_active: true,
+            is_active: formIsActive,
           },
         },
       }),
@@ -189,6 +193,8 @@ function ManajemenEkskulPage() {
     setFormLocation("Lapangan Pesantren");
     setFormQuota(30);
     setFormDesc("");
+    setFormIsActive(true);
+    setFormQuotaUnset(false);
   };
 
   const handleEdit = (item: EkskulItem) => {
@@ -198,11 +204,13 @@ function ManajemenEkskulPage() {
     setFormFee(item.fee);
     setFormFeePeriod(item.fee_period);
     setFormCoachName(item.coach_name);
-    setFormCoachId(item.coach_id);
+    setFormCoachId(item.coach_id ?? undefined);
     setFormDay(item.schedule_day);
     setFormTime(item.schedule_time);
     setFormLocation(item.location);
-    setFormQuota(item.quota || 30);
+    setFormQuota(item.quota ?? 30);
+    setFormQuotaUnset(item.quota == null);
+    setFormIsActive(item.is_active);
     setFormDesc(item.description);
     setIsModalOpen(true);
   };
@@ -443,8 +451,11 @@ function ManajemenEkskulPage() {
                   <Label className="text-xs font-semibold">Kuota Santri</Label>
                   <Input
                     type="number"
-                    value={formQuota}
-                    onChange={(e) => setFormQuota(Number(e.target.value))}
+                    value={formQuotaUnset ? "" : formQuota}
+                    onChange={(e) => {
+                      setFormQuotaUnset(e.target.value === "");
+                      setFormQuota(Number(e.target.value));
+                    }}
                     className="h-9 text-xs"
                   />
                 </div>
