@@ -1,7 +1,7 @@
 # Mapel dan nilai siswa
 - [x] Rapikan kolom Input Nilai agar setiap angka tetap terlihat saat TP bertambah.
 - [x] Pastikan perubahan profil hanya menyimpan kolom yang diubah, tanpa mengosongkan kelas/asrama.
-- [x] Simpan otomatis nilai pelajaran, Kokurikuler, Tahfiz, nilai/presensi Ekskul, kegiatan insidental; Mutaba'ah/presensi sudah langsung menyimpan. Perangkat Ajar menunggu simpan sebelum navigasi.
+- [x] Simpan otomatis nilai pelajaran, Kokurikuler, Tahfiz, nilai/presensi Ekskul, kegiatan insidental dan catatan pelanggaran lengkap; Mutaba'ah/presensi sudah langsung menyimpan. CP dan Perangkat Ajar menunggu simpan sebelum navigasi.
 - [x] Ubah label NIS/NISN menjadi NISN/NIS tanpa menukar data tersimpan.
 - [x] Uji nilai 100 tersimpan setelah pindah ke Profil, lebar input minimal 99px; uji profil kolom lain tetap sama; 16 tes perlindungan data lulus.
 - [x] Samakan mapel, nilai, dan periode rapor Pondok/Dinas dengan nilai pelajaran siswa tanpa mengubah data tersimpan.

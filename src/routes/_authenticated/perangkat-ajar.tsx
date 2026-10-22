@@ -321,7 +321,7 @@ function PerangkatAjarPage() {
     await queryClient.invalidateQueries({ queryKey: ["curriculum-plan"] });
   });
   const queueElement = () => {
-    if (!elementDialogOpen || elementNameInput.trim().length < 2 || !activePlanId) return;
+    if (!elementDialogOpen || elementNameInput.trim().length < 2 || !plan?.id) return;
     if (!editingElement && !newElementId.current) newElementId.current = crypto.randomUUID();
     const id = editingElement?.id ?? newElementId.current;
     if (!id) return;
@@ -333,7 +333,7 @@ function PerangkatAjarPage() {
   useEffect(() => {
     queueElement();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [elementNameInput, elementCpInput, elementDialogOpen]);
+  }, [elementNameInput, elementCpInput, elementDialogOpen, plan?.id]);
 
   // Element Save Mutation
   const elementMutation = useMutation({
@@ -1793,7 +1793,7 @@ function PerangkatAjarPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => { setElementNameInput(""); setElementDialogOpen(false); }}>
-              Batal
+              Tutup
             </Button>
             <Button
               size="sm"

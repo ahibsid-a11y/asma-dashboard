@@ -408,6 +408,7 @@ export const recordViolation = createServerFn({ method: "POST" })
       throw new Error("Hanya admin dan kepala kesantrian yang berhak mencatat pelanggaran santri");
     }
 
+    const createdAtById = new Map<string, string>();
     const suppliedIds = Object.values(data.record_ids ?? {});
     if (suppliedIds.length) {
       const { data: existing, error } = await ctx.supabase
@@ -417,6 +418,7 @@ export const recordViolation = createServerFn({ method: "POST" })
         if (row.recorded_by !== ctx.userId || data.record_ids?.[row.user_id] !== row.id) {
           throw new Error("Catatan ini tidak sesuai dengan pencatat atau santri yang dipilih");
         }
+        createdAtById.set(row.id, row.created_at);
       }
     }
 
@@ -433,7 +435,7 @@ export const recordViolation = createServerFn({ method: "POST" })
       status: data.status,
       recorded_by: me.id,
       source: "manual",
-      created_at: nowIso,
+      created_at: createdAtById.get(data.record_ids?.[studentId] ?? "") ?? nowIso,
       updated_at: nowIso,
     }));
 
