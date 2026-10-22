@@ -150,13 +150,14 @@ function KegiatanEkskulPage() {
 
   // 2. Ambil santri terdaftar
   const enrollmentQuery = useQuery({
-    queryKey: ["ekskul-enrollment", selectedEkskulId, selectedSemester, selectedYear],
+    queryKey: ["ekskul-enrollment", selectedEkskulId, selectedSemester, selectedYear, sessionDate.slice(0, 7)],
     queryFn: async () => {
       const res = await fetchEnrollmentData({
         data: {
           ekskulId: selectedEkskulId,
           semester: selectedSemester,
           academicYear: selectedYear,
+          month: sessionDate.slice(0, 7),
         },
       });
 
@@ -266,7 +267,7 @@ function KegiatanEkskulPage() {
 
   // Handler tandai semua hadir
   const handleMarkAllHadir = () => {
-    const updated = { ...attendanceState };
+    const updated: typeof attendanceState = {};
     for (const m of members) {
       updated[m.student.id] = { status: "hadir" };
     }
@@ -426,7 +427,7 @@ function KegiatanEkskulPage() {
                     <Input
                       type="date"
                       value={sessionDate}
-                      onChange={(e) => setSessionDate(e.target.value)}
+                      onChange={(e) => void changeFilter(setSessionDate, e.target.value)}
                       className="h-9 text-xs"
                     />
                   </div>

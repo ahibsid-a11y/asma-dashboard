@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { EkskulMonthPicker } from "@/components/ekskul-month-picker";
+import { monthLabel, semesterMonths } from "@/lib/ekskul-months";
 import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -56,6 +58,8 @@ export const Route = createFileRoute("/_authenticated/pendaftaran-ekskul")({
         content: "Katalog dan pendaftaran program ekstrakurikuler pilihan dan wajib santri SMPIT Putra Al-Hanif.",
       },
       { property: "og:title", content: "Pendaftaran Ekstrakurikuler | SIM-AHIBS" },
+      { property: "og:description", content: "Pendaftaran ekstrakurikuler santri AHIBS sesuai bulan kegiatan." },
+      { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },
     ],
   }),
@@ -71,6 +75,9 @@ function PendaftaranEkskulPage() {
   const fetchMyPortal = useServerFn(getStudentEkskulPortalDataFn);
   const enrollFn = useServerFn(enrollStudentFn);
 
+  const [selectedYear, setSelectedYear] = useState("2026/2027");
+  const [selectedSemester, setSelectedSemester] = useState("1");
+  const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEkskulToEnroll, setSelectedEkskulToEnroll] = useState<any | null>(null);
   const [selectedSession, setSelectedSession] = useState<string>("Sesi 1 (Juli / 4 Pertemuan)");
@@ -85,10 +92,10 @@ function PendaftaranEkskulPage() {
 
   // 2. Ambil ekskul yang sudah didaftar santri
   const myPortalQuery = useQuery({
-    queryKey: ["student-ekskul-portal", studentId],
+    queryKey: ["student-ekskul-portal", studentId, selectedSemester, selectedYear],
     queryFn: () =>
       fetchMyPortal({
-        data: { studentId, semester: "1", academicYear: "2026/2027" },
+        data: { studentId, semester: selectedSemester, academicYear: selectedYear },
       }),
     enabled: Boolean(studentId),
   });
@@ -106,8 +113,9 @@ function PendaftaranEkskulPage() {
           ekskulId: data.ekskulId,
           studentId,
           sessionLabel: data.sessionLabel,
-          semester: "1",
-          academicYear: "2026/2027",
+          semester: selectedSemester,
+          academicYear: selectedYear,
+          months: selectedEkskulToEnroll?.fee_period === "per_bulan" ? selectedMonths : undefined,
         },
       }),
     onSuccess: () => {
@@ -115,6 +123,10 @@ function PendaftaranEkskulPage() {
       setSelectedEkskulToEnroll(null);
       queryClient.invalidateQueries({ queryKey: ["student-ekskul-portal"] });
       queryClient.invalidateQueries({ queryKey: ["master-ekskuls"] });
+      queryClient.invalidateQueries({ queryKey: ["my-ekskul-portal-full"] });
+      queryClient.invalidateQueries({ queryKey: ["ekskul-recap-main"] });
+      queryClient.invalidateQueries({ queryKey: ["ekskul-payments-recap"] });
+      queryClient.invalidateQueries({ queryKey: ["ekskul-enrollment"] });
     },
     onError: (err: any) => {
       toast.error(err.message || "Gagal mendaftar ekskul");
@@ -144,6 +156,7 @@ function PendaftaranEkskulPage() {
           </div>
         </div>
 
+        <div className="flex flex-wrap gap-2"><Select value={selectedYear} onValueChange={setSelectedYear}><SelectTrigger aria-label="Tahun pelajaran" className="w-40"><SelectValue /></SelectTrigger><SelectContent>{["2025/2026", "2026/2027"].map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}</SelectContent></Select><Select value={selectedSemester} onValueChange={setSelectedSemester}><SelectTrigger aria-label="Semester" className="w-40"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="1">Semester 1</SelectItem><SelectItem value="2">Semester 2</SelectItem></SelectContent></Select></div>
         {/* Pencarian */}
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -159,6 +172,7 @@ function PendaftaranEkskulPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredEkskuls.map((ekskul) => {
             const isEnrolled = myEnrolledIds.has(ekskul.id) || ekskul.category === "wajib";
+            const isMonthly = ekskul.fee_period === "per_bulan";
             const isPending = enrollMutation.isPending && (enrollMutation.variables as any)?.ekskulId === ekskul.id;
 
             return (
@@ -229,7 +243,7 @@ function PendaftaranEkskulPage() {
 
                   {/* Tombol Aksi */}
                   <div className="pt-2">
-                    {isEnrolled ? (
+                    {isEnrolled && !isMonthly ? (
                       <Button
                         variant="secondary"
                         disabled
@@ -244,12 +258,13 @@ function PendaftaranEkskulPage() {
                       <Button
                         className="w-full text-xs font-bold gap-1.5"
                         onClick={() => {
+                          setSelectedMonths([]);
                           setSelectedEkskulToEnroll(ekskul);
                           setSelectedSession("Sesi 1 (Juli / 4 Pertemuan)");
                         }}
                       >
                         <UserPlus className="h-3.5 w-3.5" />
-                        Daftar & Pilih Sesi
+                        {isMonthly ? "Pilih Bulan Keikutsertaan" : "Daftar & Pilih Sesi"}
                       </Button>
                     )}
                   </div>
@@ -268,10 +283,10 @@ function PendaftaranEkskulPage() {
             <DialogHeader>
               <DialogTitle className="text-base font-bold flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-primary" />
-                Pilih Sesi & Periode Latihan
+                Pilih Periode Keikutsertaan
               </DialogTitle>
               <DialogDescription className="text-xs">
-                Pendaftaran untuk: <b className="text-foreground">{selectedEkskulToEnroll?.name}</b>. Setiap sesi mencakup 4 pertemuan latihan.
+                Pendaftaran untuk: <b className="text-foreground">{selectedEkskulToEnroll?.name}</b>.
               </DialogDescription>
             </DialogHeader>
 
@@ -279,7 +294,11 @@ function PendaftaranEkskulPage() {
               <div className="space-y-4 py-2 text-xs">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">Pilih Sesi / Bulan:</Label>
-                  <Select value={selectedSession} onValueChange={setSelectedSession}>
+                  {selectedEkskulToEnroll.fee_period === "per_bulan" ? <EkskulMonthPicker
+                    options={semesterMonths(selectedYear, selectedSemester).filter(month => selectedEkskulToEnroll.available_months == null || selectedEkskulToEnroll.available_months.includes(Number(month.slice(5)))).map(month => ({ value: month, label: monthLabel(month) }))}
+                    disabled={myPortalQuery.data?.myEkskuls.find(item => item.ekskul?.id === selectedEkskulToEnroll.id)?.enrollment.participation_months ?? []}
+                    selected={selectedMonths} onChange={setSelectedMonths}
+                  /> : <Select value={selectedSession} onValueChange={setSelectedSession}>
                     <SelectTrigger className="h-9 text-xs">
                       <SelectValue />
                     </SelectTrigger>
@@ -291,7 +310,8 @@ function PendaftaranEkskulPage() {
                       <SelectItem value="Sesi 5 (November / 4 Pertemuan)">Sesi 5 (November / 4 Pertemuan)</SelectItem>
                       <SelectItem value="Sesi 6 (Desember / 4 Pertemuan)">Sesi 6 (Desember / 4 Pertemuan)</SelectItem>
                     </SelectContent>
-                  </Select>
+                  </Select>}
+                  {selectedEkskulToEnroll.fee_period === "per_bulan" && <p className="text-muted-foreground">Bulan terdaftar: {myPortalQuery.data?.myEkskuls.find(item => item.ekskul?.id === selectedEkskulToEnroll.id)?.enrollment.participation_months?.map(monthLabel).join(", ") || "—"}</p>}
                 </div>
 
                 <div className="p-3 rounded-lg border bg-muted/20 space-y-1.5">
@@ -308,7 +328,7 @@ function PendaftaranEkskulPage() {
                     <span className="font-semibold text-emerald-600">Maks. {selectedEkskulToEnroll.quota || 30} Santri</span>
                   </div>
                   <div className="flex justify-between pt-1 border-t">
-                    <span className="text-muted-foreground font-medium">Iuran Sesi:</span>
+                    <span className="text-muted-foreground font-medium">Iuran per Periode:</span>
                     <span className="font-bold text-sm text-foreground">
                       {selectedEkskulToEnroll.fee > 0
                         ? `Rp ${selectedEkskulToEnroll.fee.toLocaleString("id-ID")}`
@@ -316,6 +336,8 @@ function PendaftaranEkskulPage() {
                     </span>
                   </div>
                 </div>
+
+                {selectedEkskulToEnroll.fee_period === "per_bulan" && <div className="flex justify-between font-semibold"><span>Total {selectedMonths.length} bulan</span><span>Rp {(selectedEkskulToEnroll.fee * selectedMonths.length).toLocaleString("id-ID")}</span></div>}
 
                 <p className="text-[11px] text-muted-foreground">
                   * Setelah mendaftar, keikutsertaan Anda akan disetujui (approve) oleh pembina/admin setelah pembayaran iuran diselesaikan.
@@ -335,7 +357,7 @@ function PendaftaranEkskulPage() {
               <Button
                 size="sm"
                 className="text-xs font-bold gap-1.5"
-                disabled={enrollMutation.isPending}
+                disabled={enrollMutation.isPending || (selectedEkskulToEnroll?.fee_period === "per_bulan" && selectedMonths.length === 0)}
                 onClick={() => {
                   if (!selectedEkskulToEnroll) return;
                   enrollMutation.mutate({

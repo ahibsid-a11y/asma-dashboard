@@ -8,6 +8,7 @@ export const manageEkskulSchema = z.object({
     category: z.enum(["wajib", "pilihan"]),
     fee: z.number().optional(),
     fee_period: z.enum(["per_bulan", "per_semester", "sekali"]).optional(),
+    available_months: z.array(z.number().int().min(1).max(12)).min(1).nullish(),
     coach_name: z.string().optional(),
     coach_id: z.string().nullish(),
     schedule_day: z.string().optional(),

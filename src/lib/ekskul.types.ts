@@ -7,6 +7,7 @@ export interface EkskulItem {
   category: EkskulCategory;
   fee: number;
   fee_period: EkskulFeePeriod;
+  available_months?: number[] | null;
   coach_name: string;
   coach_id?: string | null | undefined;
   schedule_day: string;
@@ -26,6 +27,7 @@ export interface EkskulEnrollment {
   semester: string;
   academic_year: string;
   session_label?: string | undefined;
+  participation_months?: string[] | null;
   enrolled_at: string;
   status: "aktif" | "menunggu_konfirmasi" | "selesai" | "keluar";
 }
@@ -36,6 +38,7 @@ export interface EkskulPayment {
   student_id: string;
   ekskul_id: string;
   period_label: string;
+  month_key?: string | null;
   amount: number;
   status: "lunas" | "belum_bayar";
   payment_date?: string | undefined;
