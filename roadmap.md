@@ -1,4 +1,5 @@
 # Mapel dan nilai siswa
+- [ ] Tambahkan pilihan bulan ekskul bulanan, sinkronkan pendaftaran, pembayaran, presensi, portal dan rekap tanpa mengubah data lama; uji alur terkait.
 - [x] Sinkronkan nama penandatangan rapor dengan wali kelas dan jabatan kepala sekolah tanpa mengubah data; sembilan tes lulus, akun peminta menampilkan nama/NIY di Pondok, Dinas, PDF dua halaman dan Word; akses akun siswa langsung tetap terhalang izin sesi sebelumnya.
 - [x] Rapikan kolom Input Nilai agar setiap angka tetap terlihat saat TP bertambah.
 - [x] Pastikan perubahan profil hanya menyimpan kolom yang diubah, tanpa mengosongkan kelas/asrama.
