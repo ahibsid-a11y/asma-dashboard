@@ -11,3 +11,4 @@
 
 - Extracurricular save validation lives in the client-safe `ekskul.schema.ts`; edits update only explicitly supplied fields by existing ID, so repairs cannot reset unrelated saved values or linked records.
 - Student academic reads use the authenticated client, class/year subject assignments, and explicit year/semester filters; shared assignment selection stays client-safe and never rewrites saved subject IDs or grades.
+- Academic report reads follow the same class/year assignments and semester-scoped TP grades as student scores; Dinas composition stays client-safe and preserves explicit PAI/local-content grades before considering component averages.

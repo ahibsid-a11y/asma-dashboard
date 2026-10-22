@@ -1,0 +1,45 @@
+{
+  "themes": [
+    {
+      "id": "cinta-ibadah",
+      "focus_dimension": "Keimanan & Ketakwaan",
+      "title": "Cinta Ibadah",
+      "activities": "Shalat 5 waktu berjamaah, Muhasabah diri",
+      "nilai_hebat": "Hanif, Mandiri",
+      "kebiasaan": "Beribadah, bangun pagi"
+    },
+    {
+      "id": "akhlak-adab",
+      "focus_dimension": "Kewargaan & Komunikasi",
+      "title": "Akhlak & Adab",
+      "activities": "Berperilaku baik, tutur kata sopan santun",
+      "nilai_hebat": "Hanif, Adaptif",
+      "kebiasaan": "Beribadah, bermasyarakat"
+    },
+    {
+      "id": "kemandirian",
+      "focus_dimension": "Penalaran & Kolaborasi",
+      "title": "Kemandirian",
+      "activities": "Belajar mandiri, olahraga rutin, keikutsertaan organisasi",
+      "nilai_hebat": "Edukatif, Mandiri",
+      "kebiasaan": "Gemar belajar, berolahraga"
+    },
+    {
+      "id": "kedisiplinan",
+      "focus_dimension": "Kesehatan & Kreativitas",
+      "title": "Kedisiplinan",
+      "activities": "Menjaga kebersihan diri & lingkungan, pola makan tertib",
+      "nilai_hebat": "Berkolaborasi, Mandiri",
+      "kebiasaan": "Gemar belajar, makan sehat"
+    },
+    {
+      "id": "bahasa",
+      "focus_dimension": "Komunikasi & Kolaborasi",
+      "title": "Bahasa",
+      "activities": "Penerapan mufrodat yaumi, latihan public speaking (muhadharah)",
+      "nilai_hebat": "Edukatif, Tangguh",
+      "kebiasaan": "Gemar belajar"
+    }
+  ],
+  "records": {}
+}
