@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useBlocker } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -54,6 +54,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
+import { useAutosaveQueue } from "@/hooks/use-autosave-queue";
 import {
   getCurriculumPlan,
   copyCurriculumToClasses,
@@ -99,6 +100,9 @@ export const Route = createFileRoute("/_authenticated/perangkat-ajar")({
         content: "Penyusunan dan pencetakan Capaian Pembelajaran, TP, ATP, Alokasi Waktu, Prota, dan Promes resmi SIM-AHIBS.",
       },
       { property: "og:title", content: "Perangkat Ajar (CP, TP, ATP, Prota, Promes) | SIM-AHIBS" },
+      { property: "og:description", content: "Penyusunan CP, TP, ATP, Prota dan Promes guru AHIBS per kelas dan tahun ajaran." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: PerangkatAjarPage,
@@ -311,11 +315,36 @@ function PerangkatAjarPage() {
     }
   };
 
+  const newElementId = useRef<string | undefined>(undefined);
+  const elementAutosave = useAutosaveQueue<Parameters<typeof saveElementFn>[0]>(async (payload) => {
+    await saveElementFn(payload);
+    await queryClient.invalidateQueries({ queryKey: ["curriculum-plan"] });
+  });
+  const queueElement = () => {
+    if (!elementDialogOpen || elementNameInput.trim().length < 2 || !plan?.id) return;
+    if (!editingElement && !newElementId.current) newElementId.current = crypto.randomUUID();
+    const id = editingElement?.id ?? newElementId.current;
+    if (!id) return;
+    elementAutosave.enqueue(id, { data: {
+      action: editingElement ? "update" : "create", id, plan_id: activePlanId,
+      name: elementNameInput.trim(), cp_description: elementCpInput.trim(),
+    } });
+  };
+  useEffect(() => {
+    queueElement();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [elementNameInput, elementCpInput, elementDialogOpen, plan?.id]);
+
   // Element Save Mutation
   const elementMutation = useMutation({
     mutationFn: async (action: "create" | "update" | "delete") => {
       if (action !== "delete" && !elementNameInput.trim()) {
         throw new Error("Nama elemen materi wajib diisi");
+      }
+      if (action !== "delete") {
+        queueElement();
+        await elementAutosave.flush();
+        return { success: true, created: null };
       }
       return saveElementFn({
         data: {
@@ -339,6 +368,7 @@ function PerangkatAjarPage() {
   });
 
   const openAddElement = () => {
+    newElementId.current = undefined;
     setEditingElement(null);
     setElementNameInput("");
     setElementCpInput("");
@@ -619,6 +649,17 @@ function PerangkatAjarPage() {
     if (promesDirty && !hasUnsavedTp) savePromesMutation.mutate({ silent: true, semester: promesSemRef.current });
   };
   const anyDirty = hasUnsavedTp || allocDirty || promesDirty;
+  useBlocker({
+    shouldBlockFn: async () => {
+      try {
+        if (saveTpMutation.isPending || hasUnsavedTp) await saveTpMutation.mutateAsync({ silent: true });
+        if (saveTimeAllocMutation.isPending || allocDirty) await saveTimeAllocMutation.mutateAsync({ silent: true });
+        if (savePromesMutation.isPending || promesDirty) await savePromesMutation.mutateAsync({ silent: true, semester: promesSemRef.current });
+        return false;
+      } catch { return true; }
+    },
+    enableBeforeUnload: anyDirty,
+  });
   useEffect(() => {
     const onHide = () => {
       if (document.visibilityState === "hidden") flushRef.current();
@@ -650,7 +691,7 @@ function PerangkatAjarPage() {
       }
       return copyFn({
         data: {
-          source_plan_id: plan!.id,
+          source_plan_id: activePlanId,
           subject_id: currentSubjectId,
           source_class: selectedClass,
           academic_year: selectedYear,
@@ -1752,7 +1793,7 @@ function PerangkatAjarPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => { setElementNameInput(""); setElementDialogOpen(false); }}>
-              Batal
+              Tutup
             </Button>
             <Button
               size="sm"

@@ -315,7 +315,7 @@ function MembersPage() {
                 <TableRow>
                   <TableHead>Nama</TableHead>
                   <TableHead>Jabatan</TableHead>
-                  <TableHead>NIS/NIY</TableHead>
+                  <TableHead>NISN/NIS atau NIY</TableHead>
                   <TableHead>Kelas/Asrama</TableHead>
                   <TableHead>Password</TableHead>
                   <TableHead>Status</TableHead>
@@ -583,7 +583,7 @@ function MembersPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
-                <Label htmlFor="nis_nip">Nomor Induk (NIS/NIY) — opsional</Label>
+                <Label htmlFor="nis_nip">Nomor Induk (NISN/NIS atau NIY) — opsional</Label>
                 <Input
                   id="nis_nip"
                   value={form.nis_nip}

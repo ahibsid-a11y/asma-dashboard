@@ -149,7 +149,7 @@ function NilaiPelajaranPage() {
                   {student?.name || student?.display_name || "Nama Santri"}
                 </h1>
                 <p className="text-xs md:text-sm text-muted-foreground mt-0.5 font-mono">
-                  NIS / NISN: {student?.nis_nip || "-"}
+                  NISN/NIS: {student?.nis_nip || "-"}
                 </p>
               </div>
             </div>

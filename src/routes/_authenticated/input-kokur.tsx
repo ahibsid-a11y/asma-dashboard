@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   Award,
   BookOpen,
@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app-shell";
+import { useAutosaveQueue } from "@/hooks/use-autosave-queue";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -62,6 +63,8 @@ export const Route = createFileRoute("/_authenticated/input-kokur")({
         content: "Penilaian Projek Penguatan Profil Pelajar Pancasila dan Profil Pelajar Rahmatan Lil 'Alamin (P5RA) SMPIT Putra Al-Hanif.",
       },
       { property: "og:title", content: "Input Nilai Kokurikuler (P5) | SIM-AHIBS" },
+      { property: "og:description", content: "Penilaian kokurikuler santri AHIBS berdasarkan kelas dan semester." },
+      { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },
     ],
   }),
@@ -110,6 +113,24 @@ function InputKokurPage() {
     Record<string, { grades: Record<string, StudentKokurGrade>; narrative: string }>
   >({});
 
+  const gradesRef = useRef(localGrades);
+  const autosave = useAutosaveQueue<Parameters<typeof saveStudentFn>[0]>(async (payload) => {
+    await saveStudentFn(payload);
+    await queryClient.invalidateQueries({ queryKey: ["report-card-dinas"] });
+  });
+  const updateStudentGrade = (studentId: string, current: typeof localGrades[string]) => {
+    gradesRef.current = { ...gradesRef.current, [studentId]: current };
+    setLocalGrades(gradesRef.current);
+    const student = studentList.find((item: any) => item.student.id === studentId)?.student;
+    autosave.enqueue([studentId, selectedSemester, selectedYear].join(":"), {
+      data: { studentId, studentName: student?.full_name || student?.name || "Santri",
+        semester: selectedSemester, academicYear: selectedYear, grades: current.grades, narrative: current.narrative },
+    });
+  };
+  const changeFilter = async (setter: (value: string) => void, value: string) => {
+    try { await autosave.flush(); setter(value); } catch { /* Preserve current edits. */ }
+  };
+
   // Active student for detail modal
   const [selectedStudentModal, setSelectedStudentModal] = useState<any | null>(null);
 
@@ -150,7 +171,7 @@ function InputKokurPage() {
         };
       }
 
-      setLocalGrades(init);
+      if (!autosave.hasPending()) { gradesRef.current = init; setLocalGrades(init); }
       return res;
     },
   });
@@ -172,7 +193,8 @@ function InputKokurPage() {
   // Mutation: Simpan Nilai Santri
   const saveMutation = useMutation({
     mutationFn: async (studentId: string) => {
-      const current = localGrades[studentId];
+      await autosave.flush();
+      const current = gradesRef.current[studentId];
       if (!current) return;
 
       const studentItem = studentList.find((s: any) => s.student.id === studentId);
@@ -220,50 +242,19 @@ function InputKokurPage() {
     },
     onSuccess: (data) => {
       if (!data) return;
-      setLocalGrades((prev) => ({
-        ...prev,
-        [data.studentId]: {
-          ...prev[data.studentId]!,
-          narrative: data.narrative,
-        },
-      }));
+      const current = gradesRef.current[data.studentId];
+      if (current) updateStudentGrade(data.studentId, { ...current, narrative: data.narrative });
       toast.info("Narasi capaian berhasil di-generate secara otomatis!");
     },
   });
 
-  // Handler update predikat per tema
   const handlePredicateChange = (studentId: string, themeId: string, predicate: KokurPredicate) => {
-    setLocalGrades((prev) => {
-      const current = prev[studentId] || { grades: {}, narrative: "" };
-      const updatedGrades = {
-        ...current.grades,
-        [themeId]: {
-          ...current.grades[themeId],
-          predicate,
-        },
-      };
-      return {
-        ...prev,
-        [studentId]: {
-          ...current,
-          grades: updatedGrades,
-        },
-      };
-    });
+    const current = gradesRef.current[studentId] || { grades: {}, narrative: "" };
+    updateStudentGrade(studentId, { ...current, grades: { ...current.grades, [themeId]: { ...current.grades[themeId], predicate } } });
   };
-
-  // Handler update narasi teks manual
   const handleNarrativeChange = (studentId: string, narrative: string) => {
-    setLocalGrades((prev) => {
-      const current = prev[studentId] || { grades: {}, narrative: "" };
-      return {
-        ...prev,
-        [studentId]: {
-          ...current,
-          narrative,
-        },
-      };
-    });
+    const current = gradesRef.current[studentId] || { grades: {}, narrative: "" };
+    updateStudentGrade(studentId, { ...current, narrative });
   };
 
   return (
@@ -343,7 +334,7 @@ function InputKokurPage() {
               {/* Kelas */}
               <div className="space-y-1">
                 <Label className="text-[11px] text-muted-foreground font-semibold">Kelas / Rombel</Label>
-                <Select value={selectedClass} onValueChange={setSelectedClass}>
+                <Select value={selectedClass} onValueChange={(value) => void changeFilter(setSelectedClass, value)}>
                   <SelectTrigger className="h-9 text-xs font-medium">
                     <SelectValue />
                   </SelectTrigger>
@@ -360,7 +351,7 @@ function InputKokurPage() {
               {/* Semester */}
               <div className="space-y-1">
                 <Label className="text-[11px] text-muted-foreground font-semibold">Semester</Label>
-                <Select value={selectedSemester} onValueChange={setSelectedSemester}>
+                <Select value={selectedSemester} onValueChange={(value) => void changeFilter(setSelectedSemester, value)}>
                   <SelectTrigger className="h-9 text-xs font-medium">
                     <SelectValue />
                   </SelectTrigger>
@@ -374,7 +365,7 @@ function InputKokurPage() {
               {/* Tahun Ajaran */}
               <div className="space-y-1">
                 <Label className="text-[11px] text-muted-foreground font-semibold">Tahun Pelajaran</Label>
-                <Select value={selectedYear} onValueChange={setSelectedYear}>
+                <Select value={selectedYear} onValueChange={(value) => void changeFilter(setSelectedYear, value)}>
                   <SelectTrigger className="h-9 text-xs font-medium">
                     <SelectValue />
                   </SelectTrigger>
@@ -431,7 +422,7 @@ function InputKokurPage() {
                               {s.full_name || s.name || s.display_name}
                             </h4>
                             <p className="text-xs text-muted-foreground">
-                              NIS: {s.nis_nip || "-"} • Kelas {s.class_name || s.class || "-"}
+                              NISN/NIS: {s.nis_nip || "-"} • Kelas {s.class_name || s.class || "-"}
                             </p>
                           </div>
                         </div>

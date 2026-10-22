@@ -1,4 +1,9 @@
 # Mapel dan nilai siswa
+- [x] Rapikan kolom Input Nilai agar setiap angka tetap terlihat saat TP bertambah.
+- [x] Pastikan perubahan profil hanya menyimpan kolom yang diubah, tanpa mengosongkan kelas/asrama.
+- [x] Simpan otomatis nilai pelajaran, Kokurikuler, Tahfiz, nilai/presensi Ekskul, kegiatan insidental dan catatan pelanggaran lengkap; Mutaba'ah/presensi sudah langsung menyimpan. CP dan Perangkat Ajar menunggu simpan sebelum navigasi.
+- [x] Ubah label NIS/NISN menjadi NISN/NIS tanpa menukar data tersimpan.
+- [x] Uji nilai 100 tersimpan setelah pindah ke Profil, lebar input minimal 99px; data pengujian dipulihkan (nilai 99, telepon kosong); 17 tes perlindungan data lulus dan delapan halaman input terbuka tanpa kesalahan.
 - [x] Samakan mapel, nilai, dan periode rapor Pondok/Dinas dengan nilai pelajaran siswa tanpa mengubah data tersimpan.
 - [x] Periksa melalui akun peminta: rapor siswa nyata memuat 14 mapel Pondok, 10 baris Dinas; PDF F4 dua halaman, Word berisi mapel dan logo sama (tampilan Microsoft Word belum diuji).
 - [x] Samakan daftar mapel dengan penugasan kelas tanpa mengubah nilai lama.

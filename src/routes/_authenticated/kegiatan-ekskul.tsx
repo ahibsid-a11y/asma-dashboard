@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Award,
   Calendar,
@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useAutosaveQueue } from "@/hooks/use-autosave-queue";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
 import {
   getEkskulEnrollmentDataFn,
@@ -55,6 +56,8 @@ export const Route = createFileRoute("/_authenticated/kegiatan-ekskul")({
         content: "Presensi sesi kegiatan ekstrakurikuler santri dan penilaian akhir semester untuk Rapor Dinas.",
       },
       { property: "og:title", content: "Kegiatan & Nilai Ekstrakurikuler | SIM-AHIBS" },
+      { property: "og:description", content: "Presensi kegiatan dan penilaian ekstrakurikuler santri AHIBS." },
+      { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },
     ],
   }),
@@ -90,6 +93,54 @@ function KegiatanEkskulPage() {
     Record<string, { grade: "A" | "B" | "C" | "D"; predicate: string; description: string }>
   >({});
 
+  const gradesRef = useRef(localGrades);
+  const gradeAutosave = useAutosaveQueue<Parameters<typeof saveGradeFn>[0]>(async (payload) => {
+    await saveGradeFn(payload);
+    await queryClient.invalidateQueries({ queryKey: ["report-card-dinas"] });
+  });
+  const updateGrade = (studentId: string, patch: Partial<typeof localGrades[string]>) => {
+    const current = gradesRef.current[studentId];
+    if (!current) return;
+    const next = { ...current, ...patch };
+    gradesRef.current = { ...gradesRef.current, [studentId]: next };
+    setLocalGrades(gradesRef.current);
+    gradeAutosave.enqueue([selectedEkskulId, studentId, selectedSemester, selectedYear].join(":"), {
+      data: { ekskulId: selectedEkskulId, studentId, semester: selectedSemester,
+        academicYear: selectedYear, grade: next.grade, predicate: next.predicate as any, description: next.description },
+    });
+  };
+  const changeFilter = async (setter: (value: string) => void, value: string) => {
+    try { await Promise.all([gradeAutosave.flush(), attendanceAutosave.flush()]); setter(value); } catch { /* Preserve edits. */ }
+  };
+
+  const attendanceRef = useRef(attendanceState);
+  const sessionIds = useRef(new Map<string, string>());
+  const attendanceAutosave = useAutosaveQueue<Parameters<typeof recordAttendanceFn>[0]>(async (payload) => {
+    await recordAttendanceFn(payload);
+    await queryClient.invalidateQueries({ queryKey: ["ekskul-sessions-grades"] });
+  });
+  const queueAttendance = (records: typeof attendanceState) => {
+    if (!sessionTopic.trim() || !sessionDate || !selectedEkskulId) return;
+    const key = [selectedEkskulId, selectedSemester, selectedYear, sessionDate].join(":");
+    let id = sessionIds.current.get(key);
+    if (!id) { id = crypto.randomUUID(); sessionIds.current.set(key, id); }
+    attendanceAutosave.enqueue([key, ...Object.keys(records).sort()].join(":"), { data: { id, ekskulId: selectedEkskulId, semester: selectedSemester,
+      academicYear: selectedYear, date: sessionDate, topic: sessionTopic,
+      records: Object.entries(records).map(([student_id, rec]) => ({ student_id, ...rec })) } });
+  };
+  const updateAttendance = (studentId: string, status: "hadir" | "izin" | "sakit" | "alpa") => {
+    attendanceRef.current = { ...attendanceRef.current, [studentId]: { ...attendanceRef.current[studentId], status } };
+    setAttendanceState(attendanceRef.current);
+    queueAttendance({ [studentId]: attendanceRef.current[studentId] ?? { status } });
+  };
+
+  useEffect(() => {
+    const key = [selectedEkskulId, selectedSemester, selectedYear, sessionDate].join(":");
+    if (sessionIds.current.has(key)) queueAttendance({});
+    // Save edits to an already started session; never submit default attendance on load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionTopic, sessionDate]);
+
   // 1. Ambil master ekskul
   const masterEkskulQuery = useQuery({
     queryKey: ["master-ekskuls"],
@@ -117,7 +168,7 @@ function KegiatanEkskulPage() {
       for (const m of res.members) {
         initAtt[m.student.id] = { status: "hadir" };
       }
-      setAttendanceState(initAtt);
+      if (!attendanceAutosave.hasPending()) { attendanceRef.current = initAtt; setAttendanceState(initAtt); }
       return res;
     },
     enabled: Boolean(selectedEkskulId),
@@ -161,7 +212,7 @@ function KegiatanEkskulPage() {
           };
         }
       }
-      setLocalGrades(initGrades);
+      if (!gradeAutosave.hasPending()) { gradesRef.current = initGrades; setLocalGrades(initGrades); }
       return res;
     },
     enabled: Boolean(selectedEkskulId),
@@ -172,23 +223,9 @@ function KegiatanEkskulPage() {
 
   // Mutation: Simpan Presensi Sesi
   const saveAttendanceMutation = useMutation({
-    mutationFn: () => {
-      const records = members.map((m: any) => ({
-        student_id: m.student.id,
-        status: attendanceState[m.student.id]?.status || "hadir",
-        notes: attendanceState[m.student.id]?.notes || "",
-      }));
-
-      return recordAttendanceFn({
-        data: {
-          ekskulId: selectedEkskulId,
-          date: sessionDate,
-          topic: sessionTopic.trim(),
-          semester: selectedSemester,
-          academicYear: selectedYear,
-          records,
-        },
-      });
+    mutationFn: async () => {
+      queueAttendance(Object.fromEntries(members.map((m: any) => [m.student.id, attendanceRef.current[m.student.id] || { status: "hadir" }])));
+      await attendanceAutosave.flush();
     },
     onSuccess: () => {
       toast.success(`Presensi ${selectedEkskul?.name} tanggal ${sessionDate} berhasil disimpan!`);
@@ -233,7 +270,9 @@ function KegiatanEkskulPage() {
     for (const m of members) {
       updated[m.student.id] = { status: "hadir" };
     }
+    attendanceRef.current = updated;
     setAttendanceState(updated);
+    queueAttendance(updated);
     toast.info("Semua santri ditandai hadir.");
   };
 
@@ -260,7 +299,7 @@ function KegiatanEkskulPage() {
               {/* Ekskul */}
               <div className="space-y-1">
                 <Label className="text-[11px] text-muted-foreground font-semibold">Pilih Program Ekskul</Label>
-                <Select value={selectedEkskulId} onValueChange={setSelectedEkskulId}>
+                <Select value={selectedEkskulId} onValueChange={(value) => void changeFilter(setSelectedEkskulId, value)}>
                   <SelectTrigger className="h-9 text-xs font-medium">
                     <SelectValue />
                   </SelectTrigger>
@@ -277,7 +316,7 @@ function KegiatanEkskulPage() {
               {/* Semester */}
               <div className="space-y-1">
                 <Label className="text-[11px] text-muted-foreground font-semibold">Semester</Label>
-                <Select value={selectedSemester} onValueChange={setSelectedSemester}>
+                <Select value={selectedSemester} onValueChange={(value) => void changeFilter(setSelectedSemester, value)}>
                   <SelectTrigger className="h-9 text-xs font-medium">
                     <SelectValue />
                   </SelectTrigger>
@@ -291,7 +330,7 @@ function KegiatanEkskulPage() {
               {/* Tahun Ajaran */}
               <div className="space-y-1">
                 <Label className="text-[11px] text-muted-foreground font-semibold">Tahun Pelajaran</Label>
-                <Select value={selectedYear} onValueChange={setSelectedYear}>
+                <Select value={selectedYear} onValueChange={(value) => void changeFilter(setSelectedYear, value)}>
                   <SelectTrigger className="h-9 text-xs font-medium">
                     <SelectValue />
                   </SelectTrigger>
@@ -431,7 +470,7 @@ function KegiatanEkskulPage() {
                               {m.student.full_name || m.student.name}
                             </span>
                             <span className="text-[10px] text-muted-foreground">
-                              NIS: {m.student.nis_nip || "-"}
+                              NISN/NIS: {m.student.nis_nip || "-"}
                             </span>
                           </div>
                           <span className="col-span-2 text-muted-foreground font-medium">
@@ -457,15 +496,7 @@ function KegiatanEkskulPage() {
                                 <button
                                   key={st}
                                   type="button"
-                                  onClick={() =>
-                                    setAttendanceState((prev) => ({
-                                      ...prev,
-                                      [studentId]: {
-                                        ...prev[studentId],
-                                        status: st,
-                                      },
-                                    }))
-                                  }
+                                  onClick={() => updateAttendance(studentId, st)}
                                   className={`px-2.5 py-1 rounded text-[10.5px] font-bold capitalize transition-all border ${
                                     isSelected
                                       ? colors[st]
@@ -568,14 +599,7 @@ function KegiatanEkskulPage() {
                                       C: "Cukup",
                                       D: "Kurang",
                                     };
-                                    setLocalGrades((prev) => ({
-                                      ...prev,
-                                      [studentId]: {
-                                        ...prev[studentId]!,
-                                        grade: val,
-                                        predicate: predMap[val],
-                                      },
-                                    }));
+                                    updateGrade(studentId, { grade: val, predicate: predMap[val] });
                                   }}
                                 >
                                   <SelectTrigger className="h-9 text-xs font-bold">
@@ -597,15 +621,7 @@ function KegiatanEkskulPage() {
                                 </Label>
                                 <Input
                                   value={current.description}
-                                  onChange={(e) =>
-                                    setLocalGrades((prev) => ({
-                                      ...prev,
-                                      [studentId]: {
-                                        ...prev[studentId]!,
-                                        description: e.target.value,
-                                      },
-                                    }))
-                                  }
+                                  onChange={(e) => updateGrade(studentId, { description: e.target.value })}
                                   placeholder="Deskripsi pencapaian santri dalam kegiatan ekskul ini..."
                                   className="h-9 text-xs"
                                 />

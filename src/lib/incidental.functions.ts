@@ -105,7 +105,12 @@ export const saveIncidentalEvent = createServerFn({ method: "POST" })
         .eq("id", data.id)
         .maybeSingle();
       if (readError) throw new Error(readError.message);
-      if (!existing) throw new Error("Kegiatan tidak ditemukan");
+      if (!existing) {
+        const { error } = await db.from("incidental_attendance_events")
+          .insert({ ...payload, id: data.id, created_by: ctx.userId });
+        if (error) throw new Error(error.message);
+        return { id: data.id };
+      }
       if (existing.created_by !== ctx.userId && !EVENT_LEADERS.includes(me.account_type)) {
         throw new Error("Hanya pembuat kegiatan atau pimpinan yang bisa mengubah kegiatan ini");
       }

@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
   BookOpen,
@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useAutosaveQueue } from "@/hooks/use-autosave-queue";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
 import {
   calculateLetterGrade,
@@ -75,6 +76,7 @@ export const Route = createFileRoute("/_authenticated/input-nilai")({
         content: "Pencatatan nilai berbasis Capaian Pembelajaran (CP) dan Tujuan Pembelajaran (TP) kurikulum merdeka dan kepesantrenan AHIBS.",
       },
       { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: InputNilaiPage,
@@ -132,7 +134,8 @@ function InputNilaiPage() {
 
   useEffect(() => {
     if (!selectedClass && classOptions.length > 0) {
-      setSelectedClass(classOptions[0]!);
+      const first = classOptions[0];
+      if (first) setSelectedClass(first);
     }
   }, [classOptions, selectedClass]);
 
@@ -142,7 +145,8 @@ function InputNilaiPage() {
   useEffect(() => {
     if (subjects.length === 0) return;
     if (!selectedSubjectId || !subjects.some((s) => s.id === selectedSubjectId)) {
-      setSelectedSubjectId(subjects[0]!.id);
+      const first = subjects[0];
+      if (first) setSelectedSubjectId(first.id);
     }
   }, [subjects, selectedSubjectId]);
 
@@ -194,7 +198,10 @@ function InputNilaiPage() {
         };
       }
 
-      setLocalGrades(init);
+      if (!autosave.hasPending()) {
+        gradesRef.current = init;
+        setLocalGrades(init);
+      }
       return res;
     },
     enabled: Boolean(selectedSubjectId),
@@ -204,37 +211,37 @@ function InputNilaiPage() {
   const students = sheetQuery.data?.students ?? [];
   const settings = sheetQuery.data?.settings ?? { weight_tp: 50, weight_sts: 25, weight_sas: 25 };
 
-  // Update skor TP
-  const handleTpChange = (studentId: string, tpId: string, valStr: string) => {
+  const gradesRef = useRef(localGrades);
+  const autosave = useAutosaveQueue<Parameters<typeof saveBatchFn>[0]>(async (payload) => {
+    await saveBatchFn(payload);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["class-grades-recap"] }),
+      queryClient.invalidateQueries({ queryKey: ["my-grades"] }),
+    ]);
+  });
+
+  const updateGrade = (studentId: string, tpId: string | null, field: "sts_score" | "sas_score" | null, valStr: string) => {
     const val = Math.min(100, Math.max(0, Number(valStr) || 0));
-    setLocalGrades((prev) => {
-      const studentData = prev[studentId] || { tp_scores: {}, sts_score: 0, sas_score: 0 };
-      return {
-        ...prev,
-        [studentId]: {
-          ...studentData,
-          tp_scores: {
-            ...studentData.tp_scores,
-            [tpId]: val,
-          },
-        },
-      };
+    const previous = gradesRef.current[studentId] ?? { tp_scores: {}, sts_score: 0, sas_score: 0 };
+    const updated = {
+      ...previous,
+      tp_scores: tpId ? { ...previous.tp_scores, [tpId]: val } : previous.tp_scores,
+      ...(field ? { [field]: val } : {}),
+    };
+    gradesRef.current = { ...gradesRef.current, [studentId]: updated };
+    setLocalGrades(gradesRef.current);
+    autosave.enqueue([selectedSubjectId, selectedClass, selectedSemester, selectedYear, studentId].join(":"), {
+      data: {
+        subject_id: selectedSubjectId, class_name: selectedClass,
+        semester: selectedSemester, academic_year: selectedYear,
+        grades: [{ student_id: studentId, ...updated }],
+      },
     });
   };
-
-  // Update STS / SAS
-  const handleScoreChange = (studentId: string, field: "sts_score" | "sas_score", valStr: string) => {
-    const val = Math.min(100, Math.max(0, Number(valStr) || 0));
-    setLocalGrades((prev) => {
-      const studentData = prev[studentId] || { tp_scores: {}, sts_score: 0, sas_score: 0 };
-      return {
-        ...prev,
-        [studentId]: {
-          ...studentData,
-          [field]: val,
-        },
-      };
-    });
+  const handleTpChange = (studentId: string, tpId: string, value: string) => updateGrade(studentId, tpId, null, value);
+  const handleScoreChange = (studentId: string, field: "sts_score" | "sas_score", value: string) => updateGrade(studentId, null, field, value);
+  const changeFilter = async (setter: (value: string) => void, value: string) => {
+    try { await autosave.flush(); setter(value); } catch { /* Keep current sheet on failure. */ }
   };
 
   // Hitung preview Nilai Akhir real-time untuk 1 santri
@@ -256,6 +263,7 @@ function InputNilaiPage() {
   // Mutation: Simpan Batch Nilai
   const saveBatchMutation = useMutation({
     mutationFn: async () => {
+      await autosave.flush();
       if (!selectedSubjectId) throw new Error("Pilih mata pelajaran");
       const gradesPayload = students.map((s: any) => {
         const d = localGrades[s.id] || { tp_scores: {}, sts_score: 0, sas_score: 0 };
@@ -390,6 +398,7 @@ function InputNilaiPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <span role="status" className="text-xs text-muted-foreground">{autosave.status === "saved" ? "Tersimpan" : autosave.status === "error" ? "Belum tersimpan" : "Menyimpan…"}</span>
             <Button
               variant="outline"
               size="sm"
@@ -427,7 +436,7 @@ function InputNilaiPage() {
               {/* Kelas */}
               <div className="space-y-1">
                 <Label className="text-[11px] text-muted-foreground font-semibold">Kelas</Label>
-                <Select value={selectedClass} onValueChange={setSelectedClass}>
+                <Select value={selectedClass} onValueChange={(value) => void changeFilter(setSelectedClass, value)}>
                   <SelectTrigger className="h-9 text-xs font-medium">
                     <SelectValue />
                   </SelectTrigger>
@@ -444,7 +453,7 @@ function InputNilaiPage() {
               {/* Semester */}
               <div className="space-y-1">
                 <Label className="text-[11px] text-muted-foreground font-semibold">Semester</Label>
-                <Select value={selectedSemester} onValueChange={setSelectedSemester}>
+                <Select value={selectedSemester} onValueChange={(value) => void changeFilter(setSelectedSemester, value)}>
                   <SelectTrigger className="h-9 text-xs font-medium">
                     <SelectValue />
                   </SelectTrigger>
@@ -458,7 +467,7 @@ function InputNilaiPage() {
               {/* Tahun Ajaran */}
               <div className="space-y-1">
                 <Label className="text-[11px] text-muted-foreground font-semibold">Tahun Ajaran</Label>
-                <Select value={selectedYear} onValueChange={setSelectedYear}>
+                <Select value={selectedYear} onValueChange={(value) => void changeFilter(setSelectedYear, value)}>
                   <SelectTrigger className="h-9 text-xs font-medium">
                     <SelectValue />
                   </SelectTrigger>
@@ -474,7 +483,7 @@ function InputNilaiPage() {
                 <Label className="text-[11px] text-muted-foreground font-semibold">
                   Mata Pelajaran
                 </Label>
-                <Select value={selectedSubjectId} onValueChange={setSelectedSubjectId}>
+                <Select value={selectedSubjectId} onValueChange={(value) => void changeFilter(setSelectedSubjectId, value)}>
                   <SelectTrigger className="h-9 text-xs font-medium">
                     <SelectValue placeholder="Pilih Mapel" />
                   </SelectTrigger>
@@ -566,19 +575,19 @@ function InputNilaiPage() {
                     Belum ada data santri aktif di kelas {selectedClass}.
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs border-collapse">
+                  <div className="max-w-full overflow-x-auto" aria-label="Lembar nilai">
+                    <table className="w-max min-w-full table-auto text-left text-xs border-collapse">
                       <thead className="bg-muted/60 text-[11px] font-semibold text-muted-foreground uppercase border-b">
                         <tr>
                           <th className="p-3 w-10 text-center">No</th>
                           <th className="p-3 min-w-[180px]">Nama Santri</th>
-                          <th className="p-3 w-28">NIS</th>
+                          <th className="p-3 min-w-36 whitespace-nowrap">NISN/NIS</th>
 
                           {/* Dynamic TP Columns */}
                           {tps.map((t) => (
                             <th
                               key={t.id}
-                              className="p-3 w-24 text-center bg-primary/5 border-l border-border"
+                              className="p-3 min-w-28 text-center bg-primary/5 border-l border-border"
                               title={t.description}
                             >
                               <span className="font-bold text-primary block">{t.code}</span>
@@ -589,23 +598,23 @@ function InputNilaiPage() {
                           ))}
 
                           {/* Rata-Rata TP */}
-                          <th className="p-3 w-24 text-center bg-muted/40 border-l border-border">
+                          <th className="p-3 min-w-28 text-center bg-muted/40 border-l border-border">
                             Rata TP
                           </th>
 
                           {/* Sumatif STS & SAS */}
-                          <th className="p-3 w-24 text-center bg-blue-50/50 dark:bg-blue-950/20 border-l border-border">
+                          <th className="p-3 min-w-28 text-center bg-blue-50/50 dark:bg-blue-950/20 border-l border-border">
                             STS (UTS)
                           </th>
-                          <th className="p-3 w-24 text-center bg-blue-50/50 dark:bg-blue-950/20 border-l border-border">
+                          <th className="p-3 min-w-28 text-center bg-blue-50/50 dark:bg-blue-950/20 border-l border-border">
                             SAS (UAS)
                           </th>
 
                           {/* Nilai Akhir & Predikat */}
-                          <th className="p-3 w-28 text-center bg-emerald-50/60 dark:bg-emerald-950/30 border-l border-border">
+                          <th className="p-3 min-w-28 text-center bg-emerald-50/60 dark:bg-emerald-950/30 border-l border-border">
                             Nilai Akhir
                           </th>
-                          <th className="p-3 w-20 text-center border-l border-border">
+                          <th className="p-3 min-w-24 text-center border-l border-border">
                             Predikat
                           </th>
                         </tr>
@@ -631,7 +640,7 @@ function InputNilaiPage() {
                               {tps.map((t) => {
                                 const val = local.tp_scores[t.id] ?? 0;
                                 return (
-                                  <td key={t.id} className="p-1.5 text-center border-l border-border">
+                                  <td key={t.id} className="p-1.5 min-w-28 text-center border-l border-border">
                                     <Input
                                       type="number"
                                       min={0}
@@ -639,7 +648,7 @@ function InputNilaiPage() {
                                       value={val === 0 ? "" : val}
                                       placeholder="0"
                                       onChange={(e) => handleTpChange(s.id, t.id, e.target.value)}
-                                      className="h-8 text-xs text-center font-bold font-mono focus:ring-1"
+                                      className="h-8 min-w-24 px-2 text-xs text-center font-bold font-mono [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none focus:ring-1"
                                     />
                                   </td>
                                 );
@@ -651,7 +660,7 @@ function InputNilaiPage() {
                               </td>
 
                               {/* STS */}
-                              <td className="p-1.5 text-center border-l border-border">
+                              <td className="p-1.5 min-w-28 text-center border-l border-border">
                                 <Input
                                   type="number"
                                   min={0}
@@ -659,12 +668,12 @@ function InputNilaiPage() {
                                   value={local.sts_score === 0 ? "" : local.sts_score}
                                   placeholder="0"
                                   onChange={(e) => handleScoreChange(s.id, "sts_score", e.target.value)}
-                                  className="h-8 text-xs text-center font-bold font-mono text-blue-700 dark:text-blue-400"
+                                  className="h-8 min-w-24 px-2 text-xs text-center font-bold font-mono [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none text-blue-700 dark:text-blue-400"
                                 />
                               </td>
 
                               {/* SAS */}
-                              <td className="p-1.5 text-center border-l border-border">
+                              <td className="p-1.5 min-w-28 text-center border-l border-border">
                                 <Input
                                   type="number"
                                   min={0}
@@ -672,7 +681,7 @@ function InputNilaiPage() {
                                   value={local.sas_score === 0 ? "" : local.sas_score}
                                   placeholder="0"
                                   onChange={(e) => handleScoreChange(s.id, "sas_score", e.target.value)}
-                                  className="h-8 text-xs text-center font-bold font-mono text-blue-700 dark:text-blue-400"
+                                  className="h-8 min-w-24 px-2 text-xs text-center font-bold font-mono [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none text-blue-700 dark:text-blue-400"
                                 />
                               </td>
 

@@ -380,6 +380,7 @@ export const recordViolation = createServerFn({ method: "POST" })
   .validator((data: unknown) =>
     z
       .object({
+        record_ids: z.record(z.string(), z.string().uuid()).optional(),
         student_ids: z.array(z.string().uuid()).min(1, "Pilih minimal 1 santri"),
         violation_title: z.string().trim().min(3, "Nama pelanggaran wajib diisi"),
         category: z.enum(["Ringan", "Sedang", "Berat"]),
@@ -407,8 +408,23 @@ export const recordViolation = createServerFn({ method: "POST" })
       throw new Error("Hanya admin dan kepala kesantrian yang berhak mencatat pelanggaran santri");
     }
 
+    const createdAtById = new Map<string, string>();
+    const suppliedIds = Object.values(data.record_ids ?? {});
+    if (suppliedIds.length) {
+      const { data: existing, error } = await ctx.supabase
+        .from("violation_records").select("id,user_id,recorded_by,created_at").in("id", suppliedIds);
+      if (error) throw new Error(error.message);
+      for (const row of existing ?? []) {
+        if (row.recorded_by !== ctx.userId || data.record_ids?.[row.user_id] !== row.id) {
+          throw new Error("Catatan ini tidak sesuai dengan pencatat atau santri yang dipilih");
+        }
+        createdAtById.set(row.id, row.created_at);
+      }
+    }
+
     const nowIso = new Date().toISOString();
     const rowsToInsert = data.student_ids.map((studentId) => ({
+      ...(data.record_ids?.[studentId] ? { id: data.record_ids[studentId] } : {}),
       user_id: studentId,
       date: data.date,
       violation_title: data.violation_title,
@@ -419,14 +435,14 @@ export const recordViolation = createServerFn({ method: "POST" })
       status: data.status,
       recorded_by: me.id,
       source: "manual",
-      created_at: nowIso,
+      created_at: createdAtById.get(data.record_ids?.[studentId] ?? "") ?? nowIso,
       updated_at: nowIso,
     }));
 
     try {
       const { data: inserted, error } = await (supabaseAdmin as any)
         .from("violation_records")
-        .insert(rowsToInsert)
+        .upsert(rowsToInsert, { onConflict: "id" })
         .select();
 
       if (error) {
@@ -442,6 +458,7 @@ export const recordViolation = createServerFn({ method: "POST" })
               .join(" | ");
 
             return {
+              ...("id" in r ? { id: r.id } : {}),
               user_id: r.user_id,
               date: r.date,
               violation_title: r.violation_title,
@@ -457,7 +474,7 @@ export const recordViolation = createServerFn({ method: "POST" })
 
           const { error: fallbackError } = await (supabaseAdmin as any)
             .from("violation_records")
-            .insert(fallbackRows);
+            .upsert(fallbackRows, { onConflict: "id" });
 
           if (fallbackError) throw new Error(fallbackError.message);
           return { success: true, count: fallbackRows.length };

@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { profilePatchSchema, profileUpdateFields } from "./profile-patch";
 import {
   ACCOUNT_TYPES,
   CATEGORY_DEFAULT_ACCOUNT_TYPE,
@@ -85,30 +86,17 @@ export const getMyProfile = createServerFn({ method: "GET" })
   });
 
 export const updateMyProfile = createServerFn({ method: "POST" })
-  .validator((data: unknown) => profileSchema.parse(data))
+  .validator((data: unknown) => profilePatchSchema.parse(data))
   .middleware([requireSupabaseAuth])
   .handler(async ({ context, data }) => {
     const ctx = context as Ctx;
     const cleanEmail = empty(data.email);
-    const updatePayload: Record<string, unknown> = {
-      name: data.name,
-      email: cleanEmail,
-      phone: empty(data.phone),
-      gender: (data.gender ?? null) as "L" | "P" | null,
-      class: empty(data.class),
-      dorm: empty(data.dorm),
-      halaqoh: empty(data.halaqoh),
-      nis_nip: empty(data.nis_nip),
-      rfid_card: empty(data.rfid_card),
-      avatar: empty(data.avatar),
-    };
-    if (data.display_name !== undefined) {
-      updatePayload["display_name"] = empty(data.display_name);
-    }
+    const updatePayload = profileUpdateFields(data);
+    if (Object.keys(updatePayload).length === 0 && !data.password) return { ok: true };
 
     const { data: curProfile } = await (ctx.supabase as any)
       .from("profiles")
-      .select("account_type,category")
+      .select("account_type,category,name,display_name")
       .eq("id", ctx.userId)
       .maybeSingle();
 
@@ -142,11 +130,11 @@ export const updateMyProfile = createServerFn({ method: "POST" })
       if (ctxErr) throw new Error(friendly(ctxErr.message));
     }
 
-    const displayName = empty(data.display_name) ?? data.name;
+    const displayName = empty(data.display_name) ?? curProfile?.display_name ?? data.name ?? curProfile?.name;
     if (cleanEmail || data.password) {
       try {
         const authUpdate: Record<string, unknown> = {
-          user_metadata: { name: data.name, display_name: displayName },
+          user_metadata: { name: data.name ?? curProfile?.name, display_name: displayName },
         };
         if (cleanEmail) {
           authUpdate["email"] = cleanEmail;

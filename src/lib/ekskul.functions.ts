@@ -209,6 +209,7 @@ export const recordEkskulAttendanceSessionFn = createServerFn({ method: "POST" }
   .validator((data: unknown) =>
     z
       .object({
+        id: z.string().uuid().optional(),
         ekskulId: z.string(),
         date: z.string(),
         topic: z.string().default("Latihan / Pertemuan Rutin"),
@@ -227,6 +228,7 @@ export const recordEkskulAttendanceSessionFn = createServerFn({ method: "POST" }
   .middleware([requireSupabaseAuth])
   .handler(async ({ data }) => {
     const session = await createSessionAndAttendance({
+      id: data.id,
       ekskul_id: data.ekskulId,
       date: data.date,
       topic: data.topic,
