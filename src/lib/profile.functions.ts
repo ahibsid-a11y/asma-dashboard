@@ -86,7 +86,7 @@ export const getMyProfile = createServerFn({ method: "GET" })
   });
 
 export const updateMyProfile = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => profilePatchSchema.parse(data))
+  .validator((data: unknown) => profilePatchSchema.parse(data))
   .middleware([requireSupabaseAuth])
   .handler(async ({ context, data }) => {
     const ctx = context as Ctx;

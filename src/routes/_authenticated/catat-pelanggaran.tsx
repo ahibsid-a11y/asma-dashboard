@@ -72,6 +72,7 @@ export const Route = createFileRoute("/_authenticated/catat-pelanggaran")({
         content: "Pencatatan pelanggaran, penentuan sanksi pembinaan, dan akumulasi poin kedisiplinan santri AHIBS.",
       },
       { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: CatatPelanggaranPage,

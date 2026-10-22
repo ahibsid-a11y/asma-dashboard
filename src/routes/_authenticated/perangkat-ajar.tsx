@@ -54,6 +54,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
+import { useAutosaveQueue } from "@/hooks/use-autosave-queue";
 import {
   getCurriculumPlan,
   copyCurriculumToClasses,
@@ -314,11 +315,36 @@ function PerangkatAjarPage() {
     }
   };
 
+  const newElementId = useRef<string | undefined>(undefined);
+  const elementAutosave = useAutosaveQueue<Parameters<typeof saveElementFn>[0]>(async (payload) => {
+    await saveElementFn(payload);
+    await queryClient.invalidateQueries({ queryKey: ["curriculum-plan"] });
+  });
+  const queueElement = () => {
+    if (!elementDialogOpen || elementNameInput.trim().length < 2 || !activePlanId) return;
+    if (!editingElement && !newElementId.current) newElementId.current = crypto.randomUUID();
+    const id = editingElement?.id ?? newElementId.current;
+    if (!id) return;
+    elementAutosave.enqueue(id, { data: {
+      action: editingElement ? "update" : "create", id, plan_id: activePlanId,
+      name: elementNameInput.trim(), cp_description: elementCpInput.trim(),
+    } });
+  };
+  useEffect(() => {
+    queueElement();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [elementNameInput, elementCpInput, elementDialogOpen]);
+
   // Element Save Mutation
   const elementMutation = useMutation({
     mutationFn: async (action: "create" | "update" | "delete") => {
       if (action !== "delete" && !elementNameInput.trim()) {
         throw new Error("Nama elemen materi wajib diisi");
+      }
+      if (action !== "delete") {
+        queueElement();
+        await elementAutosave.flush();
+        return { success: true, created: null };
       }
       return saveElementFn({
         data: {
@@ -342,6 +368,7 @@ function PerangkatAjarPage() {
   });
 
   const openAddElement = () => {
+    newElementId.current = undefined;
     setEditingElement(null);
     setElementNameInput("");
     setElementCpInput("");
@@ -664,7 +691,7 @@ function PerangkatAjarPage() {
       }
       return copyFn({
         data: {
-          source_plan_id: plan!.id,
+          source_plan_id: activePlanId,
           subject_id: currentSubjectId,
           source_class: selectedClass,
           academic_year: selectedYear,

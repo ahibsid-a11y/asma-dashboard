@@ -321,12 +321,13 @@ export const saveCurriculumElement = createServerFn({ method: "POST" })
     if (data.action === "create") {
       if (!data.name) throw new Error("Nama elemen wajib diisi");
       const { data: row, error } = await table()
-        .insert({
+        .upsert({
+          ...(data.id ? { id: data.id } : {}),
           plan_id: data.plan_id,
           name: data.name,
           cp_description: data.cp_description || "",
           order_index: data.order_index || 1,
-        })
+        }, { onConflict: "id" })
         .select()
         .maybeSingle();
       if (error) throw new Error(error.message);
