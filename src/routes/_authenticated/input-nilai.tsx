@@ -8,7 +8,9 @@ import {
   Check,
   CheckCircle2,
   ChevronRight,
+  Download,
   ExternalLink,
+  FileSpreadsheet,
   GraduationCap,
   Info,
   Layers,
@@ -20,6 +22,7 @@ import {
   SlidersHorizontal,
   Table as TableIcon,
   Trash2,
+  Upload,
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -49,6 +52,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useAutosaveQueue } from "@/hooks/use-autosave-queue";
 import { useCurrentProfile } from "@/hooks/use-current-profile";
+import {
+  downloadGradesExcel,
+  parseGradesExcel,
+  type ParsedGradeRow,
+} from "@/lib/grades-excel";
 import {
   calculateLetterGrade,
   listClassSubjects,
@@ -115,6 +123,12 @@ function InputNilaiPage() {
   const [newSubName, setNewSubName] = useState("");
   const [newSubGroup, setNewSubGroup] = useState<SubjectGroup>("Umum");
   const [newSubKkm, setNewSubKkm] = useState<number>(75);
+
+  // Ekspor/Impor Excel states
+  const [importRows, setImportRows] = useState<ParsedGradeRow[]>([]);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importFileName, setImportFileName] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 1. Ambil daftar mata pelajaran sesuai kelas terpilih (Manajemen Mapel)
   const subjectsQuery = useQuery({
@@ -297,6 +311,103 @@ function InputNilaiPage() {
     },
   });
 
+  // Ekspor lembar nilai ke Excel (berisi nilai yang sudah tersimpan)
+  const handleExportExcel = () => {
+    if (!currentSubject || students.length === 0) {
+      toast.error("Belum ada lembar nilai yang bisa diunduh");
+      return;
+    }
+    downloadGradesExcel(
+      {
+        subjectName: currentSubject.name,
+        className: selectedClass,
+        semester: selectedSemester,
+        academicYear: selectedYear,
+      },
+      students.map((s: any) => ({ id: s.id, name: s.name, nis_nip: s.nis_nip ?? null })),
+      tps.map((t) => ({ id: t.id, code: t.code, description: t.description })),
+      localGrades,
+    );
+  };
+
+  // Baca file Excel hasil isian guru
+  const handleImportFile = async (file: File) => {
+    try {
+      const parsed = await parseGradesExcel(
+        file,
+        students.map((s: any) => ({ id: s.id, name: s.name, nis_nip: s.nis_nip ?? null })),
+        tps.map((t) => ({ id: t.id, code: t.code, description: t.description })),
+      );
+      if (parsed.length === 0) {
+        toast.error("File tidak berisi baris nilai");
+        return;
+      }
+      setImportFileName(file.name);
+      setImportRows(parsed);
+      setImportOpen(true);
+    } catch {
+      toast.error("File tidak dapat dibaca. Pastikan berformat .xlsx");
+    }
+  };
+
+  // Mutation: Simpan hasil impor — hanya sel yang terisi di Excel yang menimpa,
+  // nilai lama pada sel kosong tetap dipertahankan.
+  const importMutation = useMutation({
+    mutationFn: async () => {
+      await autosave.flush();
+      const valid = importRows.filter(
+        (r) => r.studentId && r.errors.length === 0 && r.changeCount > 0,
+      );
+      if (valid.length === 0) throw new Error("Tidak ada nilai baru yang terisi di file");
+
+      const mergedByStudent: Record<
+        string,
+        { tp_scores: Record<string, number>; sts_score: number; sas_score: number; teacher_notes?: string }
+      > = {};
+      for (const row of valid) {
+        const current = gradesRef.current[row.studentId!] ?? {
+          tp_scores: {},
+          sts_score: 0,
+          sas_score: 0,
+        };
+        mergedByStudent[row.studentId!] = {
+          tp_scores: { ...current.tp_scores, ...row.tpScores },
+          sts_score: row.stsScore ?? current.sts_score,
+          sas_score: row.sasScore ?? current.sas_score,
+          ...(current.teacher_notes ? { teacher_notes: current.teacher_notes } : {}),
+        };
+      }
+
+      const res = await saveBatchFn({
+        data: {
+          subject_id: selectedSubjectId,
+          class_name: selectedClass,
+          semester: selectedSemester,
+          academic_year: selectedYear,
+          grades: Object.entries(mergedByStudent).map(([student_id, g]) => ({
+            student_id,
+            ...g,
+          })),
+        },
+      });
+      return { res, mergedByStudent };
+    },
+    onSuccess: ({ res, mergedByStudent }) => {
+      gradesRef.current = { ...gradesRef.current, ...mergedByStudent };
+      setLocalGrades(gradesRef.current);
+      toast.success(`Nilai ${res.count} santri berhasil diimpor dari Excel`);
+      setImportOpen(false);
+      setImportRows([]);
+      setImportFileName("");
+      queryClient.invalidateQueries({ queryKey: ["input-grades-sheet"] });
+      queryClient.invalidateQueries({ queryKey: ["class-grades-recap"] });
+      queryClient.invalidateQueries({ queryKey: ["my-grades"] });
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Gagal mengimpor nilai");
+    },
+  });
+
   // Mutation: Tambah TP Baru
   const addTpMutation = useMutation({
     mutationFn: () =>
@@ -399,6 +510,37 @@ function InputNilaiPage() {
 
           <div className="flex flex-wrap items-center gap-2">
             <span role="status" className="text-xs text-muted-foreground">{autosave.status === "saved" ? "Tersimpan" : autosave.status === "error" ? "Belum tersimpan" : "Menyimpan…"}</span>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void handleImportFile(file);
+                e.target.value = "";
+              }}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={handleExportExcel}
+              disabled={students.length === 0}
+            >
+              <Download className="h-4 w-4" />
+              Unduh Excel
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={students.length === 0}
+            >
+              <Upload className="h-4 w-4" />
+              Impor Excel
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -935,6 +1077,102 @@ function InputNilaiPage() {
               Tutup
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIALOG PRATINJAU IMPOR NILAI DARI EXCEL */}
+      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-base flex items-center gap-2">
+              <FileSpreadsheet className="h-5 w-5 text-primary" />
+              Pratinjau Impor Nilai dari Excel
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              {importFileName ? `File: ${importFileName}. ` : ""}
+              Hanya sel yang terisi di Excel yang disimpan; nilai lama pada sel kosong tidak
+              berubah. Periksa baris bertanda sebelum menyimpan.
+            </DialogDescription>
+          </DialogHeader>
+
+          {(() => {
+            const validCount = importRows.filter(
+              (r) => r.studentId && r.errors.length === 0 && r.changeCount > 0,
+            ).length;
+            const skippedCount = importRows.filter(
+              (r) => r.studentId && r.errors.length === 0 && r.changeCount === 0,
+            ).length;
+            const errorCount = importRows.length - validCount - skippedCount;
+            return (
+              <>
+                <div className="flex flex-wrap gap-4 rounded-lg border border-border bg-muted/40 p-3 text-sm font-semibold">
+                  <span>Total baris: {importRows.length}</span>
+                  <span className="text-primary">Siap disimpan: {validCount}</span>
+                  <span className="text-muted-foreground">Tanpa isian baru: {skippedCount}</span>
+                  <span className={errorCount > 0 ? "text-destructive" : "text-muted-foreground"}>
+                    Perlu koreksi: {errorCount}
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto rounded-xl border border-border">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className="bg-muted/50 text-[11px] font-semibold text-muted-foreground uppercase">
+                      <tr>
+                        <th className="p-2.5 w-12">Baris</th>
+                        <th className="p-2.5">Nama Santri</th>
+                        <th className="p-2.5">NISN/NIS</th>
+                        <th className="p-2.5 text-center">Sel Terisi</th>
+                        <th className="p-2.5">Keterangan</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {importRows.map((r) => (
+                        <tr
+                          key={r.rowNumber}
+                          className={r.errors.length > 0 ? "bg-destructive/10" : undefined}
+                        >
+                          <td className="p-2.5 text-muted-foreground font-mono">{r.rowNumber}</td>
+                          <td className="p-2.5 font-semibold text-foreground">{r.name || "-"}</td>
+                          <td className="p-2.5 font-mono text-muted-foreground">
+                            {r.nis_nip || "-"}
+                          </td>
+                          <td className="p-2.5 text-center font-bold">{r.changeCount}</td>
+                          <td className="p-2.5 text-[11px] font-semibold text-destructive">
+                            {r.errors.join(", ") || (
+                              <span className="text-muted-foreground font-normal">
+                                {r.changeCount > 0 ? "Valid" : "Tidak ada isian baru"}
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <DialogFooter>
+                  <Button variant="outline" size="sm" onClick={() => setImportOpen(false)}>
+                    Batal
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="font-bold"
+                    disabled={validCount === 0 || importMutation.isPending}
+                    onClick={() => importMutation.mutate()}
+                  >
+                    {importMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Menyimpan…
+                      </>
+                    ) : (
+                      `Simpan Nilai ${validCount} Santri`
+                    )}
+                  </Button>
+                </DialogFooter>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </AppShell>
