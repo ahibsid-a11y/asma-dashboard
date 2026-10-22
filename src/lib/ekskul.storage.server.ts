@@ -6,6 +6,7 @@ import crypto from "node:crypto";
 
 import { createClient } from "@supabase/supabase-js";
 import { getRequest } from "@tanstack/react-start/server";
+import { ekskulUpdateFields } from "./ekskul.schema";
 
 import type {
   EkskulAttendanceRecord,
@@ -109,6 +110,15 @@ export async function saveOrUpdateEkskul(
   item: Partial<EkskulItem> & { name: string; category: EkskulCategory },
 ): Promise<EkskulItem> {
   const supabase = await db();
+  if (item.id) {
+    const { data, error } = await supabase.from("ekskuls")
+      .update(ekskulUpdateFields(item))
+      .eq("id", item.id)
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    return data as EkskulItem;
+  }
   const row: Record<string, unknown> = {
     id: item.id || slugify(item.name),
     name: item.name,

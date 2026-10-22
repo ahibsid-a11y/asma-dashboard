@@ -8,11 +8,11 @@ export interface EkskulItem {
   fee: number;
   fee_period: EkskulFeePeriod;
   coach_name: string;
-  coach_id?: string | undefined;
+  coach_id?: string | null | undefined;
   schedule_day: string;
   schedule_time: string;
   location: string;
-  quota?: number | undefined;
+  quota?: number | null | undefined;
   description: string;
   is_active: boolean;
   created_at: string;
