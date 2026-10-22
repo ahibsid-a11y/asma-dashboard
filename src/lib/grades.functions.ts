@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { selectAssignedSubjects } from "./grades-subjects";
+import { selectAssignedSubjects, selectDinasReportSubjects } from "./grades-subjects";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { isMemberAdmin } from "@/lib/roles";
@@ -927,8 +927,8 @@ export const getStudentReportCard = createServerFn({ method: "POST" })
       .parse(data),
   )
   .middleware([requireSupabaseAuth])
-  .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  .handler(async ({ data, context }) => {
+    const supabaseAdmin = (context as Ctx).supabase;
 
     // 1. Profil santri
     const { data: student, error: stdErr } = await (supabaseAdmin as any)
@@ -955,6 +955,9 @@ export const getStudentReportCard = createServerFn({ method: "POST" })
       summaryMap.set(sum.subject_id, sum as StudentSubjectSummary);
     }
 
+    const { classNameVariants } = await import("./curriculum-plan.server");
+    const classVariants = classNameVariants(student.class ?? "");
+
     // 4. Nilai per-TP
     const { data: tpGrades } = await (supabaseAdmin as any)
       .from("student_tp_grades")
@@ -970,7 +973,10 @@ export const getStudentReportCard = createServerFn({ method: "POST" })
         )
       `,
       )
-      .eq("student_id", data.student_id);
+      .eq("student_id", data.student_id)
+      .eq("learning_objectives.semester", data.semester)
+      .eq("learning_objectives.academic_year", data.academic_year)
+      .in("learning_objectives.class_name", classVariants);
 
     const tpDetailsBySubject: Record<string, { code: string; desc: string; score: number }[]> = {};
     for (const g of tpGrades ?? []) {
@@ -979,7 +985,9 @@ export const getStudentReportCard = createServerFn({ method: "POST" })
       if (!tpDetailsBySubject[lo.subject_id]) {
         tpDetailsBySubject[lo.subject_id] = [];
       }
-      tpDetailsBySubject[lo.subject_id]!.push({
+      const subjectDetails = tpDetailsBySubject[lo.subject_id] ?? [];
+        tpDetailsBySubject[lo.subject_id] = subjectDetails;
+        subjectDetails.push({
         code: lo.code,
         desc: lo.description,
         score: Number(g.score),
@@ -991,6 +999,7 @@ export const getStudentReportCard = createServerFn({ method: "POST" })
       umum: [] as any[],
       diniyyah: [] as any[],
       bahasa_arab: [] as any[],
+      muatan_lokal: [] as any[],
     };
 
     for (const sbj of activeSubjects) {
@@ -1016,6 +1025,7 @@ export const getStudentReportCard = createServerFn({ method: "POST" })
       if (sbj.group === "Umum") grouped.umum.push(item);
       else if (sbj.group === "Diniyyah") grouped.diniyyah.push(item);
       else if (sbj.group === "Bahasa Arab") grouped.bahasa_arab.push(item);
+      else if (sbj.group === "Muatan Lokal") grouped.muatan_lokal.push(item);
     }
 
     // 5. Kehadiran dari attendance_records jika ada
@@ -1317,8 +1327,8 @@ export const getReportCardPondok = createServerFn({ method: "POST" })
       .parse(data),
   )
   .middleware([requireSupabaseAuth])
-  .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  .handler(async ({ data, context }) => {
+    const supabaseAdmin = (context as Ctx).supabase;
 
     // 1. Profil santri
     const { data: student, error: stdErr } = await (supabaseAdmin as any)
@@ -1329,9 +1339,8 @@ export const getReportCardPondok = createServerFn({ method: "POST" })
 
     if (stdErr || !student) throw new Error("Santri tidak ditemukan");
 
-    // 2. Daftar mapel aktif
-    const allSubjects = await ensureSubjects(supabaseAdmin);
-    const activeSubjects = allSubjects.filter((s) => s.is_active);
+    // 2. Mapel sesuai kelas dan tahun pelajaran, sama dengan nilai siswa.
+    const activeSubjects = await subjectsForClass(supabaseAdmin, student.class ?? "", data.academic_year, false);
 
     // 3. Nilai summaries
     const { data: summaries } = await (supabaseAdmin as any)
@@ -1346,6 +1355,9 @@ export const getReportCardPondok = createServerFn({ method: "POST" })
       summaryMap.set(sum.subject_id, sum as StudentSubjectSummary);
     }
 
+    const { classNameVariants } = await import("./curriculum-plan.server");
+    const classVariants = classNameVariants(student.class ?? "");
+
     // 4. Nilai per-TP
     let tpDetailsBySubject: Record<string, { code: string; desc: string; score: number }[]> = {};
     try {
@@ -1357,7 +1369,10 @@ export const getReportCardPondok = createServerFn({ method: "POST" })
             id, subject_id, code, description, order_index
           )
         `)
-        .eq("student_id", data.student_id);
+        .eq("student_id", data.student_id)
+      .eq("learning_objectives.semester", data.semester)
+      .eq("learning_objectives.academic_year", data.academic_year)
+      .in("learning_objectives.class_name", classVariants);
 
       for (const g of tpGrades ?? []) {
         const lo = g.learning_objectives;
@@ -1365,7 +1380,9 @@ export const getReportCardPondok = createServerFn({ method: "POST" })
         if (!tpDetailsBySubject[lo.subject_id]) {
           tpDetailsBySubject[lo.subject_id] = [];
         }
-        tpDetailsBySubject[lo.subject_id]!.push({
+        const subjectDetails = tpDetailsBySubject[lo.subject_id] ?? [];
+        tpDetailsBySubject[lo.subject_id] = subjectDetails;
+        subjectDetails.push({
           code: lo.code,
           desc: lo.description,
           score: Number(g.score),
@@ -1378,6 +1395,7 @@ export const getReportCardPondok = createServerFn({ method: "POST" })
       umum: [] as any[],
       diniyyah: [] as any[],
       bahasa_arab: [] as any[],
+      muatan_lokal: [] as any[],
     };
 
     for (const sbj of activeSubjects) {
@@ -1402,6 +1420,7 @@ export const getReportCardPondok = createServerFn({ method: "POST" })
       if (sbj.group === "Umum") grouped.umum.push(item);
       else if (sbj.group === "Diniyyah") grouped.diniyyah.push(item);
       else if (sbj.group === "Bahasa Arab") grouped.bahasa_arab.push(item);
+      else if (sbj.group === "Muatan Lokal") grouped.muatan_lokal.push(item);
     }
 
     // 6. Kehadiran
@@ -1445,8 +1464,8 @@ export const getReportCardDinas = createServerFn({ method: "POST" })
       .parse(data),
   )
   .middleware([requireSupabaseAuth])
-  .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  .handler(async ({ data, context }) => {
+    const supabaseAdmin = (context as Ctx).supabase;
 
     // 1. Profil santri
     const { data: student, error: stdErr } = await (supabaseAdmin as any)
@@ -1457,9 +1476,8 @@ export const getReportCardDinas = createServerFn({ method: "POST" })
 
     if (stdErr || !student) throw new Error("Santri tidak ditemukan");
 
-    // 2. Daftar mapel aktif
-    const allSubjects = await ensureSubjects(supabaseAdmin);
-    const activeSubjects = allSubjects.filter((s) => s.is_active);
+    // 2. Mapel sesuai kelas dan tahun pelajaran, sama dengan nilai siswa.
+    const activeSubjects = await subjectsForClass(supabaseAdmin, student.class ?? "", data.academic_year, false);
 
     // 3. Nilai summaries
     const { data: summaries } = await (supabaseAdmin as any)
@@ -1474,111 +1492,19 @@ export const getReportCardDinas = createServerFn({ method: "POST" })
       summaryMap.set(sum.subject_id, sum as StudentSubjectSummary);
     }
 
-    // 4. Mapel Kemendikdasmen (group Umum)
-    const umumSubjects = activeSubjects.filter((s) => s.group === "Umum");
-    const diniyyahSubjects = activeSubjects.filter((s) => s.group === "Diniyyah");
-    const bahasaArabSubjects = activeSubjects.filter((s) => s.group === "Bahasa Arab");
-
-    // Build items for Umum
-    const umumItems = umumSubjects.map((sbj) => {
-      const sum = summaryMap.get(sbj.id);
+    // Preserve assigned subjects and explicit grades before considering combined subjects.
+    const reportItems = activeSubjects.map((subject) => {
+      const summary = summaryMap.get(subject.id);
       return {
-        subject: sbj,
-        finalScore: sum?.final_score ?? 0,
-        letterGrade: sum?.letter_grade ?? "-",
-        highestDesc: sum?.highest_tp_desc || null,
-        lowestDesc: sum?.lowest_tp_desc || null,
-        teacherNotes: sum?.teacher_notes || null,
+        subject,
+        finalScore: Number(summary?.final_score) || 0,
+        letterGrade: summary?.letter_grade ?? "-",
+        highestDesc: summary?.highest_tp_desc || null,
+        lowestDesc: summary?.lowest_tp_desc || null,
+        teacherNotes: summary?.teacher_notes || null,
       };
     });
-
-    // 5. Calculate PAI = average of Diniyyah subjects
-    let paiScore = 0;
-    let paiCount = 0;
-    const paiComponents: { name: string; score: number }[] = [];
-    for (const sbj of diniyyahSubjects) {
-      const sum = summaryMap.get(sbj.id);
-      const score = sum?.final_score ?? 0;
-      paiComponents.push({ name: sbj.name, score });
-      if (score > 0) {
-        paiScore += score;
-        paiCount++;
-      }
-    }
-    const paiFinalScore = paiCount > 0 ? Math.round((paiScore / paiCount) * 10) / 10 : 0;
-    const paiLetterGrade = paiFinalScore > 0 ? calculateLetterGrade(paiFinalScore).grade : "-";
-
-    // Best performing diniyyah
-    const bestDiniyyah = paiComponents.reduce((best, c) => (c.score > best.score ? c : best), { name: "", score: 0 });
-    const worstDiniyyah = paiComponents.filter(c => c.score > 0).reduce((worst, c) => (c.score < worst.score ? c : worst), { name: "", score: 999 });
-
-    const paiItem = {
-      subject: {
-        id: "pai_combined",
-        code: "PAI",
-        name: "Pendidikan Agama Islam & Budi Pekerti",
-        group: "Umum" as SubjectGroup,
-        kkm: 75,
-        order_index: 1,
-        is_active: true,
-      },
-      finalScore: paiFinalScore,
-      letterGrade: paiLetterGrade,
-      highestDesc: bestDiniyyah.score >= 75
-        ? `Menunjukkan penguasaan yang sangat baik dalam ${bestDiniyyah.name}.`
-        : null,
-      lowestDesc: worstDiniyyah.score < 75 && worstDiniyyah.score < 999
-        ? `Perlu bimbingan dan peningkatan pemahaman dalam ${worstDiniyyah.name}.`
-        : null,
-      teacherNotes: null,
-      components: paiComponents,
-    };
-
-    // 6. Calculate Mulok = average of Bahasa Arab subjects
-    let mulokScore = 0;
-    let mulokCount = 0;
-    const mulokComponents: { name: string; score: number }[] = [];
-    for (const sbj of bahasaArabSubjects) {
-      const sum = summaryMap.get(sbj.id);
-      const score = sum?.final_score ?? 0;
-      mulokComponents.push({ name: sbj.name, score });
-      if (score > 0) {
-        mulokScore += score;
-        mulokCount++;
-      }
-    }
-    const mulokFinalScore = mulokCount > 0 ? Math.round((mulokScore / mulokCount) * 10) / 10 : 0;
-    const mulokLetterGrade = mulokFinalScore > 0 ? calculateLetterGrade(mulokFinalScore).grade : "-";
-
-    const bestMulok = mulokComponents.reduce((best, c) => (c.score > best.score ? c : best), { name: "", score: 0 });
-    const worstMulok = mulokComponents.filter(c => c.score > 0).reduce((worst, c) => (c.score < worst.score ? c : worst), { name: "", score: 999 });
-
-    const mulokItem = {
-      subject: {
-        id: "mulok_combined",
-        code: "MULOK",
-        name: "Muatan Lokal (Bahasa Arab)",
-        group: "Muatan Lokal" as SubjectGroup,
-        kkm: 75,
-        order_index: 90,
-        is_active: true,
-      },
-      finalScore: mulokFinalScore,
-      letterGrade: mulokLetterGrade,
-      highestDesc: bestMulok.score >= 75
-        ? `Menunjukkan penguasaan yang sangat baik dalam ${bestMulok.name}.`
-        : null,
-      lowestDesc: worstMulok.score < 75 && worstMulok.score < 999
-        ? `Perlu bimbingan dan peningkatan pemahaman dalam ${worstMulok.name}.`
-        : null,
-      teacherNotes: null,
-      components: mulokComponents,
-    };
-
-    // 7. Merge: Replace original PAI with combined PAI, filter out diniyyah/arab subjects, add Mulok
-    const dinasSubjects = umumItems.filter((i) => i.subject.code !== "PAI");
-    dinasSubjects.unshift(paiItem); // PAI first
-    dinasSubjects.push(mulokItem); // Mulok last
+    const dinasSubjects = selectDinasReportSubjects(reportItems, (score) => calculateLetterGrade(score).grade);
 
     // 8. Kokurikuler (P5 / P5RA - Narasi 1 Paragraf)
     const kokurRecord = getStudentKokurRecord(data.student_id, data.semester, data.academic_year);
