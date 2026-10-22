@@ -493,7 +493,7 @@ function SignatureBlock({
 
         <div>
           <p className="font-medium text-slate-600 dark:text-slate-400 print:text-black">Wali Kelas</p>
-          <p className="font-medium text-slate-700 dark:text-slate-300 print:text-black">Kelas {studentClass || "-"}</p>
+          <p className="font-medium text-slate-700 dark:text-slate-300 print:text-black">{studentClass?.replace(/^kelas\s*/i, "") ? `Kelas ${studentClass.replace(/^kelas\s*/i, "")}` : "Kelas -"}</p>
           <div className="h-20" />
           <p className="font-bold uppercase underline">{signatures.homeroomTeacherName}</p>
           <p className="text-[10px] text-slate-500 print:text-black">NIY. {signatures.homeroomTeacherNiy}</p>

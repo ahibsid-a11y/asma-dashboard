@@ -14,3 +14,4 @@
 - Academic report reads follow the same class/year assignments and semester-scoped TP grades as student scores; Dinas composition stays client-safe and preserves explicit PAI/local-content grades before considering component averages.
 - Self-profile saves use a client-safe partial patch and transmit only changed fields; omitted fields must never become null, preventing unrelated unit assignments from being cleared.
 - Teacher assessment autosaves use a coalescing serial queue with captured student/period payloads and await completion before navigation; additive forms reuse a stable record ID so typing cannot create duplicate records.
+- Report signers use a student-scoped database RPC returning only names and NIY; homeroom follows class master assignments and leadership follows existing positions, so student reports do not require access to private staff profiles.
