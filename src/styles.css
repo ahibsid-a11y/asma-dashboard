@@ -162,7 +162,7 @@
 
 @media print {
   @page {
-    size: 215mm 330mm portrait; /* Format F4 / Folio (215 x 330 mm) */
+    size: 215mm 330mm; /* Format F4 / Folio (215 x 330 mm) */
     margin: 12mm;
   }
 
