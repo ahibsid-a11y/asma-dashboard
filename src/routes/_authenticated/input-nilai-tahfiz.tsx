@@ -662,7 +662,7 @@ function InputNilaiTahfizPage() {
 
                       {/* TAB 1: IQRO */}
                       <TabsContent value="iqro" className="mt-4 space-y-4">
-                        <form onChangeCapture={markEdited} onSubmit={handleSaveIqro} className="space-y-4">
+                        <form onChangeCapture={() => markEdited()} onSubmit={handleSaveIqro} className="space-y-4">
                           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                             <div className="space-y-1.5">
                               <Label className="text-xs font-medium">Halaman Iqro</Label>
@@ -762,7 +762,7 @@ function InputNilaiTahfizPage() {
 
                       {/* TAB 2: TILAWAH */}
                       <TabsContent value="tilawah" className="mt-4 space-y-4">
-                        <form onChangeCapture={markEdited} onSubmit={handleSaveTilawah} className="space-y-4">
+                        <form onChangeCapture={() => markEdited()} onSubmit={handleSaveTilawah} className="space-y-4">
                           <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
                             <div className="space-y-1.5">
                               <Label className="text-xs font-medium">Juz</Label>
@@ -912,7 +912,7 @@ function InputNilaiTahfizPage() {
 
                       {/* TAB 3: TAHFIZ (3 PILAR) */}
                       <TabsContent value="tahfiz" className="mt-4 space-y-4">
-                        <form onChangeCapture={markEdited} onSubmit={handleSaveTahfiz} className="space-y-4">
+                        <form onChangeCapture={() => markEdited()} onSubmit={handleSaveTahfiz} className="space-y-4">
                           {/* Pilar Selector */}
                           <div className="space-y-1.5">
                             <Label className="text-xs font-semibold">Pilih Pilar Hafalan:</Label>
@@ -1068,7 +1068,7 @@ function InputNilaiTahfizPage() {
                       {/* TAB 4: UJIAN TAHFIZ & CETAK RAPOR */}
                       <TabsContent value="ujian" className="mt-4 space-y-6">
                         <form
-                          onChangeCapture={markEdited}
+                          onChangeCapture={() => markEdited()}
                           onSubmit={handleSaveCurrent}
                           className="space-y-4"
                         >
